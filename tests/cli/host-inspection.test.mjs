@@ -88,14 +88,14 @@ test('legacy folders and the old record are ignored', async (t) => {
   const { host } = fixture(t);
   const plan = await buildInstallPlan(host);
   for (const [current, legacy] of [
-    [host.agentsDir, host.legacyAgentsDir],
-    [host.commandsDir, host.legacyCommandsDir],
+    [host.agentsDir, path.join(host.root, 'agents', 'codex')],
+    [host.commandsDir, path.join(host.root, 'commands', 'codex')],
   ]) {
     const item = plan.find((candidate) => candidate.target.startsWith(current + path.sep));
     fs.mkdirSync(legacy, { recursive: true });
     fs.writeFileSync(path.join(legacy, path.basename(item.target)), await plannedContent(item, host.brandRoot));
   }
-  fs.writeFileSync(path.join(host.legacyAgentsDir, '.codex-bridge-install.json'), '{}');
+  fs.writeFileSync(path.join(host.root, 'agents', 'codex', '.codex-bridge-install.json'), '{}');
   const inspection = await inspectHost(host);
   assert.deepEqual(inspection.files, []);
   assert.equal(hasPackageMarks(inspection), false);

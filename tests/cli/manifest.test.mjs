@@ -254,8 +254,9 @@ test('missing record reads as not installed', async (t) => {
   const { host } = await fixture(t);
   assert.equal(await readInstallRecord(host), null);
   // Plan_82 D5 / OW-062 A6h: old host records must not become a second source of installation state.
-  const oldPath = path.join(host.legacyAgentsDir, '.codex-bridge-install.json');
-  await fs.mkdir(host.legacyAgentsDir, { recursive: true });
+  const oldDir = path.join(host.root, 'agents', 'codex');
+  const oldPath = path.join(oldDir, '.codex-bridge-install.json');
+  await fs.mkdir(oldDir, { recursive: true });
   await fs.writeFile(oldPath, JSON.stringify(record));
   assert.equal(await readInstallRecord(host), null);
   await fs.writeFile(oldPath, '{ broken');

@@ -13,7 +13,6 @@ import {
   removeEmpty,
   removeEmptyHome,
   removeEmptyHomeParents,
-  removeEmptyLayout,
   removeEmptyParents,
 } from '../../cli/remove-layout.mjs';
 
@@ -30,12 +29,6 @@ test('a target inside a package directory stops the walk at that directory', () 
   const nested = path.join(host.agentsDir, 'hooks', 'reply-guard.mjs');
   assert.equal(claudeBoundary(host, nested), host.agentsDir);
   assert.equal(claudeBoundary(host, path.join(host.commandsDir, 'env.md')), host.commandsDir);
-});
-
-test('the previous layout has its own boundary, not the current one', () => {
-  const host = hostFor(path.join(os.tmpdir(), 'bridge-boundary-legacy'));
-  assert.equal(claudeBoundary(host, path.join(host.legacyAgentsDir, 'run-codex.mjs')), host.legacyAgentsDir);
-  assert.equal(claudeBoundary(host, path.join(host.legacyCommandsDir, 'usage.md')), host.legacyCommandsDir);
 });
 
 test('a target under no package directory falls back to the host root', () => {
@@ -87,14 +80,6 @@ test('the walk stops as soon as a directory still holds something', async (t) =>
   await fs.access(path.join(kept, 'operator-file.md'));
 });
 
-test('removeEmptyLayout takes down the emptied package directory', async (t) => {
-  const homedir = await tempHome(t);
-  const host = hostFor(homedir);
-  await fs.mkdir(host.legacyAgentsDir, { recursive: true });
-  await removeEmptyLayout(host.legacyAgentsDir);
-  await assert.rejects(() => fs.access(host.legacyAgentsDir), { code: 'ENOENT' });
-});
-
 test('the shared agents and commands directories survive their emptied package subdirectory', async (t) => {
   // Claude Code owns ~/.claude/agents and ~/.claude/commands and shares them with every other
   // agent the operator has. An operator whose only agents were ours would have had those two
@@ -102,22 +87,14 @@ test('the shared agents and commands directories survive their emptied package s
   // far, so this is asserted rather than left to the boundary argument.
   const homedir = await tempHome(t);
   const host = hostFor(homedir);
-  await fs.mkdir(host.legacyAgentsDir, { recursive: true });
-  await fs.mkdir(host.legacyCommandsDir, { recursive: true });
-  await removeEmptyLayout(host.legacyAgentsDir);
-  await removeEmptyLayout(host.legacyCommandsDir);
+  await fs.mkdir(host.agentsDir, { recursive: true });
+  await fs.mkdir(host.commandsDir, { recursive: true });
+  await removeEmpty(host.agentsDir);
+  await removeEmpty(host.commandsDir);
+  await assert.rejects(() => fs.access(host.agentsDir), { code: 'ENOENT' });
+  await assert.rejects(() => fs.access(host.commandsDir), { code: 'ENOENT' });
   await fs.access(path.join(host.root, 'agents'));
   await fs.access(path.join(host.root, 'commands'));
-});
-
-test('removeEmptyLayout keeps a previous-layout directory holding a foreign file', async (t) => {
-  const homedir = await tempHome(t);
-  const host = hostFor(homedir);
-  const foreign = path.join(host.legacyCommandsDir, 'operator-command.md');
-  await fs.mkdir(host.legacyCommandsDir, { recursive: true });
-  await fs.writeFile(foreign, 'mine\n');
-  await removeEmptyLayout(host.legacyCommandsDir);
-  await fs.access(foreign);
 });
 
 test('home parent removal uses the adapter and keeps the home root', async (t) => {

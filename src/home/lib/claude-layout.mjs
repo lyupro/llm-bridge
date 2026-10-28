@@ -10,7 +10,5 @@ export function claudePaths(root) {
     agentsDir: path.join(root, 'agents', PACKAGE_NAME),
     commandsDir: path.join(root, 'commands', PACKAGE_NAME),
     rulesDir: path.join(root, 'rules', PACKAGE_NAME),
-    legacyAgentsDir: path.join(root, 'agents', 'codex'),
-    legacyCommandsDir: path.join(root, 'commands', 'codex'),
   };
 }

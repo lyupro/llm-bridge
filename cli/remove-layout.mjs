@@ -7,15 +7,18 @@ import path from 'node:path';
 import { inspectSegments } from './link-segments.mjs';
 
 /**
- * These four helpers existed as two copies — one in uninstall.mjs, one in update.mjs — and the
+ * These removal helpers existed as two copies — one in uninstall.mjs, one in update.mjs — and the
  * copies had already drifted before this file was written: update's removeEmptyParents inlined the
- * readdir/rmdir pair instead of calling removeEmpty, and only uninstall's removeEmptyLayout
+ * readdir/rmdir pair instead of calling removeEmpty, and only uninstall's layout removal
  * guarded a missing directory. Nothing failed, which is exactly the problem: the same divergence
  * between the installer's file list and the hook's list went unnoticed until Plan_19 had to
  * reconcile them. Removal logic decides what disappears from the operator's ~/.claude, so it gets
  * one definition.
  */
 
+// Removes only the given directory, never its parent: `~/.claude/agents` and `~/.claude/commands`
+// belong to Claude Code, and an operator whose only agents were ours would have lost them to an
+// uninstall that walked one level too far. Walks inside our own folders go through claudeBoundary().
 export async function removeEmpty(directory) {
   try {
     if ((await fs.readdir(directory)).length === 0) await fs.rmdir(directory);
@@ -33,8 +36,8 @@ export async function removeEmptyParents(target, boundary) {
 }
 
 /**
- * The directory an emptied-parent walk must stop at: five package-owned directories: current
- * agents, commands and rules (Plan_64 D5, D9), plus the two legacy directories (Plan_25).
+ * The directory an emptied-parent walk must stop at: three package-owned directories:
+ * agents, commands and rules (Plan_64 D5, D9).
  * Stopping there preserves the operator's own emptied parent directories.
  */
 export function claudeBoundary(host, target) {
@@ -42,24 +45,9 @@ export function claudeBoundary(host, target) {
     host.agentsDir,
     host.commandsDir,
     host.rulesDir,
-    host.legacyAgentsDir,
-    host.legacyCommandsDir,
   ].filter(Boolean);
   return directories.find((directory) => target === directory
     || target.startsWith(`${directory}${path.sep}`)) || host.root;
-}
-
-/**
- * Takes down one emptied package-owned layout directory — and stops there.
- *
- * It deliberately does not walk into the parent: the parents here are `~/.claude/agents` and
- * `~/.claude/commands`, which belong to Claude Code and are shared with every other agent the
- * operator has. An operator whose only agents were ours would have had those directories deleted
- * out from under Claude Code by an uninstall that was asked to remove our files. Directories
- * *inside* our own are a different case and are still walked, bounded by claudeBoundary().
- */
-export async function removeEmptyLayout(directory) {
-  await removeEmpty(directory);
 }
 
 // The segment check runs before every rmdir, not once per walk: on Windows rmdir on a junction

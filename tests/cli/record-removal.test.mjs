@@ -13,8 +13,6 @@ function fixture(prefix) {
     brandRoot: path.join(root, 'brand'),
     agentsDir: path.join(root, 'host', 'agents'),
     commandsDir: path.join(root, 'host', 'commands'),
-    legacyAgentsDir: path.join(root, 'host', 'legacy-agents'),
-    legacyCommandsDir: path.join(root, 'host', 'legacy-commands'),
   };
   return { host };
 }

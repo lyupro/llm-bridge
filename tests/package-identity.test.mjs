@@ -37,8 +37,6 @@ test('host folders and Codex rules names derive from the current package name', 
     assert.equal(paths[key], path.join(root, folder, 'codex-bridge'));
     assert.equal(path.basename(paths[key]), PACKAGE_NAME);
   }
-  assert.equal(paths.legacyAgentsDir, path.join(root, 'agents', 'codex'));
-  assert.equal(paths.legacyCommandsDir, path.join(root, 'commands', 'codex'));
   assert.equal(RULES_NAME, 'codex-bridge.rules');
   assert.equal(RULES_NAME, `${PACKAGE_NAME}.rules`);
   assert.equal(RULES_REGISTRY_NAME, '.codex-bridge-rules.json');
