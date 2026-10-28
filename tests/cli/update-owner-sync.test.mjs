@@ -69,7 +69,7 @@ test('up-to-date A leaves edited B untouched and exits one', async (t) => {
   assert.deepEqual((await readInstallRecordFile(f.a)).owners[key(f.b)], f.record.owners[key(f.b)]);
 });
 
-test('updated A retires legacy layout and guard logs and prints its summary when B is edited', async (t) => {
+test('updated A retires legacy layout and prints its summary when B is edited', async (t) => {
   const f = await fixture(t);
   await oldAgent(f, f.a);
   await fs.writeFile(f.agent.target, 'Operator-edited B\n');
@@ -81,17 +81,12 @@ test('updated A retires legacy layout and guard logs and prints its summary when
   f.record.owners[key(f.a)].files.push({ root: 'claude', path: relative });
   f.record.owners[key(f.a)].fingerprints.claude[relative] = await fileFingerprint(retired);
   await fs.writeFile(f.a.brandInstallRecordPath, JSON.stringify(f.record, null, 2) + '\n');
-  const log = path.join(path.dirname(f.a.settingsPath), 'logs', 'codex-reply-guard.blocked.json');
-  await fs.mkdir(path.dirname(log), { recursive: true });
-  await fs.writeFile(log, '{}\n');
   const result = await update({ host: f.a, env });
   assert.equal(result.exitCode, 1);
   assert.ok(result.output.startsWith('Updated codex-bridge: 1 updated, 1 removed.\nSource: '));
-  assert.ok(result.output.includes(`Removed ${path.join('logs', 'codex-reply-guard.blocked.json')}.`));
   assert.equal(result.output.split(`Left ${f.b.root} behind:`).length - 1, 1);
   assert.deepEqual(await fs.readFile(path.join(f.a.root, f.agent.relativeToRoot)), await plannedContent(f.agent, f.a.brandRoot));
   await assert.rejects(fs.access(f.a.legacyAgentsDir), { code: 'ENOENT' });
-  await assert.rejects(fs.access(log), { code: 'ENOENT' });
   assert.equal(await fs.readFile(f.agent.target, 'utf8'), 'Operator-edited B\n');
   assert.deepEqual((await readInstallRecordFile(f.a)).owners[key(f.b)], f.record.owners[key(f.b)]);
 });

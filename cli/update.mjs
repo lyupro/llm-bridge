@@ -34,12 +34,6 @@ import { recordHomeWriter, removeOutside, removeRecordedFile } from './record-re
 import { askTransition, detectTransition, transitionOutcome } from './inventory-transition.mjs';
 import { hasPackageMarks, inspectHost } from './host-inspection.mjs';
 
-const LEGACY_GUARD_LOG_FILES = [
-  'codex-reply-guard.blocked.json',
-  'codex-order-gate.last.json',
-  'codex-reply-guard.last.json',
-];
-
 async function exists(target) {
   try {
     return (await fs.stat(target)).isFile();
@@ -54,18 +48,6 @@ async function retireLegacyLayout(host, writer) {
   await removeOutside(writer, legacyInstallRecordPath(host));
   await removeEmptyLayout(host.legacyAgentsDir);
   await removeEmptyLayout(host.legacyCommandsDir);
-}
-
-async function retireLegacyGuardLogs(host, writer, { dryRun = false } = {}) {
-  const logDir = path.join(path.dirname(host.settingsPath), 'logs');
-  const lines = [];
-  for (const name of LEGACY_GUARD_LOG_FILES) {
-    const target = path.join(logDir, name);
-    if (!await exists(target)) continue;
-    if (!dryRun) await removeOutside(writer, target);
-    lines.push(`${dryRun ? 'Would remove' : 'Removed'} ${path.join('logs', name)}.`);
-  }
-  return lines.join('\n');
 }
 
 function displayFile(file) {
@@ -294,7 +276,6 @@ async function updateInRun({
   // D11: the command doctor recommends must clear its warning about this host's image stamp.
   if (!changed && inspectedHooks.every(({ state }) => state.current)
     && recordHasHooks(record, targets) && recordCurrent && ownImageStampCurrent(rawRecord, host)) {
-    const legacyLogOutput = await retireLegacyGuardLogs(host, writer, { dryRun });
     if (!dryRun) {
       await addRulesOwner(host);
       // An update that installed the new layout but stopped before retiring the old one used to
@@ -306,18 +287,17 @@ async function updateInRun({
     const ownerSync = await syncOtherOwners(host, { packageRoot, env, dryRun });
     return {
       exitCode: ownerSync.complete ? 0 : 1,
-      output: [`codex-bridge is up to date with ${source}${mismatch}`, legacyLogOutput, ...ownerSync.lines]
+      output: [`codex-bridge is up to date with ${source}${mismatch}`, ...ownerSync.lines]
         .filter(Boolean).join('\n'),
     };
   }
   if (dryRun) {
-    const legacyLogOutput = await retireLegacyGuardLogs(host, writer, { dryRun: true });
     const ownerSync = await syncOtherOwners(host, { packageRoot, env, dryRun });
     return {
       exitCode: 0,
       output: [`Would update codex-bridge with ${source}.${mismatch}`,
         ...(transition ? [`A real run would ask whether this host is the only one using ${host.brandRoot}.`] : []),
-        dryRunOutput(states, inspectedHooks, legacy, oldHooks), legacyLogOutput, ...ownerSync.lines]
+        dryRunOutput(states, inspectedHooks, legacy, oldHooks), ...ownerSync.lines]
         .filter(Boolean).join('\n'),
     };
   }
@@ -344,11 +324,10 @@ async function updateInRun({
   // Plan_65 D7: another owner left behind must not prevent this host's retirement and summary.
   if (installed.exitCode !== 0 && installed.ownerSync?.complete !== false) return installed;
   await retireLegacyLayout(host, writer);
-  const legacyLogOutput = await retireLegacyGuardLogs(host, writer);
   const outcome = transition ? transitionOutcome(host, inventory) : null;
   return {
     exitCode: installed.exitCode,
-    output: [`${appliedOutput(states)}\nSource: ${source}${mismatch}`, outcome, legacyLogOutput,
+    output: [`${appliedOutput(states)}\nSource: ${source}${mismatch}`, outcome,
       ...installed.ownerSync.lines]
       .filter(Boolean).join('\n'),
   };
