@@ -12,13 +12,11 @@ import { HOOK_DEFINITIONS } from './manifest.mjs';
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
 
-// Every directory a released version installed hook files into. Checked against git history:
+// Directories whose hook paths still count as ours (Plan_82 D5). Checked against git history:
 // agents/codex-bridge never held hooks — they moved into the brand home (7a43fa4, 2026-08-10) a
 // day before that directory existed (4eafc85).
 const HOOK_DIRECTORIES = Object.freeze([
   Object.freeze({ root: 'brandRoot', segments: ['hooks'] }),
-  // Before 7a43fa4 the path form pointed into host.agentsDir/hooks, and agentsDir was agents/codex.
-  Object.freeze({ root: 'root', segments: ['agents', 'codex', 'hooks'] }),
 ]);
 
 const DEFINITION_NAMES = new Set(HOOK_DEFINITIONS.map(({ name }) => name));

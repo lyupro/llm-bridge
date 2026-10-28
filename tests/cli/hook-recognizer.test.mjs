@@ -70,11 +70,11 @@ test('a file serving several hooks is named by its event, and unnamed without on
   assert.deepEqual(isOwnHookCommand(command, host), own(null, 'path'));
 });
 
-test('the pre-brand-home agents/codex/hooks location is recognized', (t) => {
+test('a path-form command into the pre-brand-home agents/codex/hooks location is foreign', (t) => {
   const host = makeHost(t);
   const file = path.join(host.root, 'agents', 'codex', 'hooks', FIRST.file);
 
-  assert.deepEqual(isOwnHookCommand(pathCommand(file), host), own(FIRST.name, 'path'));
+  assert.deepEqual(isOwnHookCommand(pathCommand(file), host), FOREIGN);
 });
 
 test('locations and files no release installed are foreign', (t) => {
