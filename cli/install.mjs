@@ -1,6 +1,5 @@
 /** Installs codex-bridge files into the Claude and brand roots with conflict-safe idempotency. */
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import {
   buildInstallPlan,
   fileFingerprint,
@@ -15,7 +14,6 @@ import {
   writeInstallRecord,
 } from './manifest.mjs';
 import { copyPlannedFile, planHomeWriter, targetMatches } from './copy.mjs';
-import { removeOutside } from './record-removal.mjs';
 import { hookTargets, recordHasHooks } from './hook-targets.mjs';
 import { fingerprintFor, readInstallRecordFile } from './install-record.mjs';
 import { ownImageStampCurrent } from './install-owners.mjs';
@@ -91,25 +89,6 @@ function permissionOutput(result, settingsPath) {
     return `${result.present} of ${result.total} permission rules are in place in ${settingsPath}; run codex-bridge install --force to restore the rest.`;
   }
   return `All ${result.total} permission rules are already in place in ${settingsPath}, so the host runs the package command without asking.`;
-}
-
-async function migrateLegacySeed(host, seed, writer, id) {
-  if (await targetExists(seed.target)) return;
-  const legacyName = path.basename(seed.target) === 'config.json' ? 'run-config.json' : path.basename(seed.target);
-  const legacy = path.join(host.legacyAgentsDir, legacyName);
-  if (legacy === seed.target || !(await targetExists(legacy))) return;
-  // Existing seeded files hold operator decisions, so Plan_25 moves them rather than reading a
-  // fresh default: copy first, compare the bytes, and only then drop the old path. Leaving the old
-  // copy behind — the first version of this migration did — keeps agents/codex non-empty forever,
-  // so the previous layout is never taken down and the operator goes on editing a file nothing
-  // reads. If the comparison fails the old file stays: a half-copied config is the one case where
-  // having two is better than having none.
-  // Plan_65 B10: the seed lands in the home only by its registry id, and the old copy under the
-  // host agents directory is removed only after the adapter proves it lies outside the home.
-  await writer.mkdir(id, path.dirname(seed.target));
-  await writer.copyFile(id, legacy, seed.target);
-  if (await fileFingerprint(legacy) !== await fileFingerprint(seed.target)) return;
-  await removeOutside(writer, legacy);
 }
 
 async function ownerSyncOutput(host, { packageRoot, env, dryRun }, output) {
@@ -257,10 +236,7 @@ async function installInRun(options = {}) {
   // exactly as it is, including under --force, because --force is about our files, not theirs.
   for (const seed of seedPlan(host, packageRoot)) {
     if (!(await targetExists(seed.target))) {
-      await migrateLegacySeed(host, seed, writer, copyId(seed));
-      if (!(await targetExists(seed.target))) {
-        await copyPlannedFile(seed, host.brandRoot, { writer, id: copyId(seed) });
-      }
+      await copyPlannedFile(seed, host.brandRoot, { writer, id: copyId(seed) });
     }
   }
   const hookResults = [];
