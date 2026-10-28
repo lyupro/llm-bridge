@@ -12,7 +12,6 @@ import path from 'node:path';
 import {
   buildInstallPlan,
   contentFingerprint,
-  legacyInstallRecordPath,
 } from './manifest.mjs';
 import { plannedContent } from './copy.mjs';
 import { findOwnHooks } from './hook-recognizer.mjs';
@@ -28,11 +27,6 @@ function result(context, target, disposition, reason) {
 }
 
 const unreadable = (context, target, error) => result(context, target, 'keep', `unreadable: ${error.code ?? 'UNKNOWN'}`);
-
-function isWithin(directory, target) {
-  const relative = path.relative(directory, target);
-  return relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
-}
 
 async function judgeFile(context, target, item) {
   const { host, owner } = context;
@@ -89,32 +83,6 @@ async function walk(context, target) {
   context.files.push(await judgeFile(context, target, planByTarget.get(path.resolve(target))));
 }
 
-// The pre-0.6 folder name is not unique to the package: only the names the package installs are
-// looked at, never the folder as a whole. Each is judged against the package file of the same name.
-async function inspectLegacyDirectory(context, directory, items) {
-  const stat = await lstatOrReport(context, directory);
-  if (!stat) return;
-  if (stat.isSymbolicLink()) {
-    context.files.push(result(context, directory, 'keep', 'link'));
-    return;
-  }
-  if (!stat.isDirectory()) return;
-  for (const item of items) {
-    const target = path.join(directory, path.basename(item.target));
-    const entry = await lstatOrReport(context, target);
-    if (!entry) continue;
-    if (entry.isSymbolicLink()) context.files.push(result(context, target, 'keep', 'link'));
-    else if (entry.isFile()) context.files.push(await judgeFile(context, target, item));
-  }
-}
-
-async function inspectLegacyRecord(context) {
-  const target = legacyInstallRecordPath(context.host);
-  const stat = await lstatOrReport(context, target);
-  if (stat?.isFile()) context.files.push(result(context, target, 'remove', 'old installation record'));
-  else if (stat?.isSymbolicLink()) context.files.push(result(context, target, 'keep', 'link'));
-}
-
 async function inspectSettings(host) {
   try {
     const state = await readSettings(host.settingsPath);
@@ -145,9 +113,6 @@ export async function inspectHost(host, { owner = null, packageRoot } = {}) {
   await walk(context, host.agentsDir);
   await walk(context, host.commandsDir);
   await walk(context, host.rulesDir);
-  await inspectLegacyDirectory(context, host.legacyAgentsDir, plan.filter((item) => isWithin(host.agentsDir, item.target)));
-  await inspectLegacyDirectory(context, host.legacyCommandsDir, plan.filter((item) => isWithin(host.commandsDir, item.target)));
-  await inspectLegacyRecord(context);
   const files = context.files.sort((a, b) => a.relativeToHost.localeCompare(b.relativeToHost));
   return { files, ...(await inspectSettings(host)), permissions: await inspectOwnPermissions(host) };
 }

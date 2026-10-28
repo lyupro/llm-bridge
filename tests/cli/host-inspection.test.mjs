@@ -84,38 +84,22 @@ test('unknown package-directory files and seed files are kept with distinct reas
   assert.equal(conventions.reason, 'seed');
 });
 
-test('legacy directories list matching planned basenames and the old record only', async (t) => {
+// Plan_82 D5 / OW-062 A6e: pre-0.5.0 leftovers no longer count as host installation marks.
+test('legacy folders and the old record are ignored', async (t) => {
   const { host } = fixture(t);
   const plan = await buildInstallPlan(host);
-  const item = plan.find((candidate) => candidate.target.startsWith(host.agentsDir + path.sep));
-  fs.mkdirSync(host.legacyAgentsDir, { recursive: true });
-  fs.writeFileSync(path.join(host.legacyAgentsDir, path.basename(item.target)), 'foreign legacy copy');
-  fs.writeFileSync(path.join(host.legacyAgentsDir, 'other.md'), 'foreign file');
+  for (const [current, legacy] of [
+    [host.agentsDir, host.legacyAgentsDir],
+    [host.commandsDir, host.legacyCommandsDir],
+  ]) {
+    const item = plan.find((candidate) => candidate.target.startsWith(current + path.sep));
+    fs.mkdirSync(legacy, { recursive: true });
+    fs.writeFileSync(path.join(legacy, path.basename(item.target)), await plannedContent(item, host.brandRoot));
+  }
   fs.writeFileSync(legacyInstallRecordPath(host), '{}');
   const inspection = await inspectHost(host);
-  const legacyTarget = path.join(host.legacyAgentsDir, path.basename(item.target));
-  const legacy = inspection.files.find((file) => file.target === legacyTarget);
-  const record = inspection.files.find((file) => file.target === legacyInstallRecordPath(host));
-  assert.equal(legacy.disposition, 'keep');
-  assert.equal(legacy.reason, 'changed');
-  assert.equal(inspection.files.some((file) => file.target.endsWith('other.md')), false);
-  assert.equal(record.disposition, 'remove');
-  assert.equal(record.reason, 'old installation record');
-});
-
-test('a legacy copy with the package bytes may be removed', async (t) => {
-  const { host } = fixture(t);
-  const plan = await buildInstallPlan(host);
-  const item = plan.find((candidate) => candidate.target.startsWith(host.agentsDir + path.sep));
-  const legacyTarget = path.join(host.legacyAgentsDir, path.basename(item.target));
-  fs.mkdirSync(host.legacyAgentsDir, { recursive: true });
-  fs.writeFileSync(legacyTarget, await plannedContent(item, host.brandRoot));
-
-  const inspection = await inspectHost(host);
-
-  const legacy = inspection.files.find((file) => file.target === legacyTarget);
-  assert.equal(legacy.disposition, 'remove');
-  assert.equal(legacy.reason, 'matches the package');
+  assert.deepEqual(inspection.files, []);
+  assert.equal(hasPackageMarks(inspection), false);
 });
 
 test('directory links are kept and their contents are not listed', async (t) => {
