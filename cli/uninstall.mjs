@@ -2,10 +2,7 @@
  * Uninstalls one host: its side from an inspection of the package's marks, the shared image only from
  * the record and only once the host is detached, preserving host data and foreign files (Plan_65 D10).
  */
-import {
-  legacyInstallRecordPath,
-  readInstallRecord,
-} from './manifest.mjs';
+import { readInstallRecord } from './manifest.mjs';
 import { imageRemoval } from './install-owners.mjs';
 import { asFormat2, readInstallRecordFile } from './install-record.mjs';
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
@@ -17,8 +14,8 @@ import { withSettingsRun } from './settings-merge.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
 import { readRulesRegistry } from './rules-owners.mjs';
 import { rulesDryRunLines, removeRulesForHost, remainingOwnersText } from './uninstall-rules.mjs';
-import { removeEmpty, removeEmptyLayout } from './remove-layout.mjs';
-import { recordHomeWriter, removeOutside } from './record-removal.mjs';
+import { removeEmpty } from './remove-layout.mjs';
+import { recordHomeWriter } from './record-removal.mjs';
 import { buildHomeRemovalPlan } from './home-removal-plan.mjs';
 import { executeHomePlan } from './home-plan-execute.mjs';
 import { outcomeLines, outcomeExitCode, planLines, planExitCode } from './removal-outcomes.mjs';
@@ -111,8 +108,6 @@ no host is recorded as using it.`,
   await removeEmpty(host.commandsDir);
   await removeEmpty(host.rulesDir);
   await removeEmpty(host.agentsDir);
-  await removeEmptyLayout(host.legacyAgentsDir);
-  await removeEmptyLayout(host.legacyCommandsDir);
   const { outcomes } = await executeHomePlan(host, plan,
     { detached: hostSide.detached, imageMembers: plan.imageMembers });
 
@@ -212,8 +207,7 @@ using ${host.brandRoot}.`);
   const plan = await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
     imagePolicy });
   // Plan_65 D10 item 4: a host still attached keeps everything it shares — its rules ownership, its
-  // place in the record, the old per-host record — so a repeat run after the fix finds it whole.
-  const detachedRecord = record && hostSide.detached ? record : null;
+  // place in the record — so a repeat run after the fix finds it whole.
   const rulesResult = await removeRulesForHost({
     host, record, registry, registryError, detached: hostSide.detached, writer,
   });
@@ -223,10 +217,7 @@ using ${host.brandRoot}.`);
     { detached: hostSide.detached, imageMembers: plan.imageMembers });
   await removeEmpty(host.commandsDir);
   await removeEmpty(host.rulesDir);
-  if (detachedRecord) await removeOutside(writer, legacyInstallRecordPath(host));
   await removeEmpty(host.agentsDir);
-  await removeEmptyLayout(host.legacyAgentsDir);
-  await removeEmptyLayout(host.legacyCommandsDir);
   const blockedImageLine = decision.removeImage && !hostSide.detached
     ? `Left the shared image in ${host.brandRoot} because this host's hooks could not be removed.`
     : null;

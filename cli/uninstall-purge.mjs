@@ -5,7 +5,7 @@
  */
 import fs from 'node:fs';
 import { uninstall, removePermissions, stillAttachedLine } from './uninstall.mjs';
-import { legacyInstallRecordPath, readInstallRecord } from './manifest.mjs';
+import { readInstallRecord } from './manifest.mjs';
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { inspectHost } from './host-inspection.mjs';
 import { removeHostSide } from './host-removal.mjs';
@@ -13,8 +13,8 @@ import { withSettingsRun } from './settings-merge.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
 import { readRulesRegistry } from './rules-owners.mjs';
 import { rulesDryRunLines, removeRulesForHost } from './uninstall-rules.mjs';
-import { removeEmpty, removeEmptyLayout } from './remove-layout.mjs';
-import { recordHomeWriter, removeOutside } from './record-removal.mjs';
+import { removeEmpty } from './remove-layout.mjs';
+import { recordHomeWriter } from './record-removal.mjs';
 import { runPurgePreflight, diagnosePurge } from './purge-preflight.mjs';
 import { executeHomePlan } from './home-plan-execute.mjs';
 import { inspectHome } from './home-inspection.mjs';
@@ -83,10 +83,7 @@ async function purgeInRun(options, ticket) {
   });
   await removeEmpty(host.commandsDir);
   await removeEmpty(host.rulesDir);
-  if (record) await removeOutside(writer, legacyInstallRecordPath(host));
   await removeEmpty(host.agentsDir);
-  await removeEmptyLayout(host.legacyAgentsDir);
-  await removeEmptyLayout(host.legacyCommandsDir);
   const appeared = appearedLines(host, plan, outcomes);
   return {
     exitCode: appeared.length ? 1 : outcomeExitCode(outcomes),

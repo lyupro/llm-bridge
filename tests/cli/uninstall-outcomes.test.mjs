@@ -6,10 +6,10 @@ import path from 'node:path';
 import { install } from '../../cli/install.mjs';
 import { uninstall } from '../../cli/uninstall.mjs';
 import {
-  contentFingerprint, installRecordPath, legacyInstallRecordPath, readInstallRecord, recordTarget,
+  installRecordPath, readInstallRecord, recordTarget,
 } from '../../cli/manifest.mjs';
 import { runsRoot } from '../../src/home/lib/runner/runs-root.mjs';
-import { allFiles, fixture, formatOneRecord } from './host-fixture.mjs';
+import { allFiles, fixture } from './host-fixture.mjs';
 
 const artifactsLine = () => `Run artifacts in ${runsRoot()} are outside uninstall and stay.`;
 
@@ -118,29 +118,22 @@ test('dry-run uninstall names image members behind a link and exits nonzero', as
   assert.equal(result.output.split('\n').at(-1), artifactsLine());
 });
 
-// D10 rejects a past-version catalogue: a legacy per-host record cannot authorize retired image members.
-test('legacy-only uninstall keeps retired image members as unknown and removes current package members', async (t) => {
+// Plan_82 D7 keeps current-member removal and unknown-file preservation without the retired record cleanup.
+test('uninstall keeps unknown image files and removes current package members', async (t) => {
   const { host } = await fixture(t);
   await install({ host });
-  const legacy = await formatOneRecord(host);
-  const currentMembers = legacy.files.filter((file) => file.root === 'brand');
+  const record = await readInstallRecord(host);
+  const currentMembers = record.files.filter((file) => file.root === 'brand');
   assert.ok(currentMembers.length > 0);
   const relative = 'lib/retired-legacy-member.mjs';
   const target = path.join(host.brandRoot, relative);
   const bytes = Buffer.from('retired package member\n');
   await fs.writeFile(target, bytes);
-  legacy.files.push({ root: 'brand', path: relative });
-  legacy.fingerprints.brand[relative] = contentFingerprint(bytes);
-  await fs.mkdir(path.dirname(legacyInstallRecordPath(host)), { recursive: true });
-  await fs.writeFile(legacyInstallRecordPath(host), `${JSON.stringify(legacy, null, 2)}\n`);
-  await fs.unlink(installRecordPath(host));
-  assert.ok((await readInstallRecord(host)).files.some((file) => file.path === relative));
 
   const dryRun = await uninstall({ host, dryRun: true });
   assert.equal(dryRun.exitCode, 0);
   assert.ok(dryRun.output.split('\n').includes(`Would leave brand/${relative} (unknown)`));
   assert.deepEqual(await fs.readFile(target), bytes);
-  await fs.access(legacyInstallRecordPath(host));
 
   const result = await uninstall({ host });
 
@@ -150,7 +143,6 @@ test('legacy-only uninstall keeps retired image members as unknown and removes c
   for (const member of currentMembers) {
     await assert.rejects(() => fs.access(recordTarget(host, member)), { code: 'ENOENT' });
   }
-  await assert.rejects(() => fs.access(legacyInstallRecordPath(host)), { code: 'ENOENT' });
   assert.equal(dryRun.output.split('\n').at(-1), artifactsLine());
   assert.equal(result.output.split('\n').at(-1), artifactsLine());
 });
