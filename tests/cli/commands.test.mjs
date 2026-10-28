@@ -322,6 +322,20 @@ test('every registry entry and action has well-formed help usage', () => {
   }
 });
 
+test('registry usage and global help use only the configured CLI names', () => {
+  for (const entry of COMMANDS) {
+    for (const section of [entry, ...Object.values(entry.actions ?? {})]) {
+      for (const line of section.usage) assert.ok(line.startsWith(`${CLI_NAMES[0]} `), line);
+    }
+  }
+  const aliasLines = HELP.split('\n').filter((line) => line.includes('<same command forms as '));
+  assert.deepEqual(aliasLines,
+    CLI_NAMES.slice(1).map((alias) => `  ${alias} <same command forms as ${CLI_NAMES[0]}>`));
+  for (const spelling of HELP.match(/\b(?:codex-bridge|codexb)\b/g) ?? []) {
+    assert.ok(CLI_NAMES.includes(spelling), `Unexpected command spelling in help: ${spelling}`);
+  }
+});
+
 test('non-help arguments and exit codes pass unchanged through the registry', async (t) => {
   for (const entry of COMMANDS) {
     const argv = ['set', '--model', '--help'];

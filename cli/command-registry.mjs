@@ -3,6 +3,7 @@
  * model -h refused help and global help omitted its actions (2026-09-29) because
  * dispatch and usage had separate sources. One registry keeps invocation and help together.
  */
+import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
 import { diagnose, renderDoctor } from './doctor.mjs';
 import { sandboxChecks } from './doctor-sandbox.mjs';
 import { sessionLogCheck } from './doctor-session-log.mjs';
@@ -32,6 +33,8 @@ import { unlock } from './unlock.mjs';
 import { uninstall } from './uninstall.mjs';
 import { purge } from './uninstall-purge.mjs';
 import { update } from './update.mjs';
+
+const CLI_NAME = CLI_NAMES[0];
 
 export function commandOptions(command, argv) {
   const options = {};
@@ -64,8 +67,8 @@ export function commandOptions(command, argv) {
 export const COMMANDS = [
   {
     name: 'install',
-    summary: 'Install codex-bridge into the selected Claude Code host',
-    usage: ['codex-bridge install [--scope user|project] [--host <path>] [--dry-run] [--force]'],
+    summary: `Install ${CLI_NAME} into the selected Claude Code host`,
+    usage: [`${CLI_NAME} install [--scope user|project] [--host <path>] [--dry-run] [--force]`],
     section: 'public',
     async handler(argv, io) {
       const options = commandOptions('install', argv);
@@ -77,8 +80,8 @@ export const COMMANDS = [
   },
   {
     name: 'update',
-    summary: 'Update a recorded codex-bridge installation',
-    usage: ['codex-bridge update [--scope user|project] [--host <path>] [--dry-run] [--force]'],
+    summary: `Update a recorded ${CLI_NAME} installation`,
+    usage: [`${CLI_NAME} update [--scope user|project] [--host <path>] [--dry-run] [--force]`],
     section: 'public',
     async handler(argv, io) {
       const options = commandOptions('update', argv);
@@ -91,16 +94,16 @@ export const COMMANDS = [
   {
     name: 'permissions',
     summary: 'Show, add, or remove optional shell permission rules',
-    usage: ['codex-bridge permissions [add|remove] [--scope user|project] [--host <path>]'],
+    usage: [`${CLI_NAME} permissions [add|remove] [--scope user|project] [--host <path>]`],
     section: 'public',
     actions: {
       add: {
         summary: 'Add optional shell permission rules',
-        usage: ['codex-bridge permissions add [--scope user|project] [--host <path>]'],
+        usage: [`${CLI_NAME} permissions add [--scope user|project] [--host <path>]`],
       },
       remove: {
         summary: 'Remove optional shell permission rules',
-        usage: ['codex-bridge permissions remove [--scope user|project] [--host <path>]'],
+        usage: [`${CLI_NAME} permissions remove [--scope user|project] [--host <path>]`],
       },
     },
     async handler(argv, io) {
@@ -123,7 +126,7 @@ export const COMMANDS = [
   {
     name: 'uninstall',
     summary: 'Remove installed files while preserving run artifacts',
-    usage: ['codex-bridge uninstall [--scope user|project] [--host <path>] [--dry-run] [--purge]'],
+    usage: [`${CLI_NAME} uninstall [--scope user|project] [--host <path>] [--dry-run] [--purge]`],
     section: 'public',
     async handler(argv, io) {
       const options = commandOptions('uninstall', argv);
@@ -138,7 +141,7 @@ export const COMMANDS = [
   {
     name: 'inventory',
     summary: 'Confirm that the recorded hosts are all the hosts using this home',
-    usage: ['codex-bridge inventory confirm [--scope user|project] [--host <path>] [--dry-run]'],
+    usage: [`${CLI_NAME} inventory confirm [--scope user|project] [--host <path>] [--dry-run]`],
     section: 'public',
     async handler(argv, io) {
       if (argv[0] !== 'confirm') throw new Error(`unknown inventory action "${argv[0] ?? ''}"`);
@@ -152,12 +155,12 @@ export const COMMANDS = [
   {
     name: 'runs',
     summary: 'Move run records into the package home (Plan_77)',
-    usage: ['codex-bridge runs move [--dry-run]'],
+    usage: [`${CLI_NAME} runs move [--dry-run]`],
     section: 'public',
     actions: {
       move: {
         summary: 'Move run records into the package home (Plan_77)',
-        usage: ['codex-bridge runs move [--dry-run]'],
+        usage: [`${CLI_NAME} runs move [--dry-run]`],
       },
     },
     async handler(argv, io) {
@@ -176,7 +179,7 @@ export const COMMANDS = [
   {
     name: 'doctor',
     summary: 'Diagnose the selected Claude Code host (--probe-contract measures on a live host)',
-    usage: ['codex-bridge doctor [--scope user|project] [--host <path>] [--probe-contract] [--probe-executable <path>]'],
+    usage: [`${CLI_NAME} doctor [--scope user|project] [--host <path>] [--probe-contract] [--probe-executable <path>]`],
     section: 'public',
     async handler(argv, io) {
       const options = commandOptions('doctor', argv);
@@ -205,7 +208,7 @@ export const COMMANDS = [
   {
     name: 'run',
     summary: 'Start or attach to a delegated Codex run',
-    usage: ['codex-bridge run <runner options> --task-file <path>'],
+    usage: [`${CLI_NAME} run <runner options> --task-file <path>`],
     section: 'public',
     async handler(argv, io) {
       return runCodex(argv);
@@ -214,30 +217,30 @@ export const COMMANDS = [
   {
     name: 'model',
     summary: 'Show, set or list the models delegated roles run on',
-    usage: ['codex-bridge model'],
+    usage: [`${CLI_NAME} model`],
     section: 'public',
     actions: {
       list: {
         summary: 'List the live model catalogue',
-        usage: ['codex-bridge model list'],
+        usage: [`${CLI_NAME} model list`],
       },
       set: {
         summary: 'Set the model and optional effort for a role',
         usage: [
-          'codex-bridge model set <role> <model> [effort]',
-          'codex-bridge model set <role> --model <model> [--effort <effort>]',
+          `${CLI_NAME} model set <role> <model> [effort]`,
+          `${CLI_NAME} model set <role> --model <model> [--effort <effort>]`,
         ],
       },
       unset: {
         summary: 'Unset the model override for a role',
-        usage: ['codex-bridge model unset <role>'],
+        usage: [`${CLI_NAME} model unset <role>`],
       },
       speed: {
         summary: 'Preview, pin (confirm) or unpin the accelerated speed tier of a role',
         usage: [
-          'codex-bridge model speed <role> <tier>',
-          'codex-bridge model speed <role> <tier> confirm',
-          'codex-bridge model speed <role> unset',
+          `${CLI_NAME} model speed <role> <tier>`,
+          `${CLI_NAME} model speed <role> <tier> confirm`,
+          `${CLI_NAME} model speed <role> unset`,
         ],
       },
     },
@@ -250,7 +253,7 @@ export const COMMANDS = [
   {
     name: 'projects',
     summary: 'List projects or runs from the run store',
-    usage: ['codex-bridge projects [<name>] [--json]'],
+    usage: [`${CLI_NAME} projects [<name>] [--json]`],
     section: 'public',
     async handler(argv, io) {
       const result = projects(argv);
@@ -262,8 +265,8 @@ export const COMMANDS = [
     name: 'prune',
     summary: 'Remove archived transport, or purge selected run folders',
     usage: [
-      'codex-bridge prune <project> [<run>] [--purge] [--older-than <age>] [-f] [--json]',
-      'codex-bridge prune --all-projects [--older-than <age>] [-f] [--json]',
+      `${CLI_NAME} prune <project> [<run>] [--purge] [--older-than <age>] [-f] [--json]`,
+      `${CLI_NAME} prune --all-projects [--older-than <age>] [-f] [--json]`,
     ],
     section: 'public',
     async handler(argv, io) {
@@ -275,7 +278,7 @@ export const COMMANDS = [
   {
     name: 'unlock',
     summary: 'Close running records whose runner is gone, or show the lifecycle lock',
-    usage: ['codex-bridge unlock [<project>|--all]', 'codex-bridge unlock --lifecycle [--clear]'],
+    usage: [`${CLI_NAME} unlock [<project>|--all]`, `${CLI_NAME} unlock --lifecycle [--clear]`],
     section: 'public',
     async handler(argv, io) {
       const result = await unlock(argv);
@@ -286,7 +289,7 @@ export const COMMANDS = [
   {
     name: 'guidance',
     summary: "Print the package's detailed rules for one topic",
-    usage: ['codex-bridge guidance [<topic>]'],
+    usage: [`${CLI_NAME} guidance [<topic>]`],
     section: 'public',
     async handler(argv, io) {
       const result = await guidance(argv);
@@ -298,11 +301,11 @@ export const COMMANDS = [
   {
     name: 'read',
     summary: "Render a run's structured event stream",
-    usage: ['codex-bridge read <run>'],
+    usage: [`${CLI_NAME} read <run>`],
     section: 'public',
     async handler(argv, io) {
       if (argv.length !== 1) {
-        io.error('codex-bridge read requires exactly one run folder (full path or bare name).');
+        io.error(`${CLI_NAME} read requires exactly one run folder (full path or bare name).`);
         return 2;
       }
       const result = read({ run: argv[0] });
@@ -313,11 +316,11 @@ export const COMMANDS = [
   {
     name: 'stop',
     summary: 'Stop a running Codex run and record FAIL',
-    usage: ['codex-bridge stop <run>'],
+    usage: [`${CLI_NAME} stop <run>`],
     section: 'public',
     async handler(argv, io) {
       if (argv.length !== 1) {
-        io.error('codex-bridge stop requires exactly one run folder (full path or bare name).');
+        io.error(`${CLI_NAME} stop requires exactly one run folder (full path or bare name).`);
         return 2;
       }
       const result = await stop({ run: argv[0] });
@@ -328,7 +331,7 @@ export const COMMANDS = [
   {
     name: 'hook',
     summary: 'Dispatch a registered guard with stdin unchanged',
-    usage: ['codex-bridge hook <name>'],
+    usage: [`${CLI_NAME} hook <name>`],
     section: 'machine',
     async handler(argv, io) {
       return hook(argv, io);
@@ -336,11 +339,11 @@ export const COMMANDS = [
   },
   {
     name: 'sweep',
-    summary: 'Renamed to codex-bridge unlock',
+    summary: `Renamed to ${CLI_NAME} unlock`,
     usage: [],
     section: 'renamed',
     async handler(argv, io) {
-      io.error('codex-bridge sweep was renamed to codex-bridge unlock; use the new command.');
+      io.error(`${CLI_NAME} sweep was renamed to ${CLI_NAME} unlock; use the new command.`);
       return 2;
     },
   },

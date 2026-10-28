@@ -4,20 +4,22 @@ import { isInvokedDirectly } from '../cli/invoked-directly.mjs';
 import { packageInfo } from '../cli/manifest.mjs';
 import { COMMANDS } from '../cli/command-registry.mjs';
 import { helpRequest, renderCommandHelp } from '../cli/command-help.mjs';
+import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
 
 export { commandOptions } from '../cli/command-registry.mjs';
 
+const CLI_NAME = CLI_NAMES[0];
 const publicCommands = COMMANDS.filter((entry) => entry.section === 'public');
 const commandWidth = Math.max(...publicCommands.map((entry) => entry.name.length));
 export const HELP = [
-  'codex-bridge — Claude Code dispatchers for Codex',
+  `${CLI_NAME} — Claude Code dispatchers for Codex`,
   '',
   'Usage:',
   ...publicCommands.flatMap((entry) => [entry, ...Object.values(entry.actions ?? {})]
     .flatMap((section) => section.usage.map((line) => `  ${line}`))),
-  '  codexb <same command forms as codex-bridge>',
-  '  codex-bridge --help',
-  '  codex-bridge --version',
+  ...CLI_NAMES.slice(1).map((alias) => `  ${alias} <same command forms as ${CLI_NAME}>`),
+  `  ${CLI_NAME} --help`,
+  `  ${CLI_NAME} --version`,
   '',
   'Commands:',
   ...publicCommands.map((entry) => `  ${entry.name.padEnd(commandWidth)}  ${entry.summary}`),
@@ -26,7 +28,7 @@ export const HELP = [
   ...COMMANDS.filter((entry) => entry.section === 'machine')
     .flatMap((entry) => entry.usage.map((line) => `  ${line}  ${entry.summary}`)),
   '',
-  'Run codex-bridge <command> -h for one command.',
+  `Run ${CLI_NAME} <command> -h for one command.`,
 ].join('\n');
 
 export async function main(argv, io = console) {
@@ -41,7 +43,7 @@ export async function main(argv, io = console) {
   }
   const entry = COMMANDS.find((candidate) => candidate.name === command);
   if (!entry) {
-    io.error(`codex-bridge: unknown command "${command}"\nRun codex-bridge --help for usage.`);
+    io.error(`${CLI_NAME}: unknown command "${command}"\nRun ${CLI_NAME} --help for usage.`);
     return 2;
   }
   const asked = helpRequest(rest, Object.keys(entry.actions ?? {}));
@@ -56,7 +58,7 @@ if (isInvokedDirectly(process.argv[1], import.meta.url)) {
   main(process.argv.slice(2))
     .then((exitCode) => { process.exitCode = exitCode; })
     .catch((err) => {
-      console.error(`codex-bridge: ${err.message}`);
+      console.error(`${CLI_NAME}: ${err.message}`);
       process.exitCode = 2;
     });
 }

@@ -1,9 +1,8 @@
 {
   "rationale": "Plan_82 D4: rename to llm-bridge; each slice lowers its files to lock in every removal.",
   "files": {
-    "bin/codex-bridge.mjs": 10,
+    "bin/codex-bridge.mjs": 1,
     "cli/command-help.mjs": 4,
-    "cli/command-registry.mjs": 35,
     "cli/doctor-home-image.mjs": 2,
     "cli/doctor-hooks.mjs": 7,
     "cli/doctor-host-side.mjs": 4,
