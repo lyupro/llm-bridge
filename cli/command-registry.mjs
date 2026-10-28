@@ -337,14 +337,4 @@ export const COMMANDS = [
       return hook(argv, io);
     },
   },
-  {
-    name: 'sweep',
-    summary: `Renamed to ${CLI_NAME} unlock`,
-    usage: [],
-    section: 'renamed',
-    async handler(argv, io) {
-      io.error(`${CLI_NAME} sweep was renamed to ${CLI_NAME} unlock; use the new command.`);
-      return 2;
-    },
-  },
 ];

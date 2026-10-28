@@ -279,11 +279,11 @@ test('permissions add --help answers action help', async () => {
   assert.deepEqual(io.errors, []);
 });
 
-test('sweep -h still refuses with its rename message', async () => {
+test('sweep -h exits 2 as an unknown command', async () => {
   const io = captureIO();
   assert.equal(await main(['sweep', '-h'], io), 2);
   assert.deepEqual(io.output, []);
-  assert.deepEqual(io.errors, ['codex-bridge sweep was renamed to codex-bridge unlock; use the new command.']);
+  assert.deepEqual(io.errors, ['codex-bridge: unknown command "sweep"\nRun codex-bridge --help for usage.']);
 });
 
 test('install --host --help remains a missing-value parser error', async () => {

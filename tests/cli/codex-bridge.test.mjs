@@ -101,12 +101,12 @@ test('unknown command exits 2 with a useful error', () => {
   assert.match(result.stderr, /--help/);
 });
 
-test('the old sweep command refuses with the unlock rename', () => {
-  // raw argv: the retired dispatcher command must report its replacement.
+test('the old sweep command exits 2 as an unknown command', () => {
+  // raw argv: an unknown dispatcher command must refuse before any order exists.
   const result = run(['sweep']);
   assert.equal(result.status, 2);
-  assert.match(result.stderr, /sweep was renamed to codex-bridge unlock/);
-  assert.match(result.stderr, /use the new command/);
+  assert.match(result.stderr, /unknown command "sweep"/);
+  assert.match(result.stderr, /--help/);
 });
 
 test('shared option parser rejects flags outside each command contract', () => {

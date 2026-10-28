@@ -47,7 +47,7 @@ export async function main(argv, io = console) {
     return 2;
   }
   const asked = helpRequest(rest, Object.keys(entry.actions ?? {}));
-  if (asked && entry.section !== 'renamed') {
+  if (asked) {
     io.log(renderCommandHelp(entry, asked.action));
     return 0;
   }
