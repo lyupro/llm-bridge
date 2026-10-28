@@ -69,12 +69,13 @@ test('up-to-date A leaves edited B untouched and exits one', async (t) => {
   assert.deepEqual((await readInstallRecordFile(f.a)).owners[key(f.b)], f.record.owners[key(f.b)]);
 });
 
-test('updated A retires legacy layout and prints its summary when B is edited', async (t) => {
+test('updated A removes a recorded orphan and prints its summary when B is edited', async (t) => {
   const f = await fixture(t);
   await oldAgent(f, f.a);
   await fs.writeFile(f.agent.target, 'Operator-edited B\n');
-  await fs.mkdir(f.a.legacyAgentsDir, { recursive: true });
-  const retired = path.join(f.a.legacyAgentsDir, path.basename(f.agent.target));
+  const previousAgentsDir = path.join(f.a.root, 'agents', 'codex');
+  await fs.mkdir(previousAgentsDir, { recursive: true });
+  const retired = path.join(previousAgentsDir, path.basename(f.agent.target));
   await fs.writeFile(retired, 'Legacy package agent\n');
   const relative = `agents/codex/${path.basename(retired)}`;
   // D7: record the retired package file so cleanup removes it rather than preserving a foreign file.
@@ -86,7 +87,7 @@ test('updated A retires legacy layout and prints its summary when B is edited', 
   assert.ok(result.output.startsWith('Updated codex-bridge: 1 updated, 1 removed.\nSource: '));
   assert.equal(result.output.split(`Left ${f.b.root} behind:`).length - 1, 1);
   assert.deepEqual(await fs.readFile(path.join(f.a.root, f.agent.relativeToRoot)), await plannedContent(f.agent, f.a.brandRoot));
-  await assert.rejects(fs.access(f.a.legacyAgentsDir), { code: 'ENOENT' });
+  await assert.rejects(fs.access(retired), { code: 'ENOENT' });
   assert.equal(await fs.readFile(f.agent.target, 'utf8'), 'Operator-edited B\n');
   assert.deepEqual((await readInstallRecordFile(f.a)).owners[key(f.b)], f.record.owners[key(f.b)]);
 });

@@ -48,7 +48,7 @@
     "cli/uninstall.mjs": 5,
     "cli/unlock-lifecycle.mjs": 5,
     "cli/unlock.mjs": 8,
-    "cli/update.mjs": 9,
+    "cli/update.mjs": 8,
     "scripts/home-write-inventory.mjs": 2,
     "scripts/isolated-roots.mjs": 4,
     "scripts/release-check/rules-load-isolation.mjs": 8,

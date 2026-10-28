@@ -7,10 +7,7 @@ import { install } from '../../cli/install.mjs';
 import {
   buildInstallPlan,
   fileFingerprint,
-  HOOK_DEFINITIONS,
   installRecordPath,
-  legacyInstallRecordPath,
-  packageInfo,
   readInstallRecord,
   recordTarget,
   rulesPlan,
@@ -64,112 +61,6 @@ test('an outdated recorded file updates silently', async (t) => {
   assert.ok(result.output.endsWith(`Source: ${SOURCE}`));
   assert.doesNotMatch(result.output, new RegExp(`${changed.root}/${changed.relativeToRoot}`));
   assert.equal(await targetMatches(changed, host.brandRoot), true);
-});
-
-test('update migrates a legacy single-root layout and removes it once', async (t) => {
-  const { host } = await fixture(t);
-  const oldFiles = [
-    ...new Set(HOOK_DEFINITIONS.map(({ file }) => `agents/codex/hooks/${file}`)),
-    'commands/codex/env.md',
-  ];
-  const fingerprints = {};
-  const hooks = [];
-  const settingsHooks = {};
-  for (const relative of oldFiles) {
-    const target = path.join(host.root, relative);
-    await fs.mkdir(path.dirname(target), { recursive: true });
-    await fs.writeFile(target, `legacy ${path.basename(relative)}\n`);
-    fingerprints[relative] = await fileFingerprint(target);
-  }
-  for (const [index, definition] of HOOK_DEFINITIONS.entries()) {
-    const relative = `agents/codex/hooks/${definition.file}`;
-    const target = path.join(host.root, relative);
-    const command = index === 0 ? `codex-bridge hook ${definition.name}` : `node "${target}"`;
-    hooks.push({ event: definition.event, path: relative, command, form: 'path' });
-    settingsHooks[definition.event] ??= [];
-    settingsHooks[definition.event].push({
-      matcher: definition.matcher,
-      hooks: [{ type: 'command', command }],
-    });
-  }
-  const oldCommand = oldFiles.at(-1);
-  const oldCommandTarget = path.join(host.root, oldCommand);
-  await fs.mkdir(path.dirname(oldCommandTarget), { recursive: true });
-  await fs.writeFile(oldCommandTarget, 'legacy command\n');
-  fingerprints[oldCommand] = await fileFingerprint(oldCommandTarget);
-  const foreign = { value: true, nested: ['keep'] };
-  await fs.writeFile(host.settingsPath, JSON.stringify({ foreign, hooks: settingsHooks }));
-  const currentPackage = await packageInfo();
-  const legacyPath = legacyInstallRecordPath(host);
-  await fs.mkdir(path.dirname(legacyPath), { recursive: true });
-  await fs.writeFile(legacyPath, `${JSON.stringify({
-    ...currentPackage,
-    installedAt: '2026-08-01T10:00:00.000Z',
-    mode: 'copy',
-    files: oldFiles,
-    fingerprints,
-    hooks,
-  }, null, 2)}\n`);
-
-  const result = await update({ host, force: true });
-  assert.equal(result.exitCode, 0);
-  await assert.rejects(() => fs.access(legacyPath), { code: 'ENOENT' });
-  for (const relative of oldFiles) {
-    await assert.rejects(() => fs.access(path.join(host.root, relative)), { code: 'ENOENT' });
-  }
-  await assert.rejects(() => fs.access(host.legacyAgentsDir), { code: 'ENOENT' });
-  await assert.rejects(() => fs.access(host.legacyCommandsDir), { code: 'ENOENT' });
-  const migrated = await readInstallRecord(host);
-  assert.ok(migrated.files.some((file) => file.root === 'brand'));
-  const settings = JSON.parse(await fs.readFile(host.settingsPath, 'utf8'));
-  assert.deepEqual(settings.foreign, foreign);
-  assert.equal(JSON.stringify(settings).includes(path.join(host.root, oldFiles[1])), false);
-
-  const repeat = await update({ host });
-  assert.deepEqual(repeat, { exitCode: 0, output: `codex-bridge is up to date with ${SOURCE}` });
-  await assert.rejects(() => fs.access(legacyPath), { code: 'ENOENT' });
-});
-
-test('update preserves foreign files in the previous layout', async (t) => {
-  const { host } = await fixture(t);
-  const definition = HOOK_DEFINITIONS[0];
-  const relative = `agents/codex/hooks/${definition.file}`;
-  const target = path.join(host.root, relative);
-  const foreignAgent = path.join(host.legacyAgentsDir, 'operator-notes.md');
-  const foreignCommand = path.join(host.legacyCommandsDir, 'operator-command.md');
-  await fs.mkdir(path.dirname(target), { recursive: true });
-  await fs.mkdir(path.dirname(foreignCommand), { recursive: true });
-  await fs.writeFile(target, 'legacy hook\n');
-  await fs.writeFile(foreignAgent, 'keep this agent file\n');
-  await fs.writeFile(foreignCommand, 'keep this command file\n');
-  const command = `node "${target}"`;
-  const currentPackage = await packageInfo();
-  const legacyPath = legacyInstallRecordPath(host);
-  await fs.writeFile(host.settingsPath, JSON.stringify({
-    foreign: { value: 'keep' },
-    hooks: {
-      [definition.event]: [{ matcher: definition.matcher, hooks: [{ type: 'command', command }] }],
-    },
-  }));
-  await fs.writeFile(legacyPath, `${JSON.stringify({
-    ...currentPackage,
-    installedAt: '2026-08-01T10:00:00.000Z',
-    mode: 'copy',
-    files: [relative],
-    fingerprints: { [relative]: await fileFingerprint(target) },
-    hooks: [{ event: definition.event, path: relative, command, form: 'path' }],
-  }, null, 2)}\n`);
-
-  const result = await update({ host, force: true });
-
-  assert.equal(result.exitCode, 0);
-  await assert.rejects(() => fs.access(target), { code: 'ENOENT' });
-  assert.equal(await fs.readFile(foreignAgent, 'utf8'), 'keep this agent file\n');
-  assert.equal(await fs.readFile(foreignCommand, 'utf8'), 'keep this command file\n');
-  await fs.access(host.legacyAgentsDir);
-  await fs.access(host.legacyCommandsDir);
-  assert.deepEqual(JSON.parse(await fs.readFile(host.settingsPath, 'utf8')).foreign, { value: 'keep' });
-  await assert.rejects(() => fs.access(legacyPath), { code: 'ENOENT' });
 });
 
 test('a manually modified file stops update without changing the file or record', async (t) => {

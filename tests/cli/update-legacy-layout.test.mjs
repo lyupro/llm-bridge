@@ -1,4 +1,4 @@
-/** Verifies that update retires the previous layout even when everything else is already current. */
+/** Verifies that update dry runs name the recorded hook registrations they would remove. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -7,7 +7,7 @@ import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 import { resolveHost } from '../../cli/hosts.mjs';
 import { install } from '../../cli/install.mjs';
 import { update } from '../../cli/update.mjs';
-import { installRecordPath, legacyInstallRecordPath } from '../../cli/manifest.mjs';
+import { installRecordPath } from '../../cli/manifest.mjs';
 import { formatOneRecord } from './host-fixture.mjs';
 
 async function fixture(t) {
@@ -19,49 +19,6 @@ async function fixture(t) {
     brandRoot: path.join(root, 'brand'),
   });
 }
-
-/**
- * Reproduces an update that installed the new layout and then stopped — power loss, a killed
- * terminal — before it removed the old record and directories. Every later update found each file
- * current and returned "up to date" without retrying, so agents/codex sat beside
- * agents/codex-bridge indefinitely.
- */
-async function installedWithLeftoverLegacy(host) {
-  await install({ host });
-  await fs.mkdir(host.legacyAgentsDir, { recursive: true });
-  await fs.mkdir(host.legacyCommandsDir, { recursive: true });
-  await fs.writeFile(legacyInstallRecordPath(host), `${JSON.stringify({ version: '0.4.0', files: [] })}\n`);
-}
-
-test('an up-to-date install still retires a leftover previous layout', async (t) => {
-  const host = await fixture(t);
-  await installedWithLeftoverLegacy(host);
-  const result = await update({ host });
-  assert.equal(result.exitCode, 0);
-  // The answer names the package it compared against (2026-09-07): a silent "up to date"
-  // from an older copy on PATH is what sent the operator looking for the cause by hand.
-  assert.match(result.output, /^codex-bridge is up to date with @lyupro\/codex-bridge@/);
-  await assert.rejects(() => fs.access(legacyInstallRecordPath(host)), { code: 'ENOENT' });
-  await assert.rejects(() => fs.access(host.legacyAgentsDir), { code: 'ENOENT' });
-  await assert.rejects(() => fs.access(host.legacyCommandsDir), { code: 'ENOENT' });
-});
-
-test('retiring the previous layout leaves the shared host directories alone', async (t) => {
-  const host = await fixture(t);
-  await installedWithLeftoverLegacy(host);
-  await update({ host });
-  await fs.access(path.join(host.root, 'agents'));
-  await fs.access(path.join(host.root, 'commands'));
-});
-
-test('a previous-layout directory holding a foreign file is not removed', async (t) => {
-  const host = await fixture(t);
-  await installedWithLeftoverLegacy(host);
-  const foreign = path.join(host.legacyAgentsDir, 'operator-notes.md');
-  await fs.writeFile(foreign, 'mine\n');
-  await update({ host });
-  await fs.access(foreign);
-});
 
 test('the dry run names the registrations it would take away', async (t) => {
   // It printed "the previous undefined hook registration" five times during the real Plan_25
@@ -88,12 +45,4 @@ test('the dry run names the registrations it would take away', async (t) => {
   const result = await update({ host, dryRun: true });
   assert.equal(result.output.includes('undefined'), false, result.output);
   assert.match(result.output, /Would remove the previous SubagentStop hook registration reply-guard for matcher \*\./);
-});
-
-test('a dry run retires nothing', async (t) => {
-  const host = await fixture(t);
-  await installedWithLeftoverLegacy(host);
-  await update({ host, dryRun: true });
-  await fs.access(legacyInstallRecordPath(host));
-  await fs.access(host.legacyAgentsDir);
 });

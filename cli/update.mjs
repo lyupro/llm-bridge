@@ -9,7 +9,6 @@ import {
   fileFingerprint,
   HOOK_DEFINITIONS,
   installedHookPath,
-  legacyInstallRecordPath,
   packageInfo,
   recordFileKey,
   readInstallRecord,
@@ -29,8 +28,7 @@ import {
 } from './settings-merge.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
 import { addRulesOwner, readRulesRegistry } from './rules-owners.mjs';
-import { removeEmptyLayout } from './remove-layout.mjs';
-import { recordHomeWriter, removeOutside, removeRecordedFile } from './record-removal.mjs';
+import { recordHomeWriter, removeRecordedFile } from './record-removal.mjs';
 import { askTransition, detectTransition, transitionOutcome } from './inventory-transition.mjs';
 import { hasPackageMarks, inspectHost } from './host-inspection.mjs';
 
@@ -41,13 +39,6 @@ async function exists(target) {
     if (err.code === 'ENOENT' || err.code === 'ENOTDIR') return false;
     throw err;
   }
-}
-
-/** Drops the previous layout's record and its emptied directories; safe to run when both are gone. */
-async function retireLegacyLayout(host, writer) {
-  await removeOutside(writer, legacyInstallRecordPath(host));
-  await removeEmptyLayout(host.legacyAgentsDir);
-  await removeEmptyLayout(host.legacyCommandsDir);
 }
 
 function displayFile(file) {
@@ -238,7 +229,7 @@ async function updateInRun({
     return { exitCode: 1, output: conflictOutput(conflicts, legacy, dryRun) };
   }
 
-  // Plan_65 D9: ask before the first change (orphans, hooks, the legacy layout) and hand install the one
+  // Plan_65 D9: ask before the first change (orphans, hooks) and hand install the one
   // answer: after that cleanup the nested run could neither ask honestly nor recount homeHadImage.
   const { transition, homeHadImage } = await detectTransition(host);
   let inventory;
@@ -278,11 +269,6 @@ async function updateInRun({
     && recordHasHooks(record, targets) && recordCurrent && ownImageStampCurrent(rawRecord, host)) {
     if (!dryRun) {
       await addRulesOwner(host);
-      // An update that installed the new layout but stopped before retiring the old one used to
-      // land here forever after: everything it compares is current, so it reported "up to date"
-      // while agents/codex sat next to agents/codex-bridge. Retirement is idempotent, so running
-      // it on this path costs nothing when there is nothing left to retire.
-      await retireLegacyLayout(host, writer);
     }
     const ownerSync = await syncOtherOwners(host, { packageRoot, env, dryRun });
     return {
@@ -323,7 +309,6 @@ async function updateInRun({
   });
   // Plan_65 D7: another owner left behind must not prevent this host's retirement and summary.
   if (installed.exitCode !== 0 && installed.ownerSync?.complete !== false) return installed;
-  await retireLegacyLayout(host, writer);
   const outcome = transition ? transitionOutcome(host, inventory) : null;
   return {
     exitCode: installed.exitCode,
