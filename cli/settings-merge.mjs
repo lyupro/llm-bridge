@@ -6,6 +6,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { readJsonFileWithRaw } from '../src/home/lib/json-file.mjs';
 import { envValue, resolveCommandOnPath } from '../src/home/lib/command-path.mjs';
+import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
 
 const LEGACY_SPEC = { event: 'SubagentStop', matcher: '*' };
 const settingsRuns = new AsyncLocalStorage();
@@ -15,10 +16,10 @@ export function commandFor(guardPath) {
 }
 
 export function shortCommandFor(name) {
-  return `codex-bridge hook ${name}`;
+  return `${CLI_NAMES[0]} hook ${name}`;
 }
 
-export function commandReachable(name = 'codex-bridge', env = process.env) {
+export function commandReachable(name = CLI_NAMES[0], env = process.env) {
   return Boolean(resolveCommandOnPath(name, env));
 }
 
@@ -30,7 +31,7 @@ export function commandReachable(name = 'codex-bridge', env = process.env) {
  * PATH was the previous release, which has no `hook` subcommand. Every guard then failed before it
  * could decide anything, and the host refused Bash, PowerShell, file edits and agent launches.
  */
-export function reachableCommandVersion(name = 'codex-bridge', env = process.env) {
+export function reachableCommandVersion(name = CLI_NAMES[0], env = process.env) {
   const result = runReachableCommand(name, ['--version'], env);
   if (!result || result.status !== 0) return null;
   return String(result.stdout || '').trim().split(/\r?\n/).pop()?.trim() || null;

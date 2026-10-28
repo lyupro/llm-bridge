@@ -4,7 +4,18 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
-import { inspectHook, mergeHook, removeHook } from '../../cli/settings-merge.mjs';
+import { inspectHook, mergeHook, removeHook, shortCommandFor } from '../../cli/settings-merge.mjs';
+import { isOwnHookCommand } from '../../cli/hook-recognizer.mjs';
+import { HOOK_DEFINITIONS } from '../../cli/manifest.mjs';
+import { CLI_NAMES } from '../../src/home/lib/cli-names.mjs';
+
+// The 2026-08-11 incident requires the hook writer and recognizer to agree on the command name.
+test('short hook commands use the primary CLI name and are recognized as own', () => {
+  assert.equal(shortCommandFor('x'), `${CLI_NAMES[0]} hook x`);
+  for (const { name } of HOOK_DEFINITIONS) {
+    assert.deepEqual(isOwnHookCommand(shortCommandFor(name)), { own: true, name, form: 'short' });
+  }
+});
 
 async function fixture(t) {
   const root = makeTempTree('bridge-settings-');

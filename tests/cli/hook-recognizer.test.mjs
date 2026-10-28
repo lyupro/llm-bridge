@@ -6,6 +6,7 @@ import { HOOK_DEFINITIONS } from '../../cli/manifest.mjs';
 import { resolveHost } from '../../cli/hosts.mjs';
 import { findOwnHooks, isOwnHookCommand } from '../../cli/hook-recognizer.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
+import { CLI_NAMES } from '../../src/home/lib/cli-names.mjs';
 
 const [FIRST] = HOOK_DEFINITIONS;
 const WITNESS = HOOK_DEFINITIONS.find(({ name }) => name === 'worktree-witness');
@@ -24,7 +25,20 @@ test('every defined short hook command is recognized', (t) => {
   const host = makeHost(t);
 
   for (const { name } of HOOK_DEFINITIONS) {
-    assert.deepEqual(isOwnHookCommand(`codex-bridge hook ${name}`, host), own(name, 'short'));
+    assert.deepEqual(isOwnHookCommand(`${CLI_NAMES[0]} hook ${name}`, host), own(name, 'short'));
+  }
+});
+
+test('short commands require the primary CLI name, exact spacing, and a known hook', (t) => {
+  const host = makeHost(t);
+  for (const command of [
+    `codexb hook ${FIRST.name}`,
+    `${CLI_NAMES[0]} hook ${FIRST.name} `,
+    `${CLI_NAMES[0]}  hook ${FIRST.name}`,
+    `${CLI_NAMES[0]} hook  ${FIRST.name}`,
+    `${CLI_NAMES[0]} hook unknown-hook`,
+  ]) {
+    assert.deepEqual(isOwnHookCommand(command, host), FOREIGN, command);
   }
 });
 

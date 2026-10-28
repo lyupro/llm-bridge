@@ -10,6 +10,7 @@
 import path from 'node:path';
 import { HOOK_DEFINITIONS } from './manifest.mjs';
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
+import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
 
 // Every directory a released version installed hook files into. Checked against git history:
 // agents/codex-bridge never held hooks — they moved into the brand home (7a43fa4, 2026-08-10) a
@@ -21,7 +22,7 @@ const HOOK_DIRECTORIES = Object.freeze([
 ]);
 
 const DEFINITION_NAMES = new Set(HOOK_DEFINITIONS.map(({ name }) => name));
-const SHORT_COMMAND = /^codex-bridge hook (\S+)$/;
+const SHORT_COMMAND = new RegExp(`^${CLI_NAMES[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} hook (\\S+)$`);
 const PATH_COMMAND = /^node "([^"\r\n]+)"$/;
 
 // Windows compares file names without case, like normalizeRepoPath does for the rest of the path.
