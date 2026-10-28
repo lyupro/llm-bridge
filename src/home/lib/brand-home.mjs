@@ -14,19 +14,20 @@
  */
 import os from 'node:os';
 import path from 'node:path';
+import { ENV_KEYS, HOME_DIR_NAME } from './package-identity.mjs';
 
 export function brandStateDir(root) {
   return path.join(root, 'state');
 }
 
 export function resolveBrandHome({ homedir = os.homedir(), env = process.env } = {}) {
-  const overridden = Boolean(env.CODEX_BRIDGE_HOME);
+  const overridden = Boolean(env[ENV_KEYS.home]);
   const root = path.resolve(
-    overridden ? env.CODEX_BRIDGE_HOME : path.join(homedir, '.lyupro', '.codex-bridge'),
+    overridden ? env[ENV_KEYS.home] : path.join(homedir, '.lyupro', HOME_DIR_NAME),
   );
   return {
     root,
-    source: overridden ? 'CODEX_BRIDGE_HOME' : 'default',
+    source: overridden ? ENV_KEYS.home : 'default',
     stateDir: brandStateDir(root),
     configPath: path.join(root, 'config.json'),
     conventionsPath: path.join(root, 'conventions.md'),

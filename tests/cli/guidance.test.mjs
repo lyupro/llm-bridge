@@ -234,7 +234,7 @@ test('invalid host config names the file without recommending update', async (t)
   fs.mkdirSync(path.join(home, 'lib'));
   fs.writeFileSync(path.join(home, 'guidance', 'budget.md'), '{{agent-budgets}}');
   fs.writeFileSync(configPath, '{"budgets":');
-  for (const file of ['agents.mjs', 'run-config.mjs', 'config-validate.mjs', 'budgets.mjs', 'brand-home.mjs']) {
+  for (const file of ['agents.mjs', 'run-config.mjs', 'config-validate.mjs', 'budgets.mjs', 'brand-home.mjs', 'package-identity.mjs']) {
     let source = fs.readFileSync(new URL('../../src/home/lib/' + file, import.meta.url), 'utf8');
     for (const dependency of ['json-file.mjs', 'config-edit.mjs']) {
       source = source.replace("'./" + dependency + "'",

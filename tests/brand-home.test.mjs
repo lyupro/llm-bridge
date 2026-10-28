@@ -13,6 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { brandStateDir, resolveBrandHome } from '../src/home/lib/brand-home.mjs';
+import { ENV_KEYS } from '../src/home/lib/package-identity.mjs';
 
 test('brandStateDir is the shared state path resolver', () => {
   const root = path.join(os.tmpdir(), 'brand-state-dir');
@@ -37,6 +38,21 @@ test('brand home reports whether its root came from the environment or the defau
   assert.equal(configured.stateDir, path.join(override, 'state'));
   assert.equal(configured.configPath, path.join(override, 'config.json'));
   assert.equal(configured.conventionsPath, path.join(override, 'conventions.md'));
+});
+
+test('brand home accepts only the exact environment key named by package identity', () => {
+  const homedir = path.join(os.tmpdir(), 'bridge-identity-home');
+  const override = path.join(os.tmpdir(), 'bridge-identity-override');
+  const ignored = path.join(os.tmpdir(), 'bridge-identity-ignored');
+  const fallback = resolveBrandHome({ homedir, env: {} });
+  for (const key of [ENV_KEYS.home.toLowerCase(), 'LLM_BRIDGE_HOME']) {
+    assert.deepEqual(resolveBrandHome({ homedir, env: { [key]: ignored } }), fallback);
+    const configured = resolveBrandHome({
+      homedir, env: { [key]: ignored, [ENV_KEYS.home]: override },
+    });
+    assert.equal(configured.root, override);
+    assert.equal(configured.source, ENV_KEYS.home);
+  }
 });
 
 function filesUnder(directory) {

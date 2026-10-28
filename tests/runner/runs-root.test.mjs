@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { ENV_KEYS } from '../../src/home/lib/package-identity.mjs';
 import { retiredPathRefusal, runsRoot, runsRootResolution, staleOverrideRefusal } from '../../src/home/lib/runner/runs-root.mjs';
 import {
   RUNS_MOVE_RECORD, readRunsMoveRecord, retiredRootOf, retiredRootRefusal, writeRunsMoveRecord,
@@ -37,6 +38,22 @@ test('a clean home uses the default package root without creating anything', asy
       assert.deepEqual(runsRootResolution({ env: { ...env, CODEX_RUNS_ROOT: override }, homedir }), {
         root: homeRoot, source: 'default', legacyRoot, homeRoot, retired: [], staleOverride: null,
       });
+    }
+    assert.deepEqual(fs.readdirSync(tree), []);
+  });
+});
+
+test('runs root accepts only the exact environment key named by package identity', async () => {
+  await withHome(({ tree, homedir, env }) => {
+    const override = path.join(tree, 'custom');
+    const ignored = path.join(tree, 'ignored');
+    const fallback = runsRootResolution({ env, homedir });
+    for (const key of [ENV_KEYS.runsRoot.toLowerCase(), 'LLM_RUNS_ROOT']) {
+      assert.deepEqual(runsRootResolution({ env: { ...env, [key]: ignored }, homedir }), fallback);
+      const configured = runsRootResolution({
+        env: { ...env, [key]: ignored, [ENV_KEYS.runsRoot]: '  ' + override + '  ' }, homedir,
+      });
+      assert.deepEqual(configured, { ...fallback, root: override, source: ENV_KEYS.runsRoot });
     }
     assert.deepEqual(fs.readdirSync(tree), []);
   });

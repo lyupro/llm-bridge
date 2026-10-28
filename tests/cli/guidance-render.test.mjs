@@ -25,7 +25,7 @@ function writeModule(root, file, source) {
 
 function budgetFixture(t, extra = {}) {
   const root = homeFixture(t);
-  for (const file of ['run-config.mjs', 'config-validate.mjs', 'budgets.mjs', 'brand-home.mjs']) {
+  for (const file of ['run-config.mjs', 'config-validate.mjs', 'budgets.mjs', 'brand-home.mjs', 'package-identity.mjs']) {
     let source = fs.readFileSync(new URL(`../../src/home/lib/${file}`, import.meta.url), 'utf8');
     // Plan_80 E39: keep the real reader and validator against the isolated installed registry.
     for (const dependency of ['json-file.mjs', 'config-edit.mjs']) {

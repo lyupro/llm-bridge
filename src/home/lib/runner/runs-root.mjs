@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { resolveBrandHome } from '../brand-home.mjs';
+import { ENV_KEYS } from '../package-identity.mjs';
 import { RUN_RECORDS_DIR } from '../home-registry.mjs';
 import { readRunsMoveRecord, retiredRootOf, retiredRootRefusal } from './retired-roots.mjs';
 import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
@@ -21,12 +22,12 @@ export function runsRootResolution({ env = process.env, homedir = os.homedir() }
   const legacyRoot = path.join(homedir, '.claude', 'codex-runs');
   const record = readRunsMoveRecord(brandHome.stateDir);
   const retired = record?.retired ?? [];
-  const configured = env.CODEX_RUNS_ROOT;
+  const configured = env[ENV_KEYS.runsRoot];
   // Trimmed, not taken literally: a path with a leading or trailing space creates a folder
   // Windows tooling cannot address, and the value usually arrives from a shell or an .env line.
   if (configured?.trim()) {
     const root = configured.trim();
-    return { root, source: 'CODEX_RUNS_ROOT', legacyRoot, homeRoot, retired,
+    return { root, source: ENV_KEYS.runsRoot, legacyRoot, homeRoot, retired,
       staleOverride: retiredRootOf(root, retired) };
   }
   if (record) {
