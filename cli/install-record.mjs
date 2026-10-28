@@ -1,6 +1,7 @@
 /** Reads, validates, and writes the installation record shared by installer commands. */
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { PACKAGE_NAME } from '../src/home/lib/package-identity.mjs';
 import { createHomeWriter } from '../src/home/lib/home-write.mjs';
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { HOOK_DEFINITIONS } from '../src/home/lib/hook-definitions.mjs';
@@ -20,7 +21,7 @@ export const INSTALL_METHOD_COPY = 'copy';
 
 export const INSTALL_RECORD_NAME = '.installed.json';
 export const LEGACY_INSTALL_RECORD_NAME = '.codex-bridge-install.json';
-export const RULES_NAME = 'codex-bridge.rules';
+export const RULES_NAME = `${PACKAGE_NAME}.rules`;
 
 const ROOTS = new Set(['claude', 'brand']);
 

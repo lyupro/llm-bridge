@@ -2,13 +2,14 @@
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import { PACKAGE_NAME } from '../src/home/lib/package-identity.mjs';
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { withOutsideFileLock } from '../src/home/lib/file-lock.mjs';
 import { createHomeWriter } from '../src/home/lib/home-write.mjs';
 export { isLockTaken } from '../src/home/lib/file-lock.mjs';
 
-export const RULES_REGISTRY_NAME = '.codex-bridge-rules.json';
+export const RULES_REGISTRY_NAME = `.${PACKAGE_NAME}-rules.json`;
 export const RULES_REGISTRY_VERSION = 1;
 
 export function rulesRegistryPath(host) {
