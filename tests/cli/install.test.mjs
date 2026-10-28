@@ -11,7 +11,6 @@ import {
   buildInstallPlan,
   HOOK_DEFINITIONS,
   installRecordPath,
-  legacyInstallRecordPath,
   readInstallRecord,
   recordTarget,
 } from '../../cli/manifest.mjs';
@@ -194,12 +193,9 @@ test('install upgrades a legacy record with host fingerprints', async (t) => {
   const { host } = await fixture(t);
   await install({ host });
   const recordPath = installRecordPath(host);
-  const legacyPath = legacyInstallRecordPath(host);
   const legacy = await formatOneRecord(host);
   delete legacy.fingerprints;
-  await fs.rm(recordPath);
-  await fs.mkdir(path.dirname(legacyPath), { recursive: true });
-  await fs.writeFile(legacyPath, `${JSON.stringify(legacy, null, 2)}\n`);
+  await fs.writeFile(recordPath, `${JSON.stringify(legacy, null, 2)}\n`);
   const result = await install({ host });
   assert.equal(result.exitCode, 0);
   assert.doesNotMatch(result.output, /nothing to do/);

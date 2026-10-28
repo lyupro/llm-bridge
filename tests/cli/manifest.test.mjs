@@ -13,6 +13,7 @@ import {
   SEEDED_SOURCES,
   buildInstallPlan,
   fileFingerprint,
+  installRecordPath,
   readInstallRecord,
   replacePlaceholders,
   rulesPlan,
@@ -175,8 +176,8 @@ test('installation record migrates an old single-hook record on read', async (t)
   };
   delete legacy.hooks;
   legacy.hook = { event: 'SubagentStop', path: 'agents/codex/hooks/reply-guard.mjs' };
-  await fs.mkdir(host.legacyAgentsDir, { recursive: true });
-  await fs.writeFile(path.join(host.legacyAgentsDir, '.codex-bridge-install.json'), `${JSON.stringify(legacy)}\n`);
+  await fs.mkdir(path.dirname(installRecordPath(host)), { recursive: true });
+  await fs.writeFile(installRecordPath(host), `${JSON.stringify(legacy)}\n`);
   const migrated = await readInstallRecord(host);
   assert.deepEqual(migrated.hooks, [{ ...legacy.hook, root: 'claude' }]);
   assert.equal(migrated.hook, undefined);
@@ -252,12 +253,19 @@ test('installation record rejects malformed fingerprint values', () => {
 test('missing record reads as not installed', async (t) => {
   const { host } = await fixture(t);
   assert.equal(await readInstallRecord(host), null);
+  // Plan_82 D5 / OW-062 A6h: old host records must not become a second source of installation state.
+  const oldPath = path.join(host.legacyAgentsDir, '.codex-bridge-install.json');
+  await fs.mkdir(host.legacyAgentsDir, { recursive: true });
+  await fs.writeFile(oldPath, JSON.stringify(record));
+  assert.equal(await readInstallRecord(host), null);
+  await fs.writeFile(oldPath, '{ broken');
+  assert.equal(await readInstallRecord(host), null);
 });
 
 test('malformed and structurally broken records fail loudly', async (t) => {
   const { host } = await fixture(t);
-  await fs.mkdir(host.legacyAgentsDir, { recursive: true });
-  await fs.writeFile(path.join(host.legacyAgentsDir, '.codex-bridge-install.json'), '{ nope');
+  await fs.mkdir(path.dirname(installRecordPath(host)), { recursive: true });
+  await fs.writeFile(installRecordPath(host), '{ nope');
   await assert.rejects(() => readInstallRecord(host), /invalid installation record JSON/);
   assert.throws(() => validateInstallRecord({ ...record, files: [3] }), /files/);
   assert.throws(() => validateInstallRecord({ ...record, files: [] }), /non-empty list/);

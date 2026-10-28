@@ -1,4 +1,4 @@
-/** Verifies installation-record normalization, persistence, and legacy lookup. */
+/** Verifies installation-record normalization, persistence, and package-home lookup. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -8,7 +8,6 @@ import { resolveHost } from '../../cli/hosts.mjs';
 import {
   INSTALL_RECORD_NAME,
   installRecordPath,
-  legacyInstallRecordPath,
   normalizeInstallRecord,
   readInstallRecord,
   removeInstallOwner,
@@ -72,7 +71,21 @@ test('write and read keep both installation roots and nested fingerprints', asyn
   assert.deepEqual(await readInstallRecord(host), expected);
   assert.equal(recordTarget(host, files[0]), path.join(host.root, files[0].path));
   assert.equal(recordTarget(host, files[1]), path.join(host.brandRoot, files[1].path));
-  await assert.rejects(() => fs.access(legacyInstallRecordPath(host)), { code: 'ENOENT' });
+
+  // OW-062 A6h preserves seed protection for the current agents directory and package home.
+  const agentPath = path.relative(host.root, host.agentsDir).split(path.sep).join('/');
+  const seeded = [
+    { root: 'claude', path: agentPath + '/run-config.json' },
+    { root: 'claude', path: agentPath + '/conventions.md' },
+    { root: 'brand', path: 'config.json' },
+    { root: 'brand', path: 'conventions.md' },
+  ];
+  await fs.mkdir(host.brandRoot, { recursive: true });
+  await fs.writeFile(installRecordPath(host), JSON.stringify(record({
+    files: [...files, ...seeded],
+    fingerprints: undefined,
+  })));
+  assert.deepEqual((await readInstallRecord(host)).files, files);
 });
 
 test('write refuses an undeclared install record path before creating it', async (t) => {
@@ -94,8 +107,8 @@ test('read migrates an old single-root record and singular hook to normalized en
     'agents/codex/conventions.md',
     'agents/codex/hooks/reply-guard.mjs',
   ];
-  await fs.mkdir(path.dirname(legacyInstallRecordPath(host)), { recursive: true });
-  await fs.writeFile(legacyInstallRecordPath(host), `${JSON.stringify({
+  await fs.mkdir(path.dirname(installRecordPath(host)), { recursive: true });
+  await fs.writeFile(installRecordPath(host), `${JSON.stringify({
     name: '@lyupro/codex-bridge',
     version: '0.0.9',
     installedAt: '2026-08-01T20:00:00.000Z',
@@ -108,6 +121,8 @@ test('read migrates an old single-root record and singular hook to normalized en
 
   assert.deepEqual(migrated.files, [
     { root: 'claude', path: 'agents/codex/run-codex.mjs' },
+    { root: 'claude', path: 'agents/codex/run-config.json' },
+    { root: 'claude', path: 'agents/codex/conventions.md' },
     { root: 'claude', path: 'agents/codex/hooks/reply-guard.mjs' },
   ]);
   assert.deepEqual(migrated.hooks, [{
@@ -116,11 +131,11 @@ test('read migrates an old single-root record and singular hook to normalized en
     root: 'claude',
   }]);
   assert.equal(migrated.fingerprints, undefined);
-  const fallback = await readInstallRecord({
+  const missing = await readInstallRecord({
     ...host,
     brandInstallRecordPath: path.join(host.brandRoot, 'missing-record.json'),
   });
-  assert.equal(fallback.version, '0.0.9');
+  assert.equal(missing, null);
 });
 
 function hostRecord(label) {

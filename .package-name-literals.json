@@ -17,7 +17,6 @@
     "cli/hook-targets.mjs": 1,
     "cli/hook.mjs": 9,
     "cli/host-inspection.mjs": 1,
-    "cli/install-record.mjs": 1,
     "cli/install.mjs": 5,
     "cli/inventory-confirm.mjs": 3,
     "cli/inventory-removal.mjs": 1,

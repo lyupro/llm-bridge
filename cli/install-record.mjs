@@ -20,7 +20,6 @@ export const INSTALL_METHOD_KEY = 'mode';
 export const INSTALL_METHOD_COPY = 'copy';
 
 export const INSTALL_RECORD_NAME = '.installed.json';
-export const LEGACY_INSTALL_RECORD_NAME = '.codex-bridge-install.json';
 export const RULES_NAME = `${PACKAGE_NAME}.rules`;
 
 const ROOTS = new Set(['claude', 'brand']);
@@ -222,7 +221,7 @@ export function normalizeInstallRecord(record) {
 }
 
 function legacySeedEntries(host) {
-  const agentDirs = [host.agentsDir, host.legacyAgentsDir].filter(Boolean);
+  const agentDirs = [host.agentsDir].filter(Boolean);
   return new Set(agentDirs.flatMap((agentsDir) => [
     { root: 'claude', path: posix(path.relative(host.root, path.join(agentsDir, 'run-config.json'))) },
     { root: 'claude', path: posix(path.relative(host.root, path.join(agentsDir, 'conventions.md'))) },
@@ -272,14 +271,10 @@ export function installRecordPath(host) {
   return host.brandInstallRecordPath || path.join(host.brandRoot, INSTALL_RECORD_NAME);
 }
 
-export function legacyInstallRecordPath(host) {
-  return path.join(host.legacyAgentsDir, LEGACY_INSTALL_RECORD_NAME);
-}
-
 /**
  * Reads the view owned by this host. Plan_65 D10 item 5: format-2 legacy only marks an
  * incomplete inventory; it is never another host's view, enrollment template, fingerprint base,
- * or source of createdGroup. Format-1 and older per-host records remain readable for migration.
+ * or source of createdGroup. Format-1 records in the package home remain readable for migration.
  */
 export async function readInstallRecord(host) {
   const parsed = await readInstallRecordFile(host);
@@ -291,8 +286,7 @@ export async function readInstallRecord(host) {
     }
     return withoutSeededFiles(host, normalizeInstallRecord(parsed));
   }
-  const legacy = await readAt(legacyInstallRecordPath(host));
-  return legacy === null ? null : withoutSeededFiles(host, normalizeInstallRecord(legacy));
+  return null;
 }
 
 export async function readInstallRecordFile(host) {

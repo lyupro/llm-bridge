@@ -9,7 +9,6 @@ import {
   buildInstallPlan,
   contentFingerprint,
   fileFingerprint,
-  legacyInstallRecordPath,
 } from '../../cli/manifest.mjs';
 import { readInstallRecordFile } from '../../cli/install-record.mjs';
 import { plannedContent } from '../../cli/copy.mjs';
@@ -96,7 +95,7 @@ test('legacy folders and the old record are ignored', async (t) => {
     fs.mkdirSync(legacy, { recursive: true });
     fs.writeFileSync(path.join(legacy, path.basename(item.target)), await plannedContent(item, host.brandRoot));
   }
-  fs.writeFileSync(legacyInstallRecordPath(host), '{}');
+  fs.writeFileSync(path.join(host.legacyAgentsDir, '.codex-bridge-install.json'), '{}');
   const inspection = await inspectHost(host);
   assert.deepEqual(inspection.files, []);
   assert.equal(hasPackageMarks(inspection), false);
