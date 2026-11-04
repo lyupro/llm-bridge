@@ -220,7 +220,9 @@ here. Nothing was reworded on the way out.
 - **A service directory is defined once, `SERVICE_RE` in `src/home/lib/meta/paths.mjs`, and both the
   preflight scope check and the verdict import it.** The verdict fails every change under `.git/`,
   `.claude/`, `.codex/`, `.omx/`, `.omc/` and `node_modules/` whatever the scope says, except paths
-  matched by `environmentPaths` (by default `.omc/**` and `.claude/settings.local.json`): `splitRunChanges`
+  matched by `environmentPaths` (defaults: `DEFAULT_ENVIRONMENT_PATHS` in `src/home/lib/config-validate.mjs`) and
+  paths excused by `environmentNewFilePaths`, which covers only a hashed untracked file the validated snapshots prove
+  new and the order's scope does not match; an edit or deletion of an existing file stays work: `splitRunChanges`
   sets those aside as environment work before `outOfScope` runs; `structuralRefusal`
   in `src/home/lib/runner/scope-check.mjs` refuses a pattern inside one before the run folder exists. A
   glob that can also match ordinary files (`**/*.md`) is not refused. Why: on 2026-09-22 an order scoped
