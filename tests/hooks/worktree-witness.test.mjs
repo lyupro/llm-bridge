@@ -156,7 +156,7 @@ test('runs that are not live do not own repository changes', async (t) => {
   }
 });
 
-// The 2026-09-19 exclusions must still leave real orchestrator edits visible and actionable.
+// The 2026-11-04 incident requires actionable advice without attributing another writer's edits.
 test('a change outside scope is reported with the path and release command', async (t) => {
   const { root, repo, runsRoot } = await fixture(t);
   const runDir = await liveRun(runsRoot, repo);
@@ -168,14 +168,17 @@ test('a change outside scope is reported with the path and release command', asy
   assert.equal(output.hookEventName, 'PostToolUse');
   assert.match(output.additionalContext, /^WORKTREE WITNESS/);
   assert.match(output.additionalContext, /run's own folder, environment paths and gitignored files are already excluded/);
-  assert.match(output.additionalContext, /orchestrator's own edits inside the repository/);
-  assert.match(output.additionalContext, /act now/i);
+  assert.doesNotMatch(output.additionalContext, /orchestrator's own edits|Act now/i);
+  assert.match(output.additionalContext, /snapshot does not show who changed these paths/);
+  assert.match(output.additionalContext, /they may be yours, another session's or a tool's/);
+  assert.match(output.additionalContext, /If they are your own edits, revert them or stop the run/);
   assert.match(output.additionalContext, /CHANGELOG\.md/);
   assert.match(output.additionalContext, new RegExp(runDir.replaceAll('\\', '\\\\')));
   assert.match(output.additionalContext, /agent codex-build/);
   assert.match(output.additionalContext, /slug split-guard-20260816/);
   assert.match(output.additionalContext, /codex-bridge stop 2026-08-16_split-guard/);
-  assert.ok(output.additionalContext.indexOf("orchestrator's own edits") < output.additionalContext.indexOf('Act now'));
+  assert.match(output.additionalContext, /keep further changes out of this tree until the run ends/);
+  assert.match(output.additionalContext, /If they are not yours, leave them alone and report them to the operator, because reverting would destroy someone else's work/);
 });
 
 // On 2026-09-19 a run under ~/.claude was falsely accused of creating its own run folder.
@@ -204,6 +207,22 @@ test('paths listed in environmentPaths are not reported', async (t) => {
   const context = JSON.parse(result.stdout).hookSpecificOutput.additionalContext;
   assert.match(context, /outside\.txt/);
   assert.doesNotMatch(context, /project-memory\.json|settings\.local\.json|session\.json/);
+});
+
+test('new environment letters are excused but edits to existing letters are reported', async (t) => {
+  const { root, repo, runsRoot } = await fixture(t);
+  await fs.mkdir(path.join(repo, 'letters'));
+  await fs.writeFile(path.join(repo, 'letters', 'existing.md'), 'before\n');
+  const runDir = await liveRun(runsRoot, repo);
+  await fs.writeFile(path.join(runDir, 'env.json'), JSON.stringify({ environmentNewFilePaths: ['letters/**'] }));
+  await fs.writeFile(path.join(repo, 'letters', 'new.md'), 'delivered\n');
+  assertPass(runWitness(root, runsRoot, repo));
+  await fs.writeFile(path.join(repo, 'letters', 'existing.md'), 'edited\n');
+  const result = runWitness(root, runsRoot, repo);
+  assert.equal(result.status, 0);
+  const context = JSON.parse(result.stdout).hookSpecificOutput.additionalContext;
+  assert.match(context, /letters\/existing\.md/);
+  assert.doesNotMatch(context, /letters\/new\.md/);
 });
 
 // Gitignored working notes are absent from the verdict's instrument and must stay absent here.

@@ -5,8 +5,10 @@
  * A shell can write through Python, redirection, or any other command while bypassing the
  * file-tool lock. That is how the orchestrator changed CHANGELOG.md during the 2026-08-16
  * split-guard run and made an honest build appear out of scope. This hook compares the live
- * run's recorded git state with the repository after every shell tool and directs the
- * orchestrator to undo any change outside the run's declared scope.
+ * run's recorded git state with the repository after every shell tool and reports changes
+ * outside the run's declared scope without claiming who made them. On 2026-11-04 the
+ * witness blamed one session for another session's edits and ordered it to revert them.
+ * Revert only your own edits; leave other writers' changes alone and report them.
  * The 2026-09-19 run accused itself of editing its own artifacts: the witness must use
  * the verdict's snapshot and environment split, not a second definition of changed work.
  */
@@ -71,9 +73,10 @@ try {
   if (repository.error || repository.status !== 0 || repository.stdout?.trim() !== 'true') pass();
   // Plan_73 / 2026-09-30: a damaged or incompatible baseline proves neither a clean
   // tree nor a stray edit. The advisory witness stays silent when the codec refuses it.
-  const comparison = compareSnapshots(beforeText, worktreeSnapshot(status.repo));
+  const afterText = worktreeSnapshot(status.repo);
+  const comparison = compareSnapshots(beforeText, afterText);
   if (!comparison.ok) pass();
-  const { work } = splitRunChanges(dir, comparison.changed);
+  const { work } = splitRunChanges(dir, comparison.changed, { before: beforeText, after: afterText });
   outside = outOfScope(work, patterns);
 } catch {
   pass();
@@ -86,9 +89,11 @@ process.stdout.write(JSON.stringify({
   hookSpecificOutput: {
     hookEventName: 'PostToolUse',
     additionalContext: `WORKTREE WITNESS — the run's own folder, environment paths and gitignored `
-      + `files are already excluded. These are the orchestrator's own edits inside the repository `
-      + `of live run folder ${dir} (agent ${status.agent}, slug ${status.slug}), outside its scope: ${paths}. `
-      + `Act now: revert those paths, or run codex-bridge stop ${folder} to take the repository back `
-      + `before making further changes.`,
+      + `files are already excluded. These paths changed outside the scope of live run folder ${dir} `
+      + `(agent ${status.agent}, slug ${status.slug}): ${paths}. The snapshot does not show who changed `
+      + `these paths; they may be yours, another session's or a tool's. If they are your own edits, `
+      + `revert them or stop the run with codex-bridge stop ${folder}, and keep further changes out `
+      + `of this tree until the run ends. If they are not yours, leave them alone and report them `
+      + `to the operator, because reverting would destroy someone else's work.`,
   },
 }));

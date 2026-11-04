@@ -3,7 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { collect } from '../../src/home/lib/write-meta.mjs';
+import { AGENTS, collect } from '../../src/home/lib/write-meta.mjs';
+import { encodeSnapshot } from '../../src/home/lib/meta/snapshot-format.mjs';
 import { buildResult, COMPLETED_COMMAND, makeRun } from './test-fixtures.mjs';
 
 const events = [{ type: 'thread.started', thread_id: 'reply-snapshot' }, COMPLETED_COMMAND];
@@ -44,6 +45,39 @@ test('OK build reply snapshot', () => {
     + 'Verification: npm test — pass\n'
     + 'Flags: none\n'
     + 'Report: <run>/report.md · Log: codex-bridge read <run>');
+});
+
+test('a delivered letter appears on the Environment line, not among the run changed files', () => {
+  const dir = makeRun({ args: ['exec', '--json'], events,
+    result: buildResult([{ file: 'src/a.ts', what: 'change', why: 'task' }]) });
+  fs.writeFileSync(path.join(dir, 'scope.txt'), 'src/**\n');
+  fs.writeFileSync(path.join(dir, 'env.json'), JSON.stringify({ environmentNewFilePaths: ['letters/**'] }));
+  fs.writeFileSync(path.join(dir, 'state-before.txt'), encodeSnapshot([]));
+  fs.writeFileSync(path.join(dir, 'state-after.txt'), encodeSnapshot([
+    { path: 'src/a.ts', state: '1\t0' },
+    { path: 'letters/new.md', state: `U\t10:${'a'.repeat(64)}` },
+  ]));
+  const { meta, reply } = collect(dir, 'codex-build', 0);
+  assert.equal(meta.status, 'OK');
+  assert.match(reply, /^Files: 1 changed · src\/a\.ts$/m);
+  assert.match(reply, /^Environment: 1 changed outside the run — letters\/new\.md$/m);
+});
+
+test('damaged, missing and unreadable snapshots still produce a build reply without throwing', () => {
+  const dir = makeRun({ result: buildResult([]) });
+  fs.writeFileSync(path.join(dir, 'state-before.txt'), 'not a snapshot\n');
+  fs.writeFileSync(path.join(dir, 'state-after.txt'), 'also damaged\n');
+  const missing = path.join(dir, 'missing');
+  const unreadable = path.join(dir, 'unreadable');
+  fs.mkdirSync(path.join(unreadable, 'state-before.txt'), { recursive: true });
+  fs.mkdirSync(path.join(unreadable, 'state-after.txt'));
+  for (const runDir of [dir, missing, unreadable]) {
+    let rows;
+    assert.doesNotThrow(() => {
+      rows = AGENTS['codex-build'].reply({ runDir, result: buildResult([]), file: (name) => path.join(runDir, name) });
+    });
+    assert.match(rows.join('\n'), /^Files: 0 changed · worktree untouched$/m);
+  }
 });
 
 test('OK review reply snapshot', () => {

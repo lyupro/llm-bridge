@@ -21,11 +21,11 @@ import { unavailableRows } from './unavailable-rows.mjs';
 import { stopRows } from './stop-rows.mjs';
 
 /** What the run itself changed, and what the tooling around it changed while it worked. */
-const runChanges = (runDir) =>
-  splitRunChanges(
-    runDir,
-    changedPaths(readText(path.join(runDir, 'state-before.txt')), readText(path.join(runDir, 'state-after.txt'))),
-  );
+const runChanges = (runDir) => {
+  const before = readText(path.join(runDir, 'state-before.txt'));
+  const after = readText(path.join(runDir, 'state-after.txt'));
+  return splitRunChanges(runDir, changedPaths(before, after), { before, after });
+};
 
 const readCommand = (runDir) => `codex-bridge read ${runDir}`;
 

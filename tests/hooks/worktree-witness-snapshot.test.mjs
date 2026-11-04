@@ -77,9 +77,9 @@ test('a v2 baseline names a Cyrillic stray outside the scope exactly', async (t)
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout).hookSpecificOutput;
   assert.equal(output.hookEventName, 'PostToolUse');
-  assert.ok(output.additionalContext.includes(`outside its scope: ${stray}. Act now:`));
+  assert.ok(output.additionalContext.includes(`): ${stray}. The snapshot does not show`));
   assert.ok(!output.additionalContext.includes('разрешено.mjs'));
-  const reported = output.additionalContext.split('outside its scope: ')[1].split('. Act now:')[0];
+  const reported = output.additionalContext.split('): ')[1].split('. The snapshot does not show')[0];
   assert.equal(reported, stray);
 });
 

@@ -104,6 +104,8 @@ export function collect(runDir, agent, exitCode) {
     execution: executionFact,
   });
 
+  const before = readText(path.join(runDir, 'state-before.txt'));
+  const after = readText(path.join(runDir, 'state-after.txt'));
   const meta = {
     agent,
     // D2: old runs have no phase fact; do not invent one from today's registry.
@@ -142,7 +144,8 @@ export function collect(runDir, agent, exitCode) {
     // excused, so a real edit cannot hide behind one.
     environment_changes: splitRunChanges(
       runDir,
-      changedPaths(readText(path.join(runDir, 'state-before.txt')), readText(path.join(runDir, 'state-after.txt'))),
+      changedPaths(before, after),
+      { before, after },
     ).environment,
     result_ok: resultOk,
     events_bytes: eventsBytes,

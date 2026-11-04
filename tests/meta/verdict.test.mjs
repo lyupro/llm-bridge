@@ -5,7 +5,9 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
+import { encodeSnapshot } from '../../src/home/lib/meta/snapshot-format.mjs';
 import { collect } from '../../src/home/lib/write-meta.mjs';
 import { outOfScope, reportVersusWork } from '../../src/home/lib/meta/verdict.mjs';
 import { makeChainRoot, makeRun, CHAIN_REPO, CHAIN_SLUG } from './test-fixtures.mjs';
@@ -22,6 +24,19 @@ const build = (changes, extra = {}) => ({
 
 /** The task context reportVersusWork() gets from status.json in production. */
 const chainCtx = (runsRoot) => ({ runsRoot, repo: CHAIN_REPO, slug: CHAIN_SLUG });
+
+test('collect records a new delivered letter in environment_changes', () => {
+  const dir = makeRun({ result: build([]) });
+  fs.writeFileSync(path.join(dir, 'scope.txt'), 'src/**\n');
+  fs.writeFileSync(path.join(dir, 'env.json'), JSON.stringify({ environmentNewFilePaths: ['letters/**'] }));
+  fs.writeFileSync(path.join(dir, 'state-before.txt'), encodeSnapshot([]));
+  fs.writeFileSync(path.join(dir, 'state-after.txt'), encodeSnapshot([
+    { path: 'letters/new.md', state: `U\t10:${'a'.repeat(64)}` },
+  ]));
+  const { meta } = collect(dir, 'codex-build', 0);
+  assert.equal(meta.status, 'OK');
+  assert.deepEqual(meta.environment_changes, ['letters/new.md']);
+});
 
 // --- outOfScope, as a pure function ---------------------------------------------------
 
