@@ -16,6 +16,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - On 2026-11-04 the worktree witness told one session that another session's edits were its
   own. It now reports paths without claiming who changed them and no longer orders a revert
   (OW-080).
+- To prepare for a later rename without changing what users see, the package name, home folder
+  name and resolver env keys now come from one module (Plan_82).
+
+### Removed
+
+- Because `sweep` only announced its rename to `unlock`, it now gets the plain unknown-command
+  answer (Plan_82).
+- Because the pre-0.5.0 layout was retired in 0.5.0, update and uninstall (including `--purge`)
+  no longer remove its per-host installation record in `agents/codex` or the emptied
+  `agents/codex` and `commands/codex` folders. Hosts still carrying them keep those leftovers;
+  `doctor` ignores them, and installation records are read only from the package home (Plan_82).
+- Because hooks moved into the package home, hooks under `agents/codex/hooks` are no longer
+  recognized as package hooks (Plan_82).
+- Because seeded files already live in the package home, install no longer moves
+  `run-config.json` and `conventions.md` out of `agents/codex`; hosts still carrying those old
+  copies keep them there (Plan_82).
+- Because guard logs moved into package state, update no longer retires the three old guard
+  files in `~/.claude/logs`; hosts still carrying them keep those files (Plan_82).
 
 ### Fixed
 
