@@ -15,7 +15,7 @@ const RUNNER = new URL('../../src/home/lib/run-codex.mjs', import.meta.url).href
 const CONFIG = new URL('../../src/home/lib/run-config.mjs', import.meta.url);
 const ADVISOR_TASK = '## Options\n- keep: Keep the boundary.\n- split: Split the boundary.\n## Paths\n- source.mjs\n';
 
-function launch({ budget = 15, phase, overrides, refuse = false, agent = 'codex-scout', continue: isContinue = false, taskText, tree, grant } = {}) {
+function launch({ budget = 15, phase, overrides, extraConfig, refuse = false, agent = 'codex-scout', continue: isContinue = false, taskText, tree, grant } = {}) {
   const root = tree?.root ?? makeTempTree('run-phase-');
   const repo = tree?.repo ?? path.join(root, 'repo');
   const home = tree?.home ?? path.join(root, 'home');
@@ -25,7 +25,9 @@ function launch({ budget = 15, phase, overrides, refuse = false, agent = 'codex-
     fs.mkdirSync(home);
     fs.writeFileSync(path.join(repo, 'source.mjs'), 'export default 1;\n');
   }
-  if (overrides) fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ budgets: overrides }));
+  if (overrides || extraConfig) {
+    fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ ...extraConfig, ...(overrides ? { budgets: overrides } : {}) }));
+  }
   const { argv: args } = orderInvocation({
       agent, order: { repository: repo, 'order id': 'phase-fixture',
         ...(agent === 'codex-build' ? { scope: 'source.mjs' } : {}),
@@ -99,6 +101,18 @@ test('single-phase defaults persist through headers and explicit defaults still 
       assert.deepEqual(env.budgets[agent.slice('codex-'.length)], { default: 15 });
     }
   }
+});
+
+test('a build launch freezes home environment new-file paths in env.json', () => {
+  const environmentNewFilePaths = ['host-mail/*/incoming/*.md'];
+  const { env } = workerFrom(launch({ agent: 'codex-build', extraConfig: { environmentNewFilePaths } }).output);
+  assert.deepEqual(env.environmentNewFilePaths, environmentNewFilePaths);
+});
+
+test('a build launch without home environment new-file paths retains both default letter patterns', () => {
+  const { env } = workerFrom(launch({ agent: 'codex-build' }).output);
+  assert.ok(env.environmentNewFilePaths.includes('!Docs/prompts/*/incoming/*.md'));
+  assert.ok(env.environmentNewFilePaths.includes('docs/prompts/*/incoming/*.md'));
 });
 
 test('advisor scope continuation resolves its phase but refuses before probes and run creation', () => {

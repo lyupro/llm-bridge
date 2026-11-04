@@ -25,7 +25,22 @@ export const DEFAULT_ENVIRONMENT_PATHS = [
   'mcp-needs-auth-cache.json',
   'plugins/installed_plugins.json',
   'plugins/known_marketplaces.json',
+  // Six honest runs failed on this host state on 2026-10-08 and 2026-10-30.
+  'plugins/plugin-directory-cache-v2.json',
+  'plugins/store/cc-plugin-agents-md_builtin-*.json',
 ];
+
+/**
+ * From 2026-10-21 to 2026-11-04, eleven honest build runs failed as out of scope only
+ * because a letter from another project arrived in the tree while they worked. These
+ * patterns describe the observed layout; the host may replace them. A matching file is
+ * excused only if the run did not start with it: editing or deleting an existing letter
+ * is still judged as run work.
+ */
+export const DEFAULT_ENVIRONMENT_NEW_FILE_PATHS = Object.freeze([
+  '!Docs/prompts/*/incoming/*.md',
+  'docs/prompts/*/incoming/*.md',
+]);
 
 /** Off means the flag is passed to Codex as `--disable <key>`. */
 export const DEFAULTS = {
@@ -35,12 +50,13 @@ export const DEFAULTS = {
   budgets: resolveBudgets('agent registry'),
   retention: DEFAULT_RETENTION,
   environmentPaths: DEFAULT_ENVIRONMENT_PATHS,
+  environmentNewFilePaths: DEFAULT_ENVIRONMENT_NEW_FILE_PATHS,
   answerLanguage: 'English',
 };
 
 /** Booleans the operator flips from the command line; structured keys are edited in the file. */
 export const SWITCH_KEYS = ['hooks', 'plugins'];
-export const LIST_KEYS = ['environmentPaths'];
+export const LIST_KEYS = ['environmentPaths', 'environmentNewFilePaths'];
 export const OBJECT_KEYS = ['models'];
 /**
  * A role is configured as a pair, not as a model alone: reasoning depth is half of what a

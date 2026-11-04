@@ -23,7 +23,7 @@ import { readJsonFileSync } from './json-file.mjs';
 import { editRunConfig } from './config-edit.mjs';
 import { explicitBudgetPhases } from './budgets.mjs';
 import { DEFAULTS, ROLES, SWITCH_KEYS, LIST_KEYS, OBJECT_KEYS, validateRunConfig } from './config-validate.mjs';
-export { DEFAULTS, DEFAULT_ENVIRONMENT_PATHS } from './config-validate.mjs';
+export { DEFAULTS, DEFAULT_ENVIRONMENT_PATHS, DEFAULT_ENVIRONMENT_NEW_FILE_PATHS } from './config-validate.mjs';
 
 export const CONFIG_PATH = BRAND_CONFIG_PATH;
 
@@ -91,6 +91,7 @@ const state = (config) => [
   ),
   `environmentPaths: ${(config.environmentPaths || []).length} patterns — changes in them are ` +
     'treated as environment work, not run work',
+  `environmentNewFilePaths: ${(config.environmentNewFilePaths || []).length} patterns — a new file there that the order does not name is treated as environment work`,
   `models: ${ROLES.map((key) => {
     const profile = config.models?.[key];
     if (!profile?.model && !profile?.effort && !profile?.speed) return `${key}: default — chosen by Codex`;

@@ -15,7 +15,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { readRunConfig, disableFlags, DEFAULTS } from '../src/home/lib/run-config.mjs';
+import { readRunConfig, disableFlags, DEFAULTS, DEFAULT_ENVIRONMENT_NEW_FILE_PATHS } from '../src/home/lib/run-config.mjs';
 import { editRunConfig } from '../src/home/lib/config-edit.mjs';
 import { agentRole } from '../src/home/lib/agents.mjs';
 import { makeTempTree } from './temp-tree.mjs';
@@ -63,6 +63,46 @@ test('the tooling that writes alongside a run is named by default', () => {
   // itself — the 2026-08-02 case this list exists for.
   assert.ok(DEFAULTS.environmentPaths.includes('.omc/**'));
   assert.ok(DEFAULTS.environmentPaths.includes('.claude/settings.local.json'));
+  assert.ok(DEFAULTS.environmentPaths.includes('plugins/plugin-directory-cache-v2.json'));
+  assert.ok(DEFAULTS.environmentPaths.includes('plugins/store/cc-plugin-agents-md_builtin-*.json'));
+});
+
+test('new-file defaults name exactly the observed letter layouts and are frozen', () => {
+  assert.deepEqual(DEFAULTS.environmentNewFilePaths, [
+    '!Docs/prompts/*/incoming/*.md',
+    'docs/prompts/*/incoming/*.md',
+  ]);
+  assert.equal(DEFAULTS.environmentNewFilePaths, DEFAULT_ENVIRONMENT_NEW_FILE_PATHS);
+  assert.ok(Object.isFrozen(DEFAULT_ENVIRONMENT_NEW_FILE_PATHS));
+  assert.deepEqual(readRunConfig(tempFile('{}')).environmentNewFilePaths, DEFAULT_ENVIRONMENT_NEW_FILE_PATHS);
+});
+
+test('an empty new-file list replaces the default', () => {
+  assert.deepEqual(readRunConfig(tempFile('{"environmentNewFilePaths": []}')).environmentNewFilePaths, []);
+});
+
+test('new-file patterns are trimmed, blanks dropped and host values replace the default', () => {
+  const file = tempFile(JSON.stringify({ environmentNewFilePaths: ['  letters/*.md  ', '', ' \t ', ' inbox/** '] }));
+  assert.deepEqual(readRunConfig(file).environmentNewFilePaths, ['letters/*.md', 'inbox/**']);
+});
+
+test('new-file patterns use the existing list validation message', () => {
+  for (const value of ['letters/*.md', [1]]) {
+    const file = tempFile(JSON.stringify({ environmentNewFilePaths: value }));
+    assert.throws(() => readRunConfig(file), {
+      message: `${file}: key “environmentNewFilePaths” must be a list of string patterns, not ${JSON.stringify(value)}. ` +
+        'An empty list means “the environment writes nothing”; an absent key uses the default.',
+    });
+  }
+});
+
+test('run-config state names the new-file key, its configured count and meaning', () => {
+  const file = tempFile('{"environmentNewFilePaths": ["letters/*.md"]}');
+  const result = spawnSync(process.execPath, [fileURLToPath(new URL('../src/home/lib/run-config.mjs', import.meta.url))], {
+    encoding: 'utf8', windowsHide: true, env: { ...process.env, CODEX_BRIDGE_HOME: path.dirname(file) },
+  });
+  assert.equal(result.status, 0, result.stderr || result.error?.message);
+  assert.match(result.stdout, /^environmentNewFilePaths: 1 patterns — a new file there that the order does not name is treated as environment work$/m);
 });
 
 test('the environment list is read as patterns, trimmed', () => {
