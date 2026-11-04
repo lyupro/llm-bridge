@@ -123,7 +123,7 @@ this record or reads additional evidence for it, so collecting again preserves t
 | `status` | `OK`, `FAIL`, `LIMIT`, `UNAVAILABLE`, or `CAPACITY`. |
 | `reason` | Reason for `FAIL`/`LIMIT`/`UNAVAILABLE`/`CAPACITY`; `null` for a normal `OK`. |
 | `carried_from_earlier_run` | `true` if the claimed work is found in the chain's accumulated diff but not in the current run's delta. Always present in a normal collect. |
-| `environment_changes` | Paths changed between snapshots that matched `env.json.environmentPaths`. They are visible in the audit but excluded from work evaluation. |
+| `environment_changes` | Paths changed between snapshots that matched `env.json.environmentPaths`, plus paths excused by `env.json.environmentNewFilePaths`. They are visible in the audit but excluded from work evaluation. |
 | `result_ok` | The result was read as JSON and contains the agent's primary required content field. |
 | `events_bytes` | Size of `events.jsonl` in bytes. |
 | `stderr_bytes` | Size of `stderr.log` in bytes. Normally it is **not** zero: a live probe on 2026-08-05 found hundreds of bytes of execpolicy refusals there for a completely healthy run. |
@@ -920,5 +920,5 @@ and other identities are never returned.
 - `reply.txt` is only a brief representation of meta; it is not a source of truth.
 - `state/load-witness.json` records session-start core paths and hashes in the branded home,
   independently of run verdicts; `doctor` joins those sessions to their transcripts for host-version evidence.
-- Recomputing an old run takes `environmentPaths` from its `env.json`, not from the current
-  `config.json`.
+- Recomputing an old run takes both `environmentPaths` and `environmentNewFilePaths` from its
+  `env.json`, not from the current `config.json`. An absent key means an empty list.

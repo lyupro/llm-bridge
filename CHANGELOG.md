@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Two sessions need an explicit writing boundary: `guidance concurrency` now explains two
+  sessions in one repository and a separate worktree for a second writer (OW-080).
+
+### Changed
+
+- On 2026-11-04 the worktree witness told one session that another session's edits were its
+  own. It now reports paths without claiming who changed them and no longer orders a revert
+  (OW-080).
+
+### Fixed
+
+- Eleven honest build runs failed only because a letter from another project arrived during
+  the run. A build no longer fails as out of scope for a new hashed untracked file arriving
+  in a folder configured by `environmentNewFilePaths`, unless the order's scope matches it;
+  editing or deleting an existing file stays judged as work (OW-079).
+- Six honest runs failed on two more of Claude Code's own files under `~/.claude`. The
+  `plugins/plugin-directory-cache-v2.json` and `plugins/store/cc-plugin-agents-md_builtin-*.json`
+  patterns are now environment paths (OW-079).
+
 ## [0.6.25] - 2026-10-28
 
 ### Added

@@ -404,7 +404,7 @@ Main files:
 | `task.md` | The verbatim task, computed constraints, and instructions for the selected agent. |
 | `schema.json` | JSON Schema for the Codex response. |
 | `worker.json` | Immutable order passed from launcher to worker. |
-| `env.json` | Effective `hooks`, `plugins`, and `environmentPaths` settings for this run. |
+| `env.json` | Effective `hooks`, `plugins`, `environmentPaths`, and `environmentNewFilePaths` settings for this run. |
 | `events.jsonl` | Codex CLI event stream under `--json`. It—and only it—determines quota exhaustion, usage, and the session identifier. Human-readable through `codex-bridge read <run>`. |
 | `stderr.log` | What the CLI said outside the protocol: panics, rejection of an unknown flag, execpolicy refusals. It is not normally empty—a live probe on 2026-08-05 found 488 bytes there in a healthy run. |
 | `result.json` | Structured scout or build response. |
@@ -612,7 +612,7 @@ tree consistency checks, but remain visible in `meta.json.environment_changes` a
 response. The list is edited directly in `config.json`; it is not a switch. Invalid JSON, an
 unknown key, or a value of the wrong type stops the run without spending quota.
 
-If the key is absent, five default patterns apply:
+If the key is absent, seven default patterns apply:
 
 ```json
 [
@@ -620,11 +620,32 @@ If the key is absent, five default patterns apply:
   ".claude/settings.local.json",
   "mcp-needs-auth-cache.json",
   "plugins/installed_plugins.json",
-  "plugins/known_marketplaces.json"
+  "plugins/known_marketplaces.json",
+  "plugins/plugin-directory-cache-v2.json",
+  "plugins/store/cc-plugin-agents-md_builtin-*.json"
 ]
 ```
 
 An empty list explicitly means that no path is considered an environment change.
+
+`environmentNewFilePaths` is a separate list of glob patterns for newly arriving files. A matching
+path is excluded from work only when validated snapshots show it absent before the compared pair and
+present after it as a new untracked file with a hash, and the order's scope does not match it. Editing
+or deleting an existing file stays work, as does creating a file named by the order's scope. These
+exclusions remain visible in `meta.json.environment_changes`.
+
+If the key is absent, two default patterns apply:
+
+```json
+[
+  "!Docs/prompts/*/incoming/*.md",
+  "docs/prompts/*/incoming/*.md"
+]
+```
+
+Edit `environmentNewFilePaths` directly in `config.json`; an empty list replaces the defaults and
+disables this new-file exemption. Each run records the effective list in its own `env.json`; an old
+run without the key uses an empty list when recomputed.
 
 ## Rules core, guidance and load witness
 

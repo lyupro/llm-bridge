@@ -117,8 +117,14 @@ the first matching branch determines the status. The order is therefore part of 
     `/` or `\`, or names an existing file directly in the repository root; it must still resolve inside
     task scope and within a valid line range. Other `word:number` text is ordinary prose.
 14. **Build edits outside scope.** `environmentPaths` are subtracted from the tree delta first, then the
-    remaining paths are compared with `scope.txt`. This check ranks above report matching: a report can
-    name one allowed file while concealing several extra ones.
+    remaining paths are compared with `scope.txt`. A path matching `env.json.environmentNewFilePaths`
+    also leaves the run's work only when validated snapshots show it absent before the compared pair
+    and present after it as a new untracked file with a hash, and the order's scope does not match it.
+    An edit or deletion of an existing such file stays work; an order that names the file keeps it as
+    work. The chain comparison uses its own baseline and after pair. Eleven honest build runs failed
+    only because a letter from another project arrived during the run. A run that started before the
+    key existed has an empty list. This check ranks above report matching: a report can name one allowed
+    file while concealing several extra ones.
 15. **Build report matches actual work.** `changes[].file` entries are first compared with the current
     run's delta. If there are no matches, service paths are rejected before examining the chain. The
     declared files are then searched in the accumulated diff from the chain's first `state-before.txt`
@@ -217,6 +223,15 @@ Scope cannot allow a service directory. However, a path matching `environmentPat
 this check regardless of which process actually changed it. The list must therefore contain only paths
 for which the operator is prepared to account as environment work; the audit remains in
 `environment_changes`.
+
+The second rule uses `env.json.environmentNewFilePaths`: a matching path leaves the run's work only
+when validated snapshots show it absent before the compared pair and present after it as a new
+untracked file with a hash, and the order's scope does not match it. An edit or deletion of an existing
+such file stays work, and an order that names the file keeps it as work. The chain comparison applies
+this rule to its own baseline and after pair. Eleven honest build runs failed only because a letter
+from another project arrived during the run; this rule excuses that arrival without excusing work on
+existing files. A run that started before the key existed has an empty list, read from its own
+`env.json` rather than today's defaults.
 
 ## Matching the report against the tree and chain
 
