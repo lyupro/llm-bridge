@@ -6,7 +6,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { environmentPatterns, splitEnvironment, splitRunChanges } from '../../src/home/lib/meta/environment.mjs';
+import { environmentNewFilePatterns, environmentPatterns, splitEnvironment, splitRunChanges } from '../../src/home/lib/meta/environment.mjs';
+import { encodeSnapshot } from '../../src/home/lib/meta/snapshot-format.mjs';
 import { makeRun } from './test-fixtures.mjs';
 
 test('a run folder whose env.json predates the list has no environment at all', () => {
@@ -68,5 +69,88 @@ test('each run uses the environment paths recorded in its own env.json', () => {
   assert.deepEqual(splitRunChanges(runWithEnvironment, [path]), {
     work: [],
     environment: [path],
+  });
+});
+
+const letter = 'letters/incoming.md';
+const hashed = `U\t12:${'a'.repeat(64)}`;
+const snapshot = (state, file = letter) => encodeSnapshot(
+  state === undefined ? [] : [{ path: file, state }],
+);
+
+test('new-file patterns are run-local, trimmed and empty for archived runs', () => {
+  assert.deepEqual(environmentNewFilePatterns(makeRun()), []);
+  assert.deepEqual(environmentNewFilePatterns(makeRun({ envPaths: ['letters/**'] })), []);
+  assert.deepEqual(environmentNewFilePatterns(makeRun({ envNewFilePaths: null })), []);
+  assert.deepEqual(environmentNewFilePatterns(makeRun({
+    envNewFilePaths: ['  letters/**  ', '', '   ', 'inbox/*.md'],
+  })), ['letters/**', 'inbox/*.md']);
+});
+
+const newFileCases = [
+  { name: 'new hashed letter outside scope', excused: true },
+  { name: 'empty new hashed file', after: snapshot(`U\t0:${'B'.repeat(64)}`), excused: true },
+  { name: 'letter already present before', before: snapshot(hashed) },
+  { name: 'existing letter content changed', before: snapshot(`U\t12:${'b'.repeat(64)}`) },
+  { name: 'existing tracked letter replaced', before: snapshot('1\t2') },
+  { name: 'existing letter removed', before: snapshot(hashed), after: snapshot() },
+  { name: 'new letter explicitly named by scope', scope: letter },
+  { name: 'new letter covered by scope glob', scope: '  letters/**  \n' },
+  { name: 'new letter covered by wildcard scope', scope: 'letters/*.md' },
+  { name: 'missing new untracked file', after: snapshot('U\tmissing') },
+  { name: 'unreadable new untracked file', after: snapshot('U\tunreadable') },
+  { name: 'new tracked state', after: snapshot('1\t2') },
+  { name: 'new tracked deletion state', after: snapshot('-\t-') },
+  { name: 'no after row', after: snapshot() },
+  { name: 'damaged before text', before: 'damaged' },
+  { name: 'damaged after text', after: 'damaged' },
+  { name: 'null before text', before: null },
+  { name: 'null after text', after: null },
+  { name: 'missing before text', before: undefined },
+  { name: 'missing after text', after: undefined },
+  { name: 'short hash', after: `# codex-bridge-state-v2\nU\t12:abc\t"${letter}"\n` },
+  { name: 'legacy untracked state without hash', before: '', after: `U\t12\t${letter}\n` },
+  { name: 'third argument absent', noSnapshots: true },
+  { name: 'new-file key absent', envNewFilePaths: undefined },
+  { name: 'new-file key empty', envNewFilePaths: [] },
+  { name: 'path outside new-file patterns', envNewFilePaths: ['inbox/**'] },
+];
+
+for (const row of newFileCases) {
+  test(`new-file environment rule: ${row.name}`, () => {
+    const options = { scope: 'src/**', envNewFilePaths: ['letters/**'], ...row };
+    const dir = makeRun({ scope: options.scope, envPaths: [], envNewFilePaths: options.envNewFilePaths });
+    const snapshots = {
+      before: Object.hasOwn(row, 'before') ? row.before : snapshot(),
+      after: Object.hasOwn(row, 'after') ? row.after : snapshot(hashed),
+    };
+    const split = row.noSnapshots
+      ? splitRunChanges(dir, [letter])
+      : splitRunChanges(dir, [letter], snapshots);
+    assert.deepEqual(split, row.excused
+      ? { work: [], environment: [letter] }
+      : { work: [letter], environment: [] });
+  });
+}
+
+test('ordinary environment patterns still win over scope and untrustworthy snapshots', () => {
+  const dir = makeRun({ envPaths: ['letters/**'], scope: letter });
+  for (const snapshots of [undefined, { before: null, after: 'damaged' }, {
+    before: snapshot(hashed), after: snapshot(),
+  }]) {
+    assert.deepEqual(splitRunChanges(dir, [letter], snapshots), {
+      work: [], environment: [letter],
+    });
+  }
+});
+
+test('new-file splitting preserves path normalization, order and unrelated work', () => {
+  const dir = makeRun({
+    envPaths: ['.omc/**'], envNewFilePaths: ['letters/**'], scope: 'src/**',
+  });
+  assert.deepEqual(splitRunChanges(dir, ['letters\\incoming.md', 'src/a.mjs', '.omc/state.json'], {
+    before: snapshot(), after: snapshot(hashed),
+  }), {
+    work: ['src/a.mjs'], environment: [letter, '.omc/state.json'],
   });
 });

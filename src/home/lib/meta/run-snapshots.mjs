@@ -16,6 +16,13 @@ export function readSnapshot(file) {
   }
 }
 
+export function readRunSnapshots(runDir) {
+  return {
+    before: readSnapshot(path.join(runDir, 'state-before.txt')),
+    after: readSnapshot(path.join(runDir, 'state-after.txt')),
+  };
+}
+
 export function runSnapshotChanges(runDir) {
   return compareSnapshots(
     readSnapshot(path.join(runDir, 'state-before.txt')),

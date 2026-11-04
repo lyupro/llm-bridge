@@ -64,6 +64,7 @@ export function makeRun({
   schema,
   scope,
   envPaths,
+  envNewFilePaths,
   headBefore,
   headAfter,
   branchBefore,
@@ -103,10 +104,11 @@ export function makeRun({
   if (questions !== undefined) fs.writeFileSync(path.join(dir, 'questions.json'), JSON.stringify(questions));
   if (schema !== undefined) fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify(schema));
   if (scope !== undefined) fs.writeFileSync(path.join(dir, 'scope.txt'), scope);
-  if (envPaths !== undefined) {
+  if (envPaths !== undefined || envNewFilePaths !== undefined) {
     fs.writeFileSync(
       path.join(dir, 'env.json'),
-      JSON.stringify({ hooks: false, plugins: false, environmentPaths: envPaths }),
+      JSON.stringify({ hooks: false, plugins: false, environmentPaths: envPaths,
+        environmentNewFilePaths: envNewFilePaths }),
     );
   }
   if (headBefore !== undefined) fs.writeFileSync(path.join(dir, 'head-before.txt'), headBefore);
@@ -140,10 +142,11 @@ export function makeChainRoot(runs) {
       };
       fs.writeFileSync(path.join(dir, 'status.json'), JSON.stringify(status));
     }
-    if (run.envPaths !== undefined) {
+    if (run.envPaths !== undefined || run.envNewFilePaths !== undefined) {
       fs.writeFileSync(
         path.join(dir, 'env.json'),
-        JSON.stringify({ hooks: false, plugins: false, environmentPaths: run.envPaths }),
+        JSON.stringify({ hooks: false, plugins: false, environmentPaths: run.envPaths,
+          environmentNewFilePaths: run.envNewFilePaths }),
       );
     }
     if (run.before !== undefined) fs.writeFileSync(path.join(dir, 'state-before.txt'), run.before);

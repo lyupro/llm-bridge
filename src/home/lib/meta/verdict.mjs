@@ -32,7 +32,7 @@ import { adviceGap } from './advice-status.mjs';
 import { contextOnlyGap } from './context-only.mjs';
 import { readExecutionFact, scoutExecutionGap } from './execution-fact.mjs';
 import { compareSnapshots } from './snapshot-format.mjs';
-import { readSnapshot, runSnapshotChanges, snapshotRefusal } from './run-snapshots.mjs';
+import { readRunSnapshots, snapshotRefusal } from './run-snapshots.mjs';
 import { answerRuleMessage } from '../answer-rules.mjs';
 import { MIN_SUBSTANCE_CHARS, MIN_SINGLE_SUBSTANCE_CHARS } from '../answer-rules/scout.mjs';
 
@@ -77,12 +77,13 @@ export function outOfScope(touchedPaths, patterns) {
  */
 export function reportVersusWork(runDir, result, ctx) {
   const declared = (result?.changes || []).flatMap((c) => expandDeclared(c?.file));
-  const comparison = runSnapshotChanges(runDir);
+  const snapshots = readRunSnapshots(runDir);
+  const comparison = compareSnapshots(snapshots.before, snapshots.after);
   const broken = (reason) => ({ ok: false, carried: false, reason });
   if (!comparison.ok) return broken(snapshotRefusal(comparison));
   // Only the run's own work is compared: a report that names nothing is honest when the sole
   // change in the tree was written by the tooling around the run.
-  const touched = splitRunChanges(runDir, comparison.changed).work;
+  const touched = splitRunChanges(runDir, comparison.changed, snapshots).work;
   const agreed = (carried = false) => ({ ok: true, carried, reason: null });
 
   if (!declared.length && !touched.length) return agreed();
@@ -101,9 +102,10 @@ export function reportVersusWork(runDir, result, ctx) {
 
   const baseline = chainBaseline(ctx?.runsRoot, ctx?.repo, ctx?.slug, ctx?.taskHash, ctx?.orderId);
   if (baseline !== null) {
-    const chain = compareSnapshots(baseline, readSnapshot(path.join(runDir, 'state-after.txt')));
+    const chainSnapshots = { before: baseline, after: snapshots.after };
+    const chain = compareSnapshots(chainSnapshots.before, chainSnapshots.after);
     if (chain.ok) {
-      const accumulated = splitRunChanges(runDir, chain.changed).work;
+      const accumulated = splitRunChanges(runDir, chain.changed, chainSnapshots).work;
       if (declared.some((d) => declaredHits(d, accumulated))) return agreed(true);
     }
   }
@@ -342,9 +344,10 @@ export function resolveStatus({ resultOk, exit, agent, result, runDir, events, e
       // Environment writes are subtracted first: attributing them to the run failed an honest
       // pass for a file it never opened. What was subtracted is reported, not swallowed —
       // see the "Environment" line in reply.mjs and environment_changes in meta.json.
-      const comparison = runSnapshotChanges(runDir);
+      const snapshots = readRunSnapshots(runDir);
+      const comparison = compareSnapshots(snapshots.before, snapshots.after);
       if (!comparison.ok) return { status: 'FAIL', reason: snapshotRefusal(comparison) };
-      const { work } = splitRunChanges(runDir, comparison.changed);
+      const { work } = splitRunChanges(runDir, comparison.changed, snapshots);
       const strays = outOfScope(work, patterns);
       if (strays.length) {
         return {

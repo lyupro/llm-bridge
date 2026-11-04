@@ -11,11 +11,18 @@
  * old run's verdict gives the answer it gave then — the config may have changed since.
  */
 import path from 'node:path';
-import { displayPath, globToRegExp, normalizePath, readJson } from './paths.mjs';
+import { displayPath, globToRegExp, normalizePath, readJson, readText } from './paths.mjs';
+import { decodeSnapshot } from './snapshot-format.mjs';
 
 /** Empty for runs made before the list existed: absence means "the run was the only writer". */
 export function environmentPatterns(runDir) {
   const configured = readJson(path.join(runDir, 'env.json'))?.environmentPaths;
+  return Array.isArray(configured) ? configured.map((row) => String(row).trim()).filter(Boolean) : [];
+}
+
+/** Old runs never inherit today's new-file defaults. */
+export function environmentNewFilePatterns(runDir) {
+  const configured = readJson(path.join(runDir, 'env.json'))?.environmentNewFilePaths;
   return Array.isArray(configured) ? configured.map((row) => String(row).trim()).filter(Boolean) : [];
 }
 
@@ -33,4 +40,28 @@ export function splitEnvironment(paths, patterns) {
 }
 
 /** The same split for a run on disk, using the patterns that were in force when it started. */
-export const splitRunChanges = (runDir, paths) => splitEnvironment(paths, environmentPatterns(runDir));
+export function splitRunChanges(runDir, paths, snapshots) {
+  const patterns = environmentPatterns(runDir);
+  const split = splitEnvironment(paths, patterns);
+  if (!snapshots) return split;
+  const before = decodeSnapshot(snapshots.before);
+  const after = decodeSnapshot(snapshots.after);
+  if (!before.ok || !after.ok) return split;
+  const newFiles = environmentNewFilePatterns(runDir).map(globToRegExp);
+  const scope = readText(path.join(runDir, 'scope.txt')).split(/\r?\n/)
+    .map((row) => row.trim()).filter(Boolean).map(globToRegExp);
+  // Eleven honest runs from 2026-10-21 to 2026-11-04 failed only because a letter
+  // arrived during the run. Excuse only a proven new hashed file: edits and deletions
+  // of existing letters remain work. Scope wins so deliberately creating a letter
+  // still matches a truthful report naming only that file instead of implying no change.
+  const excused = new Set(split.work.filter((file) =>
+    newFiles.some((re) => re.test(file)) && !before.rows.has(file) &&
+    /^U\t\d+:[0-9a-fA-F]{64}$/.test(after.rows.get(file) || '') &&
+    !scope.some((re) => re.test(file))));
+  if (!excused.size) return split;
+  const environment = new Set([...split.environment, ...excused]);
+  return {
+    work: split.work.filter((file) => !excused.has(file)),
+    environment: (paths || []).map(displayPath).filter((file) => environment.has(file)),
+  };
+}
