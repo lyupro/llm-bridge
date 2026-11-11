@@ -32,7 +32,7 @@ for (const scheme of [undefined, 1, 2]) {
     } else {
       assert.match(text, /recorded before the task header \(hash scheme 2\), so its task cannot be compared/);
       assert.match(text, /answer is already on disk/);
-      assert.ok(text.includes(`codex-bridge read "${dir}"`));
+      assert.ok(text.includes(`llm-bridge read "${dir}"`));
       assert.doesNotMatch(text, /different task|ATTACH=/);
     }
   });

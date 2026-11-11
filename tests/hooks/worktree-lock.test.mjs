@@ -57,7 +57,7 @@ function runLock(root, runsRoot, toolName, rawPath, cwd = root, env = {}) {
     encoding: 'utf8',
     env: {
       ...process.env,
-      CODEX_RUNS_ROOT: runsRoot,
+      LLM_BRIDGE_RUNS_ROOT: runsRoot,
       HOME: root,
       USERPROFILE: root,
       ...env,
@@ -76,7 +76,7 @@ function runShell(root, runsRoot, command, cwd = root) {
     encoding: 'utf8',
     env: {
       ...process.env,
-      CODEX_RUNS_ROOT: runsRoot,
+      LLM_BRIDGE_RUNS_ROOT: runsRoot,
       HOME: root,
       USERPROFILE: root,
     },
@@ -133,7 +133,7 @@ test('the denial reports last progress and the exact release command', async (t)
   const result = runLock(root, runsRoot, 'Write', path.join(repo, 'file.txt'));
   const reason = JSON.parse(result.stdout).hookSpecificOutput.permissionDecisionReason;
   assert.match(reason, /It is working; last progress \d+ seconds ago/);
-  assert.match(reason, new RegExp(`codex-bridge stop ${path.basename(runDir)}`));
+  assert.match(reason, new RegExp(`llm-bridge stop ${path.basename(runDir)}`));
   assert.doesNotMatch(reason, /Wait for status\.json/);
   assert.doesNotMatch(reason, /silent for/);
 });
@@ -183,7 +183,7 @@ test('relative paths use the host cwd and malformed payloads pass', async (t) =>
   const malformed = spawnSync(process.execPath, [LOCK], {
     input: '{',
     encoding: 'utf8',
-    env: { ...process.env, CODEX_RUNS_ROOT: runsRoot, HOME: root, USERPROFILE: root },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: runsRoot, HOME: root, USERPROFILE: root },
   });
   assertPass(malformed);
 });

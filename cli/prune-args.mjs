@@ -6,7 +6,7 @@ const DURATION = /^(\d+)([dh])$/;
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function error(message) {
-  return { error: `codex-bridge prune: ${message}` };
+  return { error: `llm-bridge prune: ${message}` };
 }
 
 function usageError(message) {

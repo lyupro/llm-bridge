@@ -96,7 +96,7 @@ for (const [label, result, expectedStatus] of [
 
     assert.equal(child.status, exitCodeFor(meta.status), child.stderr);
     assertRecordedFiles(dir, before);
-    assert.equal(read(dir, 'reply.txt'), `${reply}\n${crashLine}\nLog: codex-bridge read ${dir}\n`);
+    assert.equal(read(dir, 'reply.txt'), `${reply}\n${crashLine}\nLog: llm-bridge read ${dir}\n`);
     assert.ok(read(dir, 'stderr.log').startsWith(`${stderr}\nrun-codex crash: Error: `));
     assert.ok(read(dir, 'stderr.log').includes(crashMessage));
   });
@@ -148,7 +148,7 @@ for (const reason of ['recorded reason', null]) {
     assert.equal(read(dir, 'reply.txt'), [
       `LIMIT — ${reason ?? 'verdict recorded in meta.json'}`,
       crashLine,
-      `Log: codex-bridge read ${dir}\n`,
+      `Log: llm-bridge read ${dir}\n`,
     ].join('\n'));
   });
 }
@@ -186,7 +186,7 @@ test('a worker crash after metadata publication renders the verdict despite stat
   assert.equal(child.stdout, '');
   assert.equal(read(dir, 'status.json'), status);
   assert.equal(read(dir, 'reply.txt'), [
-    renderReply(dir, agent, meta), crashLine, `Log: codex-bridge read ${dir}\n`,
+    renderReply(dir, agent, meta), crashLine, `Log: llm-bridge read ${dir}\n`,
   ].join('\n'));
 });
 
@@ -230,7 +230,7 @@ test('a launcher crash with a recorded verdict answers on stdout', () => {
 
   assert.equal(child.status, exitCodeFor(meta.status), child.stderr);
   assertRecordedFiles(dir, before);
-  assert.equal(child.stdout, `${reply}\n${crashLine}\nLog: codex-bridge read ${dir}\n`);
+  assert.equal(child.stdout, `${reply}\n${crashLine}\nLog: llm-bridge read ${dir}\n`);
   assert.equal(fs.existsSync(path.join(dir, 'reply.txt')), false);
 });
 

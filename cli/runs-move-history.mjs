@@ -51,7 +51,7 @@ export function importRunHistory({ from, to, git = runGit, tmpdir = os.tmpdir() 
   if (history.imported === false) return history;
   const gitDir = path.join(to, '.git');
   const hadGit = fs.existsSync(gitDir);
-  const clone = fs.mkdtempSync(path.join(tmpdir, 'codex-bridge-runs-history-'));
+  const clone = fs.mkdtempSync(path.join(tmpdir, 'llm-bridge-runs-history-'));
   let initializing = false;
   try {
     gitStep(git, tmpdir, ['clone', '--quiet', '--no-checkout', history.top, clone]);
@@ -65,7 +65,7 @@ export function importRunHistory({ from, to, git = runGit, tmpdir = os.tmpdir() 
     gitStep(git, to, ['reset', '--quiet', 'FETCH_HEAD']);
     gitStep(git, to, ['add', '-A']);
     if (gitStep(git, to, ['diff', '--cached', '--quiet'], [0, 1]).status === 1) {
-      gitStep(git, to, ['commit', '--quiet', '-m', 'Import run records moved by codex-bridge (Plan_77)']);
+      gitStep(git, to, ['commit', '--quiet', '-m', 'Import run records moved by llm-bridge (Plan_77)']);
     }
     return { imported: true, commits: Number(gitStep(git, to, ['rev-list', '--count', 'HEAD']).stdout.trim()) };
   } catch (error) {

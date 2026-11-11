@@ -48,13 +48,13 @@ export const missingHostOrderIdReason =
 
 export const nonexistentRunReason =
   'Contract violated: the response has no RUN= or ATTACH= line with an existing run folder, so ' +
-  'delegation to Codex is not confirmed. Run codex-bridge run and return its stdout ' +
+  'delegation to Codex is not confirmed. Run llm-bridge run and return its stdout ' +
   'verbatim — the ATTACH=<path> line and the status block below it. If no run occurred, ' +
   'report the runner status: your own analysis instead of Codex is prohibited in all outcomes.';
 
 export const missingRunReason =
   'Contract violated: the response has no RUN= or ATTACH= line, so delegation to Codex is not ' +
-  'confirmed. Run codex-bridge run and return its stdout verbatim. If the runner refused before ' +
+  'confirmed. Run llm-bridge run and return its stdout verbatim. If the runner refused before ' +
   'creating a folder, return that refusal exactly as printed.';
 
 export const handbackDemandReason =
@@ -64,7 +64,7 @@ export const handbackDemandReason =
 
 export const noReceiptReason =
   'Contract violated: no run receipt is recorded for this dispatcher. Run the canonical ' +
-  "codex-bridge run command and return that run's stdout verbatim; another run on disk cannot identify this run.";
+  "llm-bridge run command and return that run's stdout verbatim; another run on disk cannot identify this run.";
 
 export const noReceiptStop = (maxBlocks, agentType) =>
   `The reply guard stopped the session: the dispatcher responded ${maxBlocks} times ` +
@@ -72,7 +72,7 @@ export const noReceiptStop = (maxBlocks, agentType) =>
 
 export const receiptMismatchReason = (runDir, receipt) =>
   `Contract violated: the response names run folder ${runDir}, but this dispatcher's run receipt ` +
-  `names ${receipt}. Run the canonical codex-bridge run command and return that run's stdout verbatim.`;
+  `names ${receipt}. Run the canonical llm-bridge run command and return that run's stdout verbatim.`;
 
 export const receiptMismatchStop = (maxBlocks, agentType, runDir, receipt) =>
   `The reply guard stopped the session: dispatcher ${agentType} returned run folder ${runDir} ` +
@@ -80,7 +80,7 @@ export const receiptMismatchStop = (maxBlocks, agentType, runDir, receipt) =>
 
 export const receiptConflictReason = (receipt, conflict) =>
   `Contract violated: this dispatcher's run receipt names ${fact(receipt)}, but a contradictory ` +
-  `receipt names ${conflict}. Run the canonical codex-bridge run command and return that run's stdout verbatim.`;
+  `receipt names ${conflict}. Run the canonical llm-bridge run command and return that run's stdout verbatim.`;
 
 export const receiptConflictStop = (maxBlocks, agentType, receipt, conflict) =>
   `The reply guard stopped the session: dispatcher ${agentType} responded ${maxBlocks} times ` +
@@ -101,7 +101,7 @@ export const omittedSiblingStop = (maxBlocks, dir, status) => stopText(
 export const liveRunReason =
   'Contract violated: status.json says state=running and the process is alive — the run is ' +
   'not finished, but you are already responding. The STARTED output of the starting call ' +
-  'is not a result. Repeat the identical codex-bridge run command, same task file, with ' +
+  'is not a result. Repeat the identical llm-bridge run command, same task file, with ' +
   'timeout 1800000: it attaches to this same run, costs no quota, and prints the verdict.';
 
 export const liveRunStop = (maxBlocks, runStatus, runDir) => stopText(
@@ -114,7 +114,7 @@ export const liveRunStop = (maxBlocks, runStatus, runDir) => stopText(
 
 export const deadRunReason =
   'Contract violated: status.json says state=running, but the process with this pid is dead ' +
-  'and meta.json is missing — the run is abandoned. Repeat the identical codex-bridge run ' +
+  'and meta.json is missing — the run is abandoned. Repeat the identical llm-bridge run ' +
   'command, same task file, with timeout of at least 1800000 and return its stdout verbatim.';
 
 export const deadRunStop = (maxBlocks, runStatus, runDir) => stopText(
@@ -129,7 +129,7 @@ export const deadRunStop = (maxBlocks, runStatus, runDir) => stopText(
 
 export const abandonedRunReason =
   'Contract violated: status.json says state=abandoned — the runner died without a verdict. ' +
-  'Repeat the identical codex-bridge run command, same task file, with timeout of at least ' +
+  'Repeat the identical llm-bridge run command, same task file, with timeout of at least ' +
   '1800000 and return its stdout verbatim.';
 
 export const abandonedRunStop = (maxBlocks, runStatus, runDir) => stopText(
@@ -144,7 +144,7 @@ export const abandonedRunStop = (maxBlocks, runStatus, runDir) => stopText(
 
 export const missingMetaReason = (runDir) =>
   `Contract violated: run folder ${runDir} has no meta.json; nothing supports the ` +
-  'response. Run codex-bridge run again and return its stdout verbatim.';
+  'response. Run llm-bridge run again and return its stdout verbatim.';
 
 export const missingDiscoveredMetaStop = (maxBlocks, discoveredStatus, runDir) => stopText(
   `The reply guard stopped the session: the dispatcher responded ${maxBlocks} times ` +

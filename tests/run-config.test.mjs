@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Guards the environment switches:
- *   node --test agents/codex-bridge/run-config.test.mjs
+ *   node --test agents/llm-bridge/run-config.test.mjs
  *
  * The point of these cases is that a run's environment is never decided by accident: an
  * absent file means defaults, a broken one stops the run, and what the flags turn into is
@@ -99,7 +99,7 @@ test('new-file patterns use the existing list validation message', () => {
 test('run-config state names the new-file key, its configured count and meaning', () => {
   const file = tempFile('{"environmentNewFilePaths": ["letters/*.md"]}');
   const result = spawnSync(process.execPath, [fileURLToPath(new URL('../src/home/lib/run-config.mjs', import.meta.url))], {
-    encoding: 'utf8', windowsHide: true, env: { ...process.env, CODEX_BRIDGE_HOME: path.dirname(file) },
+    encoding: 'utf8', windowsHide: true, env: { ...process.env, LLM_BRIDGE_HOME: path.dirname(file) },
   });
   assert.equal(result.status, 0, result.stderr || result.error?.message);
   assert.match(result.stdout, /^environmentNewFilePaths: 1 patterns — a new file there that the order does not name is treated as environment work$/m);
@@ -144,7 +144,7 @@ test('run-config state appends a pinned tier in the profile sentence and leaves 
     build: { model: 'model-b', effort: 'max', speed }, scout: { model: 'model-s' }, review: { speed },
   } }));
   const result = spawnSync(process.execPath, [fileURLToPath(new URL('../src/home/lib/run-config.mjs', import.meta.url))], {
-    encoding: 'utf8', windowsHide: true, env: { ...process.env, CODEX_BRIDGE_HOME: path.dirname(file) },
+    encoding: 'utf8', windowsHide: true, env: { ...process.env, LLM_BRIDGE_HOME: path.dirname(file) },
   });
   assert.equal(result.status, 0, result.stderr || result.error?.message);
   assert.ok(result.stdout.includes(`models: scout: model-s; build: model-b at max effort on ${speed} tier; review: default model on ${speed} tier`));

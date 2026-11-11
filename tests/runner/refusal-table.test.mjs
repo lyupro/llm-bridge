@@ -51,7 +51,7 @@ const REFUSALS = [
     why: 'Plan_27: nothing has been touched and the order has to be rewritten',
   },
   {
-    name: 'a CODEX_RUNS_ROOT that points under a retired runs root',
+    name: 'a LLM_BRIDGE_RUNS_ROOT that points under a retired runs root',
     side: 'before',
     marker: 'if (stale) die([stale,',
     why: 'Plan_77 D6: resolveProjectRunsDir would recreate the retired store with a recursive mkdir',

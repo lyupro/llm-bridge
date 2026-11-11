@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a reproducible problem with codex-bridge
+about: Report a reproducible problem with llm-bridge
 title: "[Bug] "
 labels: bug
 assignees: ""
@@ -16,14 +16,14 @@ List the smallest reliable sequence of commands or actions.
 
 ## Environment
 
-- codex-bridge version (`codex-bridge --version`):
+- llm-bridge version (`llm-bridge --version`):
 - Codex CLI version (`codex --version`):
 - Operating system and version:
 - Installation scope (`user`, `project`, or custom host):
 
 ## Diagnostics
 
-Paste the output of `codex-bridge doctor`. Remove secrets and unrelated operator data.
+Paste the output of `llm-bridge doctor`. Remove secrets and unrelated operator data.
 
 ```text
 
@@ -31,7 +31,7 @@ Paste the output of `codex-bridge doctor`. Remove secrets and unrelated operator
 
 ## Run folder
 
-Provide the relevant `<runs root>/<project>/<run>/` folder name and the smallest safe artifacts needed to reproduce the issue. Find the root in the `runsRoot` line of `codex-bridge doctor`. Do not publish secrets or private source code.
+Provide the relevant `<runs root>/<project>/<run>/` folder name and the smallest safe artifacts needed to reproduce the issue. Find the root in the `runsRoot` line of `llm-bridge doctor`. Do not publish secrets or private source code.
 
 ## Additional context
 

@@ -116,6 +116,6 @@ export function resolveProjectRunsDir(runsRootPath, repoRoot, { create = true } 
 
   throw new Error(
     `No project runs directory is available for ${repoRoot} after ${MAX_CANDIDATES} candidates. ` +
-      `Remove or relocate an obsolete ${base} directory, or choose a different CODEX_RUNS_ROOT.`,
+      `Remove or relocate an obsolete ${base} directory, or choose a different LLM_BRIDGE_RUNS_ROOT.`,
   );
 }

@@ -28,7 +28,7 @@ async function fixture(t) {
 }
 
 async function backups(root) {
-  return (await fs.readdir(root)).filter((name) => name.startsWith('settings.json.codex-bridge-backup-'));
+  return (await fs.readdir(root)).filter((name) => name.startsWith('settings.json.llm-bridge-backup-'));
 }
 
 function spec(target, event = 'SubagentStop', matcher = '*', hookPath = target.guardPath) {

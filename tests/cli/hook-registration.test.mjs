@@ -20,7 +20,7 @@ function shim(t, script, directoryName = 'bin with space & (x86)') {
   const directory = path.join(root, directoryName);
   fs.mkdirSync(directory);
   const windows = process.platform === 'win32';
-  fs.writeFileSync(path.join(directory, windows ? 'codex-bridge.cmd' : 'codex-bridge'),
+  fs.writeFileSync(path.join(directory, windows ? 'llm-bridge.cmd' : 'llm-bridge'),
     windows ? `@echo off\r\n${script}\r\n` : `#!/bin/sh\n${script}\n`, { mode: 0o755 });
   return windows ? { PATH: directory, PATHEXT: '.CMD' } : { PATH: directory };
 }
@@ -40,7 +40,7 @@ function registration(env, brandRoot = BRAND_ROOT) {
 }
 
 test('an unreachable command uses the installed path form', () => {
-  assert.equal(commandReachable('codex-bridge', EMPTY_PATH), false);
+  assert.equal(commandReachable('llm-bridge', EMPTY_PATH), false);
   const { result } = registration(EMPTY_PATH);
   assert.equal(result.form, 'path');
   assert.match(result.reason, /not on PATH/);
@@ -50,7 +50,7 @@ test('a launcher for this home gets the short form', (t) => {
   const { probe, result } = registration(launcherShim(t));
   assert.equal(probe.ok, true);
   assert.equal(result.form, 'short');
-  assert.equal(result.command, 'codex-bridge hook reply-guard');
+  assert.equal(result.command, 'llm-bridge hook reply-guard');
   assert.match(result.reason, /launches guards from this home/);
 });
 
@@ -87,7 +87,7 @@ for (const [label, answer, status] of [
 
 test('reachableCommandVersion remains compatible', (t) => {
   const env = shim(t, process.platform === 'win32' ? 'echo 1.2.3' : "printf '%s\\n' '1.2.3'");
-  assert.equal(reachableCommandVersion('codex-bridge', env), '1.2.3');
+  assert.equal(reachableCommandVersion('llm-bridge', env), '1.2.3');
 });
 
 for (const directory of ['plain', 'bin with space', 'Program Files (x86)', 'weird & name', 'caret^dir']) {
@@ -101,11 +101,11 @@ for (const directory of ['plain', 'bin with space', 'Program Files (x86)', 'weir
 test('reachableCommandVersion uses the first matching PATH entry', (t) => {
   const first = shim(t, process.platform === 'win32' ? 'echo 1.2.3' : "printf '%s\\n' '1.2.3'");
   const second = shim(t, process.platform === 'win32' ? 'echo 9.9.9' : "printf '%s\\n' '9.9.9'");
-  assert.equal(reachableCommandVersion('codex-bridge', { ...first, PATH: [first.PATH, second.PATH].join(path.delimiter) }), '1.2.3');
+  assert.equal(reachableCommandVersion('llm-bridge', { ...first, PATH: [first.PATH, second.PATH].join(path.delimiter) }), '1.2.3');
 });
 
 test('reachableCommandVersion resolves relative PATH entries', (t) => {
   const env = shim(t, process.platform === 'win32' ? 'echo 1.2.3' : "printf '%s\\n' '1.2.3'");
   env.PATH = path.relative(process.cwd(), env.PATH);
-  assert.equal(reachableCommandVersion('codex-bridge', env), '1.2.3');
+  assert.equal(reachableCommandVersion('llm-bridge', env), '1.2.3');
 });

@@ -34,7 +34,7 @@ test('a lock left behind by a dead process does not block the next owner', async
   const codexRulesDir = path.join(root, 'codex-home', 'rules');
   const host = { root: path.join(root, 'host'), brandRoot: path.join(root, 'brand'), codexRulesDir };
 
-  const lockPath = path.join(codexRulesDir, '.codex-bridge-rules.json.lock');
+  const lockPath = path.join(codexRulesDir, '.llm-bridge-rules.json.lock');
   await fs.mkdir(codexRulesDir, { recursive: true });
   await fs.writeFile(lockPath, '');
   const longAgo = new Date(Date.now() - 60_000);
@@ -64,7 +64,7 @@ test('a lock a live process is holding is waited for, not stolen', async (t) => 
   const codexRulesDir = path.join(root, 'codex-home', 'rules');
   const host = { root: path.join(root, 'host'), brandRoot: path.join(root, 'brand'), codexRulesDir };
 
-  const lockPath = path.join(codexRulesDir, '.codex-bridge-rules.json.lock');
+  const lockPath = path.join(codexRulesDir, '.llm-bridge-rules.json.lock');
   await fs.mkdir(codexRulesDir, { recursive: true });
   await fs.writeFile(lockPath, '');
 

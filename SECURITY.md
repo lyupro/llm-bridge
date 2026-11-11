@@ -29,14 +29,14 @@ These are response targets, not a guarantee of remediation within a fixed period
 
 The installer has two roots and may also install one shared Codex rule file:
 
-- `~/.lyupro/.codex-bridge/` receives package runtime files, guards, package metadata, the installation record, and operator-owned seeded configuration and conventions.
+- `~/.lyupro/.llm-bridge/` receives package runtime files, guards, package metadata, the installation record, and operator-owned seeded configuration and conventions.
 - The selected Claude Code root, either `~/.claude/` or `<repo>/.claude/`, receives package agent and slash-command files. Its `settings.json` receives this package's hook registrations and, only when requested through `permissions add`, the package's exact allow and deny rule strings.
 - The active Codex home receives the package's managed rule file under `rules/`.
 
 ### Backups and update safety
 
-Before changing an existing `settings.json`, codex-bridge writes a timestamped backup beside it. Updates preserve operator-owned seeded configuration, refuse changed package files unless `--force` is explicit, and remove obsolete files only when their recorded fingerprint is unchanged.
+Before changing an existing `settings.json`, llm-bridge writes a timestamped backup beside it. Updates preserve operator-owned seeded configuration, refuse changed package files unless `--force` is explicit, and remove obsolete files only when their recorded fingerprint is unchanged.
 
-### Files never removed by codex-bridge
+### Files never removed by llm-bridge
 
-Uninstall removes only recorded package files, hook registrations, and exact permission strings owned by codex-bridge. It never removes run records in `~/.lyupro/.codex-bridge/runs/` or the old `~/.claude/codex-runs/`, operator-authored foreign settings or hooks, changed files it does not own, shared Claude Code directories, or operator-owned configuration and conventions. Run records are also preserved by `--purge`.
+Uninstall removes only recorded package files, hook registrations, and exact permission strings owned by llm-bridge. It never removes run records in `~/.lyupro/.llm-bridge/runs/` or the old `~/.claude/codex-runs/`, operator-authored foreign settings or hooks, changed files it does not own, shared Claude Code directories, or operator-owned configuration and conventions. Run records are also preserved by `--purge`.

@@ -92,7 +92,7 @@ A missing `heartbeat` means an old run from before heartbeats were introduced: i
 lock so the new logic does not unexpectedly open the tree. A stale heartbeat with a live pid indicates
 a possibly hung process, but does not allow `unlock` to close the record: a confirmed live run remains
 `running`, and `unverified` remains with an explanation. This requires
-`codex-bridge stop <run>`, which kills the process first.
+`llm-bridge stop <run>`, which kills the process first.
 
 ## `meta.json`
 
@@ -445,7 +445,7 @@ and the worktree witness compare the two. One module owns the format:
 Version 2 (Plan_73), written since 2026-10-01:
 
 ```text
-# codex-bridge-state-v2
+# llm-bridge-state-v2
 3	1	"src/changed.mjs"
 -	-	"assets/logo.png"
 U	42:<sha256 hex>	"areas/новый.md"
@@ -639,11 +639,11 @@ call's `(inherit)` display or a table of volatile model ids.
 | `pinReasons` | Present when `pinFamily` is `null`: reasons the installed contract could not be determined, including affected paths where applicable. |
 
 The contract requires `.installed.json` format 2, a complete inventory, no legacy partition and
-at least one owner. Every recorded root's `agents/codex-bridge/<type>.md` must have the required
+at least one owner. Every recorded root's `agents/llm-bridge/<type>.md` must have the required
 frontmatter `name` and agree on a parseable family. Missing files, malformed definitions or
 disagreement produce an undetermined pin, rather than reconstructing host precedence.
 An old record migrated without a terminal stays `inventory: incomplete` until the operator
-accounts for every host using the home. `codex-bridge inventory confirm` sets `.installed.json`
+accounts for every host using the home. `llm-bridge inventory confirm` sets `.installed.json`
 `inventory` to `complete` and removes `legacy`, leaving every other field as read, including
 owners and fingerprints. It does not create a model match or clear a violation; the next
 dispatcher observation determines the comparison (Plan_67 D11).
@@ -682,7 +682,7 @@ Each load contains:
 
 | Load field | Value |
 | --- | --- |
-| `path` | Host-supplied path ending in `/rules/codex-bridge/core.md`; candidate detection accepts either slash spelling and ignores case. |
+| `path` | Host-supplied path ending in `/rules/llm-bridge/core.md`; candidate detection accepts either slash spelling and ignores case. |
 | `loadReason` | `session_start`; other load reasons are not recorded. |
 | `memoryType` | Host-supplied memory type, or `null`; it is not evidence of which host loaded the core. |
 | `sha256` | SHA-256 of the core's bytes, or `null` when reading failed or the bounded read found an oversized file. |
@@ -909,14 +909,14 @@ and other identities are never returned.
 - `meta.json` answers “why was this verdict reached, and what supports it?”
 - `events.jsonl` is the CLI event stream under `--json`, the only source for the `LIMIT` verdict, usage,
   and session identifier; `stderr.log` is what the CLI says outside the protocol, including execpolicy
-  refusals from a live run. A person reads a run with `codex-bridge read <run>`, which renders events
+  refusals from a live run. A person reads a run with `llm-bridge read <run>`, which renders events
   on demand.
 - The indication that a run was required to leave events is the `--json` flag in its own
   `worker.json#args`. A run with the flag but without `events.jsonl` is corrupt, not archival, and is
   judged as `FAIL`; the same applies to a `stopped_on_deadline` field without `stderr.log`. See `verdict.md`.
 - `raw.log` in runs before 0.2.0 contained both streams interleaved. New runs do not write it:
   under `--json` it duplicated `events.jsonl`, and a verdict cannot depend on a file that
-  `/codex-bridge:usage` itself declares removable.
+  `/llm-bridge:usage` itself declares removable.
 - `reply.txt` is only a brief representation of meta; it is not a source of truth.
 - `state/load-witness.json` records session-start core paths and hashes in the branded home,
   independently of run verdicts; `doctor` joins those sessions to their transcripts for host-version evidence.

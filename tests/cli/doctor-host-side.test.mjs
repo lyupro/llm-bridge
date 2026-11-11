@@ -45,7 +45,7 @@ test('host files warns when there are no package marks', () => {
   assert.deepEqual(result, {
     key: 'host files',
     status: 'warn',
-    value: 'no codex-bridge files or hooks in C:/host',
+    value: 'no llm-bridge files or hooks in C:/host',
   });
 });
 
@@ -149,7 +149,7 @@ test('home owners warns with an install hint for marks without an owner row', as
     settingsError: null,
   });
   assert.equal(result.status, 'warn');
-  assert.equal(result.value, `recorded: none; inventory incomplete: an old record did not name every host; install into each host first: run codex-bridge install --host "<path>"; ${host.root} has package files or hooks but is not recorded: run codex-bridge install --host "${host.root}"`);
+  assert.equal(result.value, `recorded: none; inventory incomplete: an old record did not name every host; install into each host first: run llm-bridge install --host "<path>"; ${host.root} has package files or hooks but is not recorded: run llm-bridge install --host "${host.root}"`);
 });
 
 test('ownerless incomplete home inventory recommends enrolling each host without marks', async (t) => {
@@ -158,7 +158,7 @@ test('ownerless incomplete home inventory recommends enrolling each host without
     { files: [], hooks: [], settingsError: null });
   assert.equal(result.status, 'warn');
   assert.match(result.value, /inventory incomplete/);
-  assert.ok(result.value.includes('codex-bridge install --host "<path>"'));
+  assert.ok(result.value.includes('llm-bridge install --host "<path>"'));
   assert.doesNotMatch(result.value, /inventory confirm/);
 });
 
@@ -171,7 +171,7 @@ test('incomplete inventory and unrecorded package marks each name their repair',
   });
   assert.equal(incomplete.status, 'warn');
   assert.ok(incomplete.value.includes(`inventory incomplete: an old record did not name every host; run ${INVENTORY_CONFIRM_COMMAND}`));
-  assert.ok(incomplete.value.includes(`codex-bridge install --host "${host.root}"`));
+  assert.ok(incomplete.value.includes(`llm-bridge install --host "${host.root}"`));
 });
 
 function syncRecord() {
@@ -215,7 +215,7 @@ test('owners in sync names only the older stamp even when its version matches', 
   });
   assert.deepEqual(ownersInSyncCheck(record), {
     key: 'owners in sync', status: 'warn',
-    value: `C:/host one (verified against an earlier image of 2.0.0): run codex-bridge update --host "C:/host one" ${verificationNote}`,
+    value: `C:/host one (verified against an earlier image of 2.0.0): run llm-bridge update --host "C:/host one" ${verificationNote}`,
   });
 });
 
@@ -240,7 +240,7 @@ test('owners in sync asks an unstamped older-version owner to update', () => {
   record.owners['C:/host one'].version = '1.0.0';
   assert.deepEqual(ownersInSyncCheck(record), {
     key: 'owners in sync', status: 'warn',
-    value: `C:/host one (recorded 1.0.0, image 2.0.0): run codex-bridge update --host "C:/host one" ${verificationNote}`,
+    value: `C:/host one (recorded 1.0.0, image 2.0.0): run llm-bridge update --host "C:/host one" ${verificationNote}`,
   });
 });
 
@@ -252,7 +252,7 @@ test('owners in sync never marks an incomplete or legacy inventory healthy', () 
     });
   }
   assert.equal(ownersInSyncCheck({ format: 2, owners: {} }).value,
-    `no recorded owners; inventory incomplete; install into each host first: run codex-bridge install --host "<path>"`);
+    `no recorded owners; inventory incomplete; install into each host first: run llm-bridge install --host "<path>"`);
 });
 
 test('owners in sync joins lagging, unstamped and incomplete inventory warnings', () => {
@@ -262,7 +262,7 @@ test('owners in sync joins lagging, unstamped and incomplete inventory warnings'
   delete record.owners['C:/host two'].imageFingerprint;
   assert.deepEqual(ownersInSyncCheck(record), {
     key: 'owners in sync', status: 'warn',
-    value: `C:/host one (verified against an earlier image of 2.0.0): run codex-bridge update --host "C:/host one"; not yet verified by image fingerprint: C:/host two; inventory incomplete; run ${INVENTORY_CONFIRM_COMMAND} if the recorded hosts are all of them ${verificationNote}`,
+    value: `C:/host one (verified against an earlier image of 2.0.0): run llm-bridge update --host "C:/host one"; not yet verified by image fingerprint: C:/host two; inventory incomplete; run ${INVENTORY_CONFIRM_COMMAND} if the recorded hosts are all of them ${verificationNote}`,
   });
 });
 

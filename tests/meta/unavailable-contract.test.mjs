@@ -55,6 +55,6 @@ test('post-start UNAVAILABLE appends the log and mirrors LIMIT worktree rows for
     const suffix = limitReply(ctx, meta).slice(3);
     assert.deepEqual(unavailableReply(ctx, meta), [...unavailableRows(meta.reason), ...suffix]);
     assert.equal(suffix.some((row) => row.startsWith('Worktree: ')), agent === 'codex-build');
-    assert.equal(suffix.at(-1), 'Log: codex-bridge read tests/meta');
+    assert.equal(suffix.at(-1), 'Log: llm-bridge read tests/meta');
   }
 });

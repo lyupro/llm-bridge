@@ -32,7 +32,7 @@ test('changed bytes fail even when the recorded package identity matches', async
   assert.equal(result.status, 'fail');
   assert.match(result.value, /changed: package\.json/);
   assert.ok(result.value.includes(`(${ownPackage.name}@${ownPackage.version})`));
-  assert.match(result.value, /run codex-bridge update --force with this same command to replace it/);
+  assert.match(result.value, /run llm-bridge update --force with this same command to replace it/);
 });
 
 test('a deleted brand file is named as missing', async (t) => {
@@ -75,7 +75,7 @@ test('changed paths are capped at five with an exact remainder count', async (t)
 
 test('no installation record warns before inspecting the host', async () => {
   assert.deepEqual(await homeImageCheck(null, null), {
-    key: 'homeImage', status: 'warn', value: 'Home image was not checked; run codex-bridge install',
+    key: 'homeImage', status: 'warn', value: 'Home image was not checked; run llm-bridge install',
   });
 });
 

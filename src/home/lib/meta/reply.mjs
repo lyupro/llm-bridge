@@ -27,7 +27,7 @@ const runChanges = (runDir) => {
   return splitRunChanges(runDir, changedPaths(before, after), { before, after });
 };
 
-const readCommand = (runDir) => `codex-bridge read ${runDir}`;
+const readCommand = (runDir) => `llm-bridge read ${runDir}`;
 
 function stripVerdict(value) {
   // Run 2026-10-01_114244_plan72-r3q-live-probe-20261001 repeated OK because the model prefixed its summary.

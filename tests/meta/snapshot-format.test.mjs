@@ -132,7 +132,7 @@ for (const [name, text] of [
   ['legacy leading whitespace', '1\t0\t file\n'],
   ['legacy duplicate', '1\t0\tfile\n2\t0\tfile \n'],
   ['header after first row', `1\t0\tfile\n${SNAPSHOT_V2_HEADER}\n`],
-  ['unsupported header', '# codex-bridge-state-v3\n'],
+  ['unsupported header', '# llm-bridge-state-v3\n'],
   ['non-text input', undefined],
 ]) {
   test(`decoder rejects the whole snapshot for ${name}`, () => {

@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { model } from '../../cli/model.mjs';
 import { validateRunConfig } from '../../src/home/lib/config-validate.mjs';
-import { HELP, main } from '../../bin/codex-bridge.mjs';
+import { HELP, main } from '../../bin/llm-bridge.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -136,14 +136,14 @@ test('model refuses unsupported actions and arguments before reading or fetching
   assert.equal(fs.readFileSync(configPath, 'utf8'), source);
 });
 
-test('dispatcher shows the configured machine-wide profile from CODEX_BRIDGE_HOME', (t) => {
+test('dispatcher shows the configured machine-wide profile from LLM_BRIDGE_HOME', (t) => {
   const profiles = configuredProfiles();
   const { root, configPath, source } = fixture(t, profiles);
-  const result = spawnSync(process.execPath, [path.join(ROOT, 'bin', 'codex-bridge.mjs'), 'model'], {
+  const result = spawnSync(process.execPath, [path.join(ROOT, 'bin', 'llm-bridge.mjs'), 'model'], {
     cwd: root,
     encoding: 'utf8',
     windowsHide: true,
-    env: { ...process.env, CODEX_BRIDGE_HOME: root },
+    env: { ...process.env, LLM_BRIDGE_HOME: root },
   });
 
   assert.equal(result.status, 0, result.stderr);
@@ -159,8 +159,8 @@ test('dispatcher forwards model arguments and returns the command exit code', as
     log: (message) => messages.push(message), error: () => assert.fail('unexpected dispatcher error'),
   });
   assert.equal(exitCode, 2);
-  assert.deepEqual(messages, ['codex-bridge model: unexpected argument "extra".\nRun codex-bridge model -h for usage.']);
-  assert.match(HELP, /^  codex-bridge model$/m);
+  assert.deepEqual(messages, ['llm-bridge model: unexpected argument "extra".\nRun llm-bridge model -h for usage.']);
+  assert.match(HELP, /^  llm-bridge model$/m);
   assert.match(HELP, /^  model\s+Show, set or list the models delegated roles run on$/m);
 });
 
@@ -168,15 +168,15 @@ test('speed is a registered action and the dispatcher returns its missing-role r
   const messages = [];
   const result = await main(['model', 'speed'], { log: (message) => messages.push(message) });
   assert.equal(result, 2);
-  assert.deepEqual(messages, [`codex-bridge model: role is required. Allowed roles: ${roles.join(', ')}.`]);
+  assert.deepEqual(messages, [`llm-bridge model: role is required. Allowed roles: ${roles.join(', ')}.`]);
 });
 
 test('dispatcher forwards speed unset to the machine-wide profile without removing model or effort', (t) => {
   const profiles = configuredProfiles();
   profiles.build.speed = randomUUID();
   const { root, configPath } = fixture(t, profiles);
-  const result = spawnSync(process.execPath, [path.join(ROOT, 'bin', 'codex-bridge.mjs'), 'model', 'speed', 'build', 'unset'], {
-    cwd: root, encoding: 'utf8', windowsHide: true, env: { ...process.env, CODEX_BRIDGE_HOME: root },
+  const result = spawnSync(process.execPath, [path.join(ROOT, 'bin', 'llm-bridge.mjs'), 'model', 'speed', 'build', 'unset'], {
+    cwd: root, encoding: 'utf8', windowsHide: true, env: { ...process.env, LLM_BRIDGE_HOME: root },
   });
   assert.equal(result.status, 0, result.stderr);
   assert.ok(result.stdout.includes(`on ${profiles.build.speed} tier ->`));
@@ -185,7 +185,7 @@ test('dispatcher forwards speed unset to the machine-wide profile without removi
 });
 
 test('Plan_56 additions stay below 400 lines and use role terminology', () => {
-  const files = ['cli/model.mjs', 'cli/model-set.mjs', 'cli/model-catalogue.mjs', 'bin/codex-bridge.mjs',
+  const files = ['cli/model.mjs', 'cli/model-set.mjs', 'cli/model-catalogue.mjs', 'bin/llm-bridge.mjs',
     'cli/model-speed.mjs', 'tests/cli/model-speed.test.mjs', 'tests/cli/model.test.mjs', 'tests/cli/model-catalogue.test.mjs'];
   for (const file of files) {
     const source = fs.readFileSync(path.join(ROOT, file), 'utf8');

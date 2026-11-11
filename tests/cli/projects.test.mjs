@@ -138,14 +138,14 @@ test('projects refuses unknown options with command help', () => {
   const result = projects(['--bogus']);
 
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output, 'codex-bridge projects: unknown option "--bogus"\nRun codex-bridge projects -h for usage.');
+  assert.equal(result.output, 'llm-bridge projects: unknown option "--bogus"\nRun llm-bridge projects -h for usage.');
 });
 
 test('projects refuses extra project names with command help', () => {
   const result = projects(['a', 'b']);
 
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output, 'codex-bridge projects accepts at most one project name.\nRun codex-bridge projects -h for usage.');
+  assert.equal(result.output, 'llm-bridge projects accepts at most one project name.\nRun llm-bridge projects -h for usage.');
 });
 
 test('unknown project names are refused with a non-zero exit code', (t) => {

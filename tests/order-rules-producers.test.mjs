@@ -83,7 +83,7 @@ test('retired producers retain exact messages, equivalent paths and null success
     assert.equal(retiredRootRefusal({ candidate, retired, destination }), expected);
     assert.equal(retiredPathRefusal(candidate, resolution), expected);
     const stale = expected + '\n' +
-      'CODEX_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.';
+      'LLM_BRIDGE_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.';
     assert.equal(staleOverrideRefusal(resolution), stale);
     assert.equal(checkOutgoingRefusal(stale, 'producers-test'), stale);
     assert.equal(retiredPathRefusal(destination, resolution), null);
@@ -198,7 +198,7 @@ test('D6 producer probe journals handwritten text and unknown parameters in a se
     checkOutgoingRefusal(unavailableRows('signed out').join('\\n'), 'producers-probe');
     orderRuleMessage('question-context-marker', { context: 'task-input', refusal: 'handwritten refusal' });
     orderDiagnosticMessage('codex-unavailable-handoff', { variant: 'handoff', unknown: 'handwritten parameter' });
-  `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+  `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const directory = path.join(root, 'order-text-violations');

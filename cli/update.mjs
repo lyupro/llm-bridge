@@ -72,7 +72,7 @@ function appliedOutput(states) {
     [states.filter((state) => ['modified', 'unowned'].includes(state.status) && state.item).length, 'overwritten'],
     [states.filter((state) => state.status === 'orphaned' && state.exists).length, 'removed'],
   ].filter(([total]) => total > 0).map(([total, label]) => `${total} ${label}`);
-  return parts.length ? `Updated codex-bridge: ${parts.join(', ')}.` : 'Updated codex-bridge.';
+  return parts.length ? `Updated llm-bridge: ${parts.join(', ')}.` : 'Updated llm-bridge.';
 }
 
 function conflictOutput(conflicts, legacy, dryRun) {
@@ -129,7 +129,7 @@ function previousHooks(host, record, targets) {
         event: hook.event,
         matcher: definition.matcher,
         command: hook.command || commandFor(target),
-        alternateCommands: [commandFor(target), `codex-bridge hook ${definition.name}`],
+        alternateCommands: [commandFor(target), `llm-bridge hook ${definition.name}`],
       },
     };
   });
@@ -156,7 +156,7 @@ async function updateInRun({
     // transition question — and update has changed nothing yet, so the question still precedes any change.
     const inspection = await inspectHost(host);
     if (!hasPackageMarks(inspection)) {
-      return { exitCode: 1, output: 'codex-bridge is not installed. Run codex-bridge install first.' };
+      return { exitCode: 1, output: 'llm-bridge is not installed. Run llm-bridge install first.' };
     }
     const installed = await install({
       host,
@@ -247,7 +247,7 @@ async function updateInRun({
     + ` (${resolved.kind === 'installed copy' ? 'installed package' : resolved.kind})`;
   // Standing in one checkout while another copy answers is how that install went wrong: the reply
   // was true about the package that ran and silent about the one the operator had on screen.
-  const elsewhere = checkoutAt(env.CODEX_BRIDGE_CWD ?? process.cwd(), resolved);
+  const elsewhere = checkoutAt(env.LLM_BRIDGE_CWD ?? process.cwd(), resolved);
   const mismatch = elsewhere && elsewhere.version !== currentPackage.version
     ? `\nRun from ${currentPackage.version}; the checkout at ${elsewhere.root} is ${elsewhere.version}.`
       + ' The home was updated from the copy that answered, not from that checkout'
@@ -273,7 +273,7 @@ async function updateInRun({
     const ownerSync = await syncOtherOwners(host, { packageRoot, env, dryRun });
     return {
       exitCode: ownerSync.complete ? 0 : 1,
-      output: [`codex-bridge is up to date with ${source}${mismatch}`, ...ownerSync.lines]
+      output: [`llm-bridge is up to date with ${source}${mismatch}`, ...ownerSync.lines]
         .filter(Boolean).join('\n'),
     };
   }
@@ -281,7 +281,7 @@ async function updateInRun({
     const ownerSync = await syncOtherOwners(host, { packageRoot, env, dryRun });
     return {
       exitCode: 0,
-      output: [`Would update codex-bridge with ${source}.${mismatch}`,
+      output: [`Would update llm-bridge with ${source}.${mismatch}`,
         ...(transition ? [`A real run would ask whether this host is the only one using ${host.brandRoot}.`] : []),
         dryRunOutput(states, inspectedHooks, legacy, oldHooks), ...ownerSync.lines]
         .filter(Boolean).join('\n'),

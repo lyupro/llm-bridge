@@ -40,7 +40,7 @@ export const DISPATCHER_PROTOCOL = Object.freeze({
   }),
   'denial': Object.freeze({
     data: Object.freeze(['command']),
-    message: ({ reason, command }) => `codex-bridge dispatcher gate: ${reason}` +
+    message: ({ reason, command }) => `llm-bridge dispatcher gate: ${reason}` +
       (typeof command === 'string' && command.length > 0
         ? `\n${command}\n${dispatcherProtocolMessage('command-repeat')}` : ''),
   }),
@@ -75,9 +75,9 @@ No path in the call means run nothing and return
 
 ## When the host refuses the command
 
-If the host refuses to run \`codex-bridge run\` — a permission prompt, a classifier denial, anything
+If the host refuses to run \`llm-bridge run\` — a permission prompt, a classifier denial, anything
 that stops the command — that refusal is your final answer. Report \`FAIL\`, name the task file from the call,
-and state the one correction: the operator runs \`codex-bridge install\`, which grants the permission
+and state the one correction: the operator runs \`llm-bridge install\`, which grants the permission
 rule this package needs.
 
 You are forbidden to look for a way around it. Specifically, and without exception:

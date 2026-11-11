@@ -33,7 +33,7 @@ The file is created after all task/schema/snapshot artifacts and before the work
     "enabled": false,
     "calibration": null,
     "brake": {
-      "key": "CODEX_BRIDGE_AUTO_RECOVERY",
+      "key": "LLM_BRIDGE_AUTO_RECOVERY",
       "value": "on",
       "source": "default"
     },
@@ -80,7 +80,7 @@ the worker writes the child's order through `reserveRecoveryChild` only from the
 arguments in their own saved order.
 
 The launcher resolves `recovery_policy.brake` once per run, before any paid work. Its key is
-`CODEX_BRIDGE_AUTO_RECOVERY`: an unset or trimmed-empty value records `value: "on"` and
+`LLM_BRIDGE_AUTO_RECOVERY`: an unset or trimmed-empty value records `value: "on"` and
 `source: "default"`; exact lowercase `on` or `off` after trimming records that value and
 `source: "env"`. Any other value refuses the launch before a run folder exists. The brake can
 only switch automatic recovery off; `on` cannot enable a false package switch. The worker

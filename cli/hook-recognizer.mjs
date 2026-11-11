@@ -13,7 +13,7 @@ import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
 
 // Directories whose hook paths still count as ours (Plan_82 D5). Checked against git history:
-// agents/codex-bridge never held hooks — they moved into the brand home (7a43fa4, 2026-08-10) a
+// agents/llm-bridge never held hooks — they moved into the brand home (7a43fa4, 2026-08-10) a
 // day before that directory existed (4eafc85).
 const HOOK_DIRECTORIES = Object.freeze([
   Object.freeze({ root: 'brandRoot', segments: ['hooks'] }),

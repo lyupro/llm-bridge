@@ -45,11 +45,11 @@ export function runsRootCheck(options = {}) {
       return check('runsRoot', 'fail', value + ' — ' + staleOverrideRefusal(resolution));
     }
     if (resolution.source === 'legacy') {
-      return check('runsRoot', 'warn', value + ' — move pending: run codex-bridge runs move when no other project is running.');
+      return check('runsRoot', 'warn', value + ' — move pending: run llm-bridge runs move when no other project is running.');
     }
     if (resolution.source === 'moved' && fs.existsSync(resolution.legacyRoot)
       && fs.statSync(resolution.legacyRoot).isDirectory()) {
-      return check('runsRoot', 'warn', value + ' — the old folder ' + resolution.legacyRoot + ' still exists; codex-bridge runs move removes it.');
+      return check('runsRoot', 'warn', value + ' — the old folder ' + resolution.legacyRoot + ' still exists; llm-bridge runs move removes it.');
     }
     const top = gitTop(root);
     if (top && normalizeRepoPath(top) !== normalizeRepoPath(root)

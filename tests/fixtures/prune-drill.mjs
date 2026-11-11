@@ -17,8 +17,8 @@
  * Creates `cb-drill` (three runs) and `cb-drill-purge` (one) under the run store. Both are removed
  * by the last steps of the checklist itself:
  *
- *   node bin/codex-bridge.mjs prune cb-drill --purge -f
- *   node bin/codex-bridge.mjs prune cb-drill-purge --purge -f
+ *   node bin/llm-bridge.mjs prune cb-drill --purge -f
+ *   node bin/llm-bridge.mjs prune cb-drill-purge --purge -f
  */
 import fs from 'node:fs';
 import path from 'node:path';

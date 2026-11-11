@@ -4,7 +4,7 @@ allowed-tools: Bash
 argument-hint: "[list | set <role> <model> [effort] | unset <role> | speed <role> <tier> [confirm] | speed <role> unset]"
 ---
 
-<!-- Part of the agents/codex-bridge/ package. The file lives here out of necessity: the slash
+<!-- Part of the agents/llm-bridge/ package. The file lives here out of necessity: the slash
      command name is set by its location under commands/<namespace>/, and Claude Code understands neither
      symlinks nor pointer files (verified 2026-08-02). Edit it here; it travels as a copy when the
      package is installed. -->
@@ -16,10 +16,10 @@ Run exactly this command, substituting the user's arguments (`$ARGUMENTS`), and 
 verbatim. Add nothing and recompute nothing:
 
 ```bash
-codex-bridge model $ARGUMENTS
+llm-bridge model $ARGUMENTS
 ```
 
-Unlike the older `/codex-bridge:env`, this calls the short package command rather than a path to a
+Unlike the older `/llm-bridge:env`, this calls the short package command rather than a path to a
 file (Plan_56 D1). The operator's standing permission rule is written for that spelling, and moving
 the installed files can no longer break the call.
 

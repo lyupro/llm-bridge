@@ -31,46 +31,46 @@ test('helpRequest recognizes only exact command or declared-action help shapes',
 
 test('withCommandHelp appends exactly one hint and is idempotent', () => {
   const message = 'Unknown model option.';
-  const expected = 'Unknown model option.\nRun codex-bridge model -h for usage.';
+  const expected = 'Unknown model option.\nRun llm-bridge model -h for usage.';
   assert.equal(withCommandHelp('model', message), expected);
   assert.equal(withCommandHelp('model', expected), expected);
   assert.equal(withCommandHelp('model', withCommandHelp('model', message)), expected);
-  assert.equal(withCommandHelp('model', 'Run codex-bridge model -h for usage.'), 'Run codex-bridge model -h for usage.');
-  assert.equal(withCommandHelp('model', 'Prefix Run codex-bridge model -h for usage.'), 'Prefix Run codex-bridge model -h for usage.\nRun codex-bridge model -h for usage.');
+  assert.equal(withCommandHelp('model', 'Run llm-bridge model -h for usage.'), 'Run llm-bridge model -h for usage.');
+  assert.equal(withCommandHelp('model', 'Prefix Run llm-bridge model -h for usage.'), 'Prefix Run llm-bridge model -h for usage.\nRun llm-bridge model -h for usage.');
 });
 
 const entry = {
   name: 'model',
   summary: 'Read or change the model.',
-  usage: ['codex-bridge model', 'codex-bridge model <action>'],
+  usage: ['llm-bridge model', 'llm-bridge model <action>'],
 };
 const entryWithActions = {
   ...entry,
   actions: {
-    set: { summary: 'Choose a model.', usage: ['codex-bridge model set <name>', 'codex-bridge model set <name> --project <path>'] },
-    show: { summary: 'Show the model.', usage: ['codex-bridge model show'] },
+    set: { summary: 'Choose a model.', usage: ['llm-bridge model set <name>', 'llm-bridge model set <name> --project <path>'] },
+    show: { summary: 'Show the model.', usage: ['llm-bridge model show'] },
   },
 };
 
 test('renderCommandHelp renders a command without actions', () => {
-  assert.equal(renderCommandHelp(entry), 'Usage:\n  codex-bridge model\n  codex-bridge model <action>\n\nRead or change the model.');
+  assert.equal(renderCommandHelp(entry), 'Usage:\n  llm-bridge model\n  llm-bridge model <action>\n\nRead or change the model.');
 });
 
 test('renderCommandHelp lists actions and the one-action hint', () => {
-  assert.equal(renderCommandHelp(entryWithActions), 'Usage:\n  codex-bridge model\n  codex-bridge model <action>\n\nRead or change the model.\n\nActions:\n  set   Choose a model.\n  show  Show the model.\nRun codex-bridge model <action> -h for one action.');
+  assert.equal(renderCommandHelp(entryWithActions), 'Usage:\n  llm-bridge model\n  llm-bridge model <action>\n\nRead or change the model.\n\nActions:\n  set   Choose a model.\n  show  Show the model.\nRun llm-bridge model <action> -h for one action.');
 });
 
 test('renderCommandHelp renders only the requested action usage and summary', () => {
-  assert.equal(renderCommandHelp(entryWithActions, 'set'), 'Usage:\n  codex-bridge model set <name>\n  codex-bridge model set <name> --project <path>\n\nChoose a model.');
-  assert.equal(renderCommandHelp(entryWithActions, 'show'), 'Usage:\n  codex-bridge model show\n\nShow the model.');
+  assert.equal(renderCommandHelp(entryWithActions, 'set'), 'Usage:\n  llm-bridge model set <name>\n  llm-bridge model set <name> --project <path>\n\nChoose a model.');
+  assert.equal(renderCommandHelp(entryWithActions, 'show'), 'Usage:\n  llm-bridge model show\n\nShow the model.');
   assert.throws(() => renderCommandHelp(entryWithActions, 'missing'), /Unknown help action/);
 });
 
 test('renderCommandHelp fails loudly for every malformed usage prefix', () => {
-  assert.throws(() => renderCommandHelp({ ...entry, usage: ['codex-bridge doctor'] }), /Help usage must start with "codex-bridge model"/);
-  assert.throws(() => renderCommandHelp({ ...entry, usage: ['codex-bridge model-extra'] }), /Help usage must start/);
-  assert.throws(() => renderCommandHelp({ ...entry, usage: ['codex-bridge model', 'model set <name>'] }), /Help usage must start/);
-  const malformedAction = { ...entryWithActions, actions: { ...entryWithActions.actions, typo: { summary: 'Invalid.', usage: ['codex-bridge models typo'] } } };
+  assert.throws(() => renderCommandHelp({ ...entry, usage: ['llm-bridge doctor'] }), /Help usage must start with "llm-bridge model"/);
+  assert.throws(() => renderCommandHelp({ ...entry, usage: ['llm-bridge model-extra'] }), /Help usage must start/);
+  assert.throws(() => renderCommandHelp({ ...entry, usage: ['llm-bridge model', 'model set <name>'] }), /Help usage must start/);
+  const malformedAction = { ...entryWithActions, actions: { ...entryWithActions.actions, typo: { summary: 'Invalid.', usage: ['llm-bridge models typo'] } } };
   assert.throws(() => renderCommandHelp(malformedAction), /Help usage must start/);
   assert.throws(() => renderCommandHelp(malformedAction, 'set'), /Help usage must start/);
   assert.throws(() => renderCommandHelp(malformedAction, 'typo'), /Help usage must start/);

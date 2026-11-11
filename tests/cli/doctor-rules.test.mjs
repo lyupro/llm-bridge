@@ -10,7 +10,7 @@ import { normalizeRepoPath } from '../../src/home/lib/runner/project-dir.mjs';
 import { codexProbe, hostFixture, installedFixture, ownPackage, honestInstalledFixture } from './doctor-fixtures.mjs';
 
 async function addRules(host, record, content = 'prefix_rule(pattern=["safe"], decision="allow")\n') {
-  const rulePath = path.join(host.codexRulesDir, 'codex-bridge.rules');
+  const rulePath = path.join(host.codexRulesDir, 'llm-bridge.rules');
   await fs.mkdir(path.dirname(rulePath), { recursive: true });
   await fs.writeFile(rulePath, content);
   record.rules = { path: rulePath, fingerprint: await fileFingerprint(rulePath) };

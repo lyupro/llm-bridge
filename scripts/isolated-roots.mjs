@@ -3,11 +3,11 @@
 /**
  * A fixture that does not name a root falls back to one of these variables, so the suite runner
  * replaces all of them and the isolation test asserts each one. Two incidents put entries here:
- * `~/.codex` collected a rules file on 2026-08-03, and `~/.lyupro/.codex-bridge` collected a
+ * `~/.codex` collected a rules file on 2026-08-03, and `~/.lyupro/.llm-bridge` collected a
  * config, conventions and an obsolete-file fixture on 2026-08-11, where the stray config then
  * stood in the way of the seeded-file migration the release was about.
  *
- * `CODEX_RUNS_ROOT` joined before a failure rather than after one (Plan_65 B12): the runs root
+ * `LLM_BRIDGE_RUNS_ROOT` joined before a failure rather than after one (Plan_65 B12): the runs root
  * falls back to the resolver's default (the package home's `runs/`, or the old
  * `~/.claude/codex-runs` while a move is pending), so a runner test that did not name it
  * filed its runs among real ones, and the purge liveness checks would read real live runs as the
@@ -16,4 +16,4 @@
  * It sits in its own module because the isolation test imports it, and importing the runner would
  * start a second suite inside the first.
  */
-export const ISOLATED_ROOTS = Object.freeze(['CODEX_HOME', 'CODEX_BRIDGE_HOME', 'CODEX_RUNS_ROOT']);
+export const ISOLATED_ROOTS = Object.freeze(['CODEX_HOME', 'LLM_BRIDGE_HOME', 'LLM_BRIDGE_RUNS_ROOT']);

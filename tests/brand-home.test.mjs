@@ -17,24 +17,24 @@ import { ENV_KEYS } from '../src/home/lib/package-identity.mjs';
 
 test('brandStateDir is the shared state path resolver', () => {
   const root = path.join(os.tmpdir(), 'brand-state-dir');
-  assert.equal(brandStateDir(root), resolveBrandHome({ env: { CODEX_BRIDGE_HOME: root } }).stateDir);
+  assert.equal(brandStateDir(root), resolveBrandHome({ env: { LLM_BRIDGE_HOME: root } }).stateDir);
 });
 
 test('brand home reports whether its root came from the environment or the default', () => {
   const homedir = path.join(os.tmpdir(), 'bridge-resolver-home');
   const fallback = resolveBrandHome({ homedir, env: {} });
   assert.deepEqual(fallback, {
-    root: path.join(homedir, '.lyupro', '.codex-bridge'),
+    root: path.join(homedir, '.lyupro', '.llm-bridge'),
     source: 'default',
-    stateDir: path.join(homedir, '.lyupro', '.codex-bridge', 'state'),
-    configPath: path.join(homedir, '.lyupro', '.codex-bridge', 'config.json'),
-    conventionsPath: path.join(homedir, '.lyupro', '.codex-bridge', 'conventions.md'),
+    stateDir: path.join(homedir, '.lyupro', '.llm-bridge', 'state'),
+    configPath: path.join(homedir, '.lyupro', '.llm-bridge', 'config.json'),
+    conventionsPath: path.join(homedir, '.lyupro', '.llm-bridge', 'conventions.md'),
   });
 
   const override = path.join(os.tmpdir(), 'bridge-resolver-override');
-  const configured = resolveBrandHome({ homedir, env: { CODEX_BRIDGE_HOME: override } });
+  const configured = resolveBrandHome({ homedir, env: { LLM_BRIDGE_HOME: override } });
   assert.equal(configured.root, override);
-  assert.equal(configured.source, 'CODEX_BRIDGE_HOME');
+  assert.equal(configured.source, 'LLM_BRIDGE_HOME');
   assert.equal(configured.stateDir, path.join(override, 'state'));
   assert.equal(configured.configPath, path.join(override, 'config.json'));
   assert.equal(configured.conventionsPath, path.join(override, 'conventions.md'));
@@ -45,7 +45,7 @@ test('brand home accepts only the exact environment key named by package identit
   const override = path.join(os.tmpdir(), 'bridge-identity-override');
   const ignored = path.join(os.tmpdir(), 'bridge-identity-ignored');
   const fallback = resolveBrandHome({ homedir, env: {} });
-  for (const key of [ENV_KEYS.home.toLowerCase(), 'LLM_BRIDGE_HOME']) {
+  for (const key of [ENV_KEYS.home.toLowerCase(), 'CODEX_BRIDGE_HOME']) {
     assert.deepEqual(resolveBrandHome({ homedir, env: { [key]: ignored } }), fallback);
     const configured = resolveBrandHome({
       homedir, env: { [key]: ignored, [ENV_KEYS.home]: override },
@@ -79,7 +79,7 @@ test('brand state paths are built only by brand-home.mjs', () => {
  */
 test('the seeded files resolve inside the same home', () => {
   const home = path.join(os.tmpdir(), 'bridge-resolver-pair');
-  const resolved = resolveBrandHome({ env: { CODEX_BRIDGE_HOME: home } });
+  const resolved = resolveBrandHome({ env: { LLM_BRIDGE_HOME: home } });
   assert.equal(path.dirname(resolved.configPath), resolved.root);
   assert.equal(path.dirname(resolved.conventionsPath), resolved.root);
 });

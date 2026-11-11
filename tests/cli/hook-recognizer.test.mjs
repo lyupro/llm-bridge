@@ -45,10 +45,10 @@ test('short commands require the primary CLI name, exact spacing, and a known ho
 test('unknown, extended, and embedded short commands are foreign', (t) => {
   const host = makeHost(t);
 
-  assert.deepEqual(isOwnHookCommand('codex-bridge hook unknown-hook', host), FOREIGN);
-  assert.deepEqual(isOwnHookCommand('codex-bridge hook reply-guard --x', host), FOREIGN);
-  assert.deepEqual(isOwnHookCommand('codex-bridge hook reply-guard\n', host), FOREIGN);
-  assert.deepEqual(isOwnHookCommand('echo codex-bridge hook reply-guard', host), FOREIGN);
+  assert.deepEqual(isOwnHookCommand('llm-bridge hook unknown-hook', host), FOREIGN);
+  assert.deepEqual(isOwnHookCommand('llm-bridge hook reply-guard --x', host), FOREIGN);
+  assert.deepEqual(isOwnHookCommand('llm-bridge hook reply-guard\n', host), FOREIGN);
+  assert.deepEqual(isOwnHookCommand('echo llm-bridge hook reply-guard', host), FOREIGN);
 });
 
 test('brand hook paths are recognized in every normalized spelling', (t) => {
@@ -79,7 +79,7 @@ test('a path-form command into the pre-brand-home agents/codex/hooks location is
 
 test('locations and files no release installed are foreign', (t) => {
   const host = makeHost(t);
-  const neverHooks = path.join(host.root, 'agents', 'codex-bridge', 'hooks', FIRST.file);
+  const neverHooks = path.join(host.root, 'agents', 'llm-bridge', 'hooks', FIRST.file);
   const notOurFile = path.join(host.root, 'agents', 'codex', 'hooks', 'codex-reply-guard.mjs');
   const foreignDir = path.join(path.dirname(host.root), 'foreign-hooks', FIRST.file);
 
@@ -98,7 +98,7 @@ test('another interpreter or a relative path is foreign', (t) => {
 
 test('findOwnHooks returns own commands across events and groups only', (t) => {
   const host = makeHost(t);
-  const shortCommand = `codex-bridge hook ${FIRST.name}`;
+  const shortCommand = `llm-bridge hook ${FIRST.name}`;
   const pathHookCommand = pathCommand(path.join(host.brandHooksDir, WITNESS.file));
   const settings = {
     hooks: {
@@ -106,7 +106,7 @@ test('findOwnHooks returns own commands across events and groups only', (t) => {
         matcher: 'Bash',
         hooks: [
           { type: 'command', command: shortCommand },
-          { type: 'command', command: 'echo codex-bridge hook reply-guard' },
+          { type: 'command', command: 'echo llm-bridge hook reply-guard' },
         ],
       }],
       [WITNESS.event]: [

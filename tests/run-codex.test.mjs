@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Guards run-codex.mjs: the decisions it makes before spending anyone's quota.
- *   node --test agents/codex-bridge/run-codex.test.mjs
+ *   node --test agents/llm-bridge/run-codex.test.mjs
  *
  * It is imported, not executed — and that importing it starts nothing is itself one of the
  * cases below. Split out of write-meta.test.mjs (which still guards the write-meta.mjs
@@ -85,7 +85,7 @@ try {
 } catch (err) { process.exit(err.exitCode || 1); }`;
   // raw argv: Node executes the isolated header-validation child without starting a worker.
   const out = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
-    encoding: 'utf8', env: { ...process.env, CODEX_TEST_ARGV: jsonAscii(argv), CODEX_RUNS_ROOT: path.join(root, 'runs') },
+    encoding: 'utf8', env: { ...process.env, CODEX_TEST_ARGV: jsonAscii(argv), LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs') },
   });
   return { code: out.status, stderr: out.stderr || '', opts: out.stdout ? JSON.parse(out.stdout) : null };
 }
@@ -234,9 +234,9 @@ test('all runner modes request the structured JSON event stream', () => {
  */
 function withHomeRepo(body) {
   const home = makeTempTree('codex-home-');
-  const keys = ['HOME', 'USERPROFILE', 'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM', 'CODEX_RUNS_ROOT'];
+  const keys = ['HOME', 'USERPROFILE', 'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM', 'LLM_BRIDGE_RUNS_ROOT'];
   const saved = keys.map((key) => [key, process.env[key]]);
-  delete process.env.CODEX_RUNS_ROOT;
+  delete process.env.LLM_BRIDGE_RUNS_ROOT;
   process.env.HOME = home;
   process.env.USERPROFILE = home;
   process.env.GIT_CONFIG_GLOBAL = path.join(home, 'no-such-gitconfig');
@@ -252,14 +252,14 @@ function withHomeRepo(body) {
 }
 
 function withRunsRoot(value, body) {
-  const saved = process.env.CODEX_RUNS_ROOT;
-  if (value === undefined) delete process.env.CODEX_RUNS_ROOT;
-  else process.env.CODEX_RUNS_ROOT = value;
+  const saved = process.env.LLM_BRIDGE_RUNS_ROOT;
+  if (value === undefined) delete process.env.LLM_BRIDGE_RUNS_ROOT;
+  else process.env.LLM_BRIDGE_RUNS_ROOT = value;
   try {
     return body();
   } finally {
-    if (saved === undefined) delete process.env.CODEX_RUNS_ROOT;
-    else process.env.CODEX_RUNS_ROOT = saved;
+    if (saved === undefined) delete process.env.LLM_BRIDGE_RUNS_ROOT;
+    else process.env.LLM_BRIDGE_RUNS_ROOT = saved;
   }
 }
 
@@ -279,7 +279,7 @@ test('the runs root defaults to the package home without a legacy directory', ()
   withHomeRepo(() => {
     for (const value of [undefined, '', '   ']) {
       withRunsRoot(value, () => {
-        assert.equal(runsRoot(), path.join(process.env.CODEX_BRIDGE_HOME, 'runs'));
+        assert.equal(runsRoot(), path.join(process.env.LLM_BRIDGE_HOME, 'runs'));
       });
     }
   });

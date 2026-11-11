@@ -12,7 +12,7 @@ import { repositoryRefusal } from '../../src/home/lib/runner/order-repository.mj
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const RUNNER = path.join(ROOT, 'src', 'home', 'lib', 'run-codex.mjs');
-const BIN = path.join(ROOT, 'bin', 'codex-bridge.mjs');
+const BIN = path.join(ROOT, 'bin', 'llm-bridge.mjs');
 
 function fixture(t) {
   const root = makeTempTree('task-input-');
@@ -37,7 +37,7 @@ function run(entry, argv, root, input, extraEnv = {}) {
     encoding: 'utf8',
     input,
     windowsHide: true,
-    env: { ...process.env, CODEX_RUNS_ROOT: path.join(root, 'runs'), ...extraEnv },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'), ...extraEnv },
   });
 }
 
@@ -105,7 +105,7 @@ test('the direct file and package run command share task-channel output and exit
   const argv = args(taskFile);
   const direct = run(RUNNER, argv, root);
   // raw argv: the package entry point requires its run subcommand for transport parity.
-  const command = run(BIN, ['run', ...argv], root, undefined, { CODEX_BRIDGE_HOME: await makeHomeImage(t) });
+  const command = run(BIN, ['run', ...argv], root, undefined, { LLM_BRIDGE_HOME: await makeHomeImage(t) });
   assert.equal(command.status, direct.status);
   assert.equal(command.stdout, direct.stdout);
   assert.equal(command.stderr, direct.stderr);
@@ -119,12 +119,12 @@ test('the direct file and package run command share the runner crash reply and e
     agent: 'codex-review', order: { repository: root, 'order id': 'crash-check' },
     task: 'force launcher crash', dir: root,
   });
-  const env = { ...process.env, CODEX_RUNS_ROOT: runsRootFile };
+  const env = { ...process.env, LLM_BRIDGE_RUNS_ROOT: runsRootFile };
   const direct = spawnSync(process.execPath, [RUNNER, ...argv], { cwd: root, encoding: 'utf8', windowsHide: true, env });
   // raw argv: the package entry point requires its run subcommand for crash parity.
   const command = spawnSync(process.execPath, [BIN, 'run', ...argv], {
     cwd: root, encoding: 'utf8', windowsHide: true,
-    env: { ...env, CODEX_BRIDGE_HOME: await makeHomeImage(t) },
+    env: { ...env, LLM_BRIDGE_HOME: await makeHomeImage(t) },
   });
   assert.equal(direct.status, 1);
   assert.equal(command.status, direct.status);

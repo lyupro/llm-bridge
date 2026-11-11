@@ -27,7 +27,7 @@ function commandText(args) {
   if (args.purge) flags.push('--purge');
   if (args.olderThanExplicit) flags.push('--older-than', ageText(args.olderThan));
   flags.push('-f');
-  return ['codex-bridge prune', scope, ...flags].join(' ');
+  return ['llm-bridge prune', scope, ...flags].join(' ');
 }
 
 function actionPayload(action) {
@@ -127,7 +127,7 @@ async function confirmAll(plan, args, options) {
         prompt: prompt ? (text) => prompt(text, action, options) : undefined,
       });
     } catch (err) {
-      return { error: `codex-bridge prune: confirmation failed: ${err.message}` };
+      return { error: `llm-bridge prune: confirmation failed: ${err.message}` };
     }
     if (outcome !== 'yes') return { declined: true };
   }

@@ -109,7 +109,7 @@ test('update passes its lifecycle ticket to nested install', async (t) => {
   await fsp.appendFile(plan[0].target, '\noperator edit\n');
   const result = await update({ host, force: true });
   assert.equal(result.exitCode, 0);
-  assert.match(result.output, /Updated codex-bridge/);
+  assert.match(result.output, /Updated llm-bridge/);
 });
 
 test('a lifecycle ticket cannot run an action for another home', async (t) => {

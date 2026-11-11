@@ -116,7 +116,7 @@ test('edited owner files conflict and initiator force cannot authorize replaceme
   assert.equal(owner.status, 'conflict');
   assert.equal(agentState(owner, f.agent).state, 'conflict');
   assert.equal(agentState(owner, f.agent).reason, 'changed');
-  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: ${f.agent.relativeToRoot} (changed); run codex-bridge update --host "${f.b.root}" after resolving it.`]);
+  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: ${f.agent.relativeToRoot} (changed); run llm-bridge update --host "${f.b.root}" after resolving it.`]);
 });
 
 test('recorded missing owner files conflict rather than being recreated', async (t) => {
@@ -126,7 +126,7 @@ test('recorded missing owner files conflict rather than being recreated', async 
   const [owner] = result.owners;
   assert.equal(owner.status, 'conflict');
   assert.equal(agentState(owner, f.agent).reason, 'missing');
-  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: ${f.agent.relativeToRoot} (missing); run codex-bridge update --host "${f.b.root}" after resolving it.`]);
+  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: ${f.agent.relativeToRoot} (missing); run llm-bridge update --host "${f.b.root}" after resolving it.`]);
   await assert.rejects(fs.lstat(f.agent.target), { code: 'ENOENT' });
 });
 
@@ -175,7 +175,7 @@ test('renamed-away owners are absent and never recreated', async (t) => {
   assert.equal(result.owners[0].reason, 'absent');
   assert.deepEqual(result.owners[0].files, []);
   assert.deepEqual(result.owners[0].hooks, []);
-  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: absent; run codex-bridge update --host "${f.b.root}" when it is available.`]);
+  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: absent; run llm-bridge update --host "${f.b.root}" when it is available.`]);
   await assert.rejects(fs.lstat(f.b.root), { code: 'ENOENT' });
 });
 
@@ -208,7 +208,7 @@ test('unparseable settings make the whole owner unreachable even with a file con
   assert.equal(result.owners[0].status, 'unreachable');
   assert.match(result.owners[0].reason, /^settings unreadable: .+/);
   assert.equal(await fs.readFile(f.b.settingsPath, 'utf8'), '{');
-  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: ${result.owners[0].reason}; run codex-bridge update --host "${f.b.root}" when it is available.`]);
+  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: ${result.owners[0].reason}; run llm-bridge update --host "${f.b.root}" when it is available.`]);
 });
 
 test('missing settings plan every hook for registration without creating settings', async (t) => {
@@ -233,7 +233,7 @@ test('a target symlink or Windows junction conflicts without touching its destin
   assert.equal(result.owners[0].status, 'conflict');
   assert.equal(agentState(result.owners[0], f.agent).reason, 'link');
   assert.deepEqual(await fs.readdir(destination), ['untouched.md']);
-  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: ${f.agent.relativeToRoot} (link); run codex-bridge update --host "${f.b.root}" after resolving it.`]);
+  assert.deepEqual(ownerSyncLines(result), [`Left ${f.b.root} behind: ${f.agent.relativeToRoot} (link); run llm-bridge update --host "${f.b.root}" after resolving it.`]);
 });
 
 test('dangling target links are conflicts rather than missing files', async (t) => {
@@ -276,7 +276,7 @@ test('planning preserves permissions, operator seeds, unrelated settings, and Co
   await fs.writeFile(f.b.settingsPath, JSON.stringify(settings));
   await fs.writeFile(f.a.brandConfigPath, 'Operator-owned seed\n');
   await fs.writeFile(f.a.brandConventionsPath, 'Operator-owned conventions\n');
-  await fs.writeFile(path.join(f.a.codexRulesDir, 'codex-bridge.rules'), 'Operator rules\n');
+  await fs.writeFile(path.join(f.a.codexRulesDir, 'llm-bridge.rules'), 'Operator rules\n');
   const result = await plan(f);
   assert.equal(result.owners[0].status, 'in-sync');
 });

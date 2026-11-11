@@ -8,7 +8,7 @@ import { claudeRulesCheck } from '../../cli/doctor-installation.mjs';
 import { buildInstallPlan, writeInstallRecord } from '../../cli/manifest.mjs';
 import { codexProbe, hostFixture, installedFixture, ownPackage, honestInstalledFixture } from './doctor-fixtures.mjs';
 
-const bridgeProbe = () => ({ available: true, value: 'codex-bridge 0.1.0' });
+const bridgeProbe = () => ({ available: true, value: 'llm-bridge 0.1.0' });
 
 test('doctor confirms planned host rules match this package immediately after the Codex rules check', async (t) => {
   const { host, record } = await honestInstalledFixture(t);
@@ -33,7 +33,7 @@ test('doctor fails and names a missing core with the force-update repair command
   const result = await diagnose({ host, codexProbe, bridgeProbe, currentPackage: ownPackage });
   const rules = result.checks.find((item) => item.key === 'claudeRules');
   assert.equal(rules.status, 'fail');
-  assert.match(rules.value, /core\.md.*run codex-bridge update --force/);
+  assert.match(rules.value, /core\.md.*run llm-bridge update --force/);
   assert.equal(result.exitCode, 1);
 });
 
@@ -43,7 +43,7 @@ test('doctor fails on edited core bytes even when every recorded file is present
   const result = await diagnose({ host, codexProbe, bridgeProbe, currentPackage: ownPackage });
   const rules = result.checks.find((item) => item.key === 'claudeRules');
   assert.equal(rules.status, 'fail');
-  assert.match(rules.value, /core\.md.*run codex-bridge update --force/);
+  assert.match(rules.value, /core\.md.*run llm-bridge update --force/);
   assert.equal(result.checks.find((item) => item.key === 'files').status, 'ok');
   assert.equal(result.exitCode, 1);
 });
@@ -59,7 +59,7 @@ test('doctor rejects conditional core frontmatter through byte comparison', asyn
 
 test('doctor checks the current host rules plan even when an older record omits the core', async (t) => {
   const { host, record } = await installedFixture(t);
-  record.files = record.files.filter((file) => file.path !== 'rules/codex-bridge/core.md');
+  record.files = record.files.filter((file) => file.path !== 'rules/llm-bridge/core.md');
   await writeInstallRecord(host, record);
   await fs.rm(path.join(host.rulesDir, 'core.md'));
   const result = await diagnose({ host, codexProbe, bridgeProbe, currentPackage: ownPackage });
@@ -85,7 +85,7 @@ test('doctor warns that host rules were not checked without an installation reco
   assert.deepEqual(result.checks.find((item) => item.key === 'claudeRules'), {
     key: 'claudeRules',
     status: 'warn',
-    value: 'Host rules were not checked; run codex-bridge install',
+    value: 'Host rules were not checked; run llm-bridge install',
   });
   assert.deepEqual(await claudeRulesCheck(host, null), result.checks.find((item) => item.key === 'claudeRules'));
 });

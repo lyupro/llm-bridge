@@ -66,7 +66,7 @@ export async function stop({
     const successor = recoverySuccessor(path.dirname(runDir), path.basename(runDir));
     if (successor.state === 'valid') {
       const childStatus = readJson(path.join(successor.childDir, 'status.json'));
-      output += ` It was continued automatically in ${successor.childDir} (state: ${childStatus?.state || 'unknown'}); to stop that run, use codex-bridge stop ${successor.child}.`;
+      output += ` It was continued automatically in ${successor.childDir} (state: ${childStatus?.state || 'unknown'}); to stop that run, use llm-bridge stop ${successor.child}.`;
     }
     return result(0, output);
   }
@@ -83,7 +83,7 @@ export async function stop({
     return result(
       1,
       `Process identity could not be confirmed for run ${runDir} (${identity}); no signal was sent. ` +
-        '"codex-bridge unlock" closes the record without killing a process.',
+        '"llm-bridge unlock" closes the record without killing a process.',
     );
   }
 

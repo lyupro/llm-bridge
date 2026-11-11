@@ -39,7 +39,7 @@ test('a target under no package directory falls back to the host root', () => {
 
 test('a directory sharing a prefix with a package directory is not inside it', () => {
   const host = hostFor(path.join(os.tmpdir(), 'bridge-boundary-prefix'));
-  // `agents/codex-bridge-extra` starts with the same characters as `agents/codex-bridge`; a
+  // `agents/llm-bridge-extra` starts with the same characters as `agents/llm-bridge`; a
   // startsWith without the separator would claim it and walk the wrong tree up.
   assert.equal(claudeBoundary(host, `${host.agentsDir}-extra${path.sep}agent.md`), host.root);
 });

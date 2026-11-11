@@ -25,16 +25,16 @@ for (const [received, value, source] of [
   ['on', 'on', 'env'], ['off', 'off', 'env'], [' off ', 'off', 'env'],
 ]) {
   test(`host brake resolves ${JSON.stringify(received)} without enabling the package switch`, () => {
-    const env = received === undefined ? {} : { CODEX_BRIDGE_AUTO_RECOVERY: received };
-    assert.deepEqual(resolveRecoveryBrake({ env }), { key: 'CODEX_BRIDGE_AUTO_RECOVERY', value, source });
+    const env = received === undefined ? {} : { LLM_BRIDGE_AUTO_RECOVERY: received };
+    assert.deepEqual(resolveRecoveryBrake({ env }), { key: 'LLM_BRIDGE_AUTO_RECOVERY', value, source });
     assert.equal(resolveRecoveryPolicy('codex-advisor', 'advise').enabled, false);
   });
 }
 
 for (const received of ['OFF', '0', 'false', 'yes']) {
   test(`host brake rejects ${JSON.stringify(received)} with an actionable diagnostic`, () => {
-    assert.throws(() => resolveRecoveryBrake({ env: { CODEX_BRIDGE_AUTO_RECOVERY: received } }), (error) => {
-      for (const part of ['CODEX_BRIDGE_AUTO_RECOVERY', 'env', JSON.stringify(received), 'on or off']) {
+    assert.throws(() => resolveRecoveryBrake({ env: { LLM_BRIDGE_AUTO_RECOVERY: received } }), (error) => {
+      for (const part of ['LLM_BRIDGE_AUTO_RECOVERY', 'env', JSON.stringify(received), 'on or off']) {
         assert.ok(error.message.includes(part), error.message);
       }
       return true;
@@ -43,10 +43,10 @@ for (const received of ['OFF', '0', 'false', 'yes']) {
 }
 
 test('host brake reads only the injected environment and only its own key', () => {
-  const key = 'CODEX_BRIDGE_AUTO_RECOVERY';
+  const key = 'LLM_BRIDGE_AUTO_RECOVERY';
   const previous = process.env[key];
   const reads = [];
-  const env = new Proxy({ CODEX_BRIDGE_AUTO_RECOVERY: 'off' }, {
+  const env = new Proxy({ LLM_BRIDGE_AUTO_RECOVERY: 'off' }, {
     get(target, key) { reads.push(key); return target[key]; },
   });
   try {
@@ -263,7 +263,7 @@ test('collect copies the saved recovery policy and uses it only for automatic el
       budget_ms: 1200000,
       enabled: false,
       calibration: { ...calibration, id: 'historical-recovery-calibration' },
-      brake: { key: 'CODEX_BRIDGE_AUTO_RECOVERY', value: 'off', source: 'env' },
+      brake: { key: 'LLM_BRIDGE_AUTO_RECOVERY', value: 'off', source: 'env' },
     };
     fs.writeFileSync(workerPath, JSON.stringify({ phase: 'advise', recovery_policy: savedPolicy }));
     for (let pass = 0; pass < 2; pass += 1) {
@@ -300,7 +300,7 @@ test('collect preserves a recovery policy with no measured budget and a disabled
     const savedPolicy = {
       version: 1, role: 'scout', phase: 'default', budget_ms: null, enabled: false,
       calibration: null,
-      brake: { key: 'CODEX_BRIDGE_AUTO_RECOVERY', value: 'on', source: 'default' },
+      brake: { key: 'LLM_BRIDGE_AUTO_RECOVERY', value: 'on', source: 'default' },
     };
     fs.writeFileSync(path.join(dir, 'worker.json'), JSON.stringify({ recovery_policy: savedPolicy }));
     const { meta } = collect(dir, 'codex-scout', 1);

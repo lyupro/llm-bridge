@@ -59,7 +59,7 @@ export async function hookChecks(host, record, launcherProbe = probeHookLauncher
     }
     const expected = recordTarget(host, recorded);
     const fullCommand = commandFor(expected);
-    const shortCommand = `codex-bridge hook ${definition.name}`;
+    const shortCommand = `llm-bridge hook ${definition.name}`;
     try {
       const state = await inspectHook(host.settingsPath, {
         event: definition.event,
@@ -70,13 +70,13 @@ export async function hookChecks(host, record, launcherProbe = probeHookLauncher
       if (state.present) {
         const recordedMatcher = state.matchedMatcher;
         const command = state.matchedCommand || recorded.command || fullCommand;
-        const form = command.startsWith('codex-bridge hook ') ? 'short' : 'path';
+        const form = command.startsWith('llm-bridge hook ') ? 'short' : 'path';
         const reason = form === 'short'
           ? launcher.ok
-            ? 'codex-bridge on PATH launches guards from this home'
-            : `short command but ${launcher.reason}: the command on PATH runs its own package copy, not this home, and refuses names it does not know; run codex-bridge update`
+            ? 'llm-bridge on PATH launches guards from this home'
+            : `short command but ${launcher.reason}: the command on PATH runs its own package copy, not this home, and refuses names it does not know; run llm-bridge update`
           : launcher.ok
-            ? 'a short command is now safe; run codex-bridge update'
+            ? 'a short command is now safe; run llm-bridge update'
             : 'full path uses the copy placed by the last install';
         const problems = [startFailure(definition, starts[index])].filter(Boolean);
         // The matcher printed is the one the host recorded, never the one this package declares.
@@ -84,14 +84,14 @@ export async function hookChecks(host, record, launcherProbe = probeHookLauncher
         // pre-shell matcher read as [ok] while the worktree lock never saw a Bash command — the
         // same shape as the 2026-08-10 defect, where doctor counted files instead of
         // reading them. A check that compares the package to itself cannot fail.
-        if (recordedMatcher !== definition.matcher) problems.push(`recorded matcher ${recordedMatcher} differs from expected ${definition.matcher}; run codex-bridge update --force`);
+        if (recordedMatcher !== definition.matcher) problems.push(`recorded matcher ${recordedMatcher} differs from expected ${definition.matcher}; run llm-bridge update --force`);
         const health = problems.length ? `; ${problems.join('; ')}` : '';
         const status = form === 'short' && !launcher.ok ? 'fail'
           : form === 'path' && launcher.ok || problems.length ? 'warn' : 'ok';
         return check(key, status, `${definition.event} matcher ${recordedMatcher} -> ${expected} (${form} command; ${reason}${form === 'path' ? `; ${hookVersion(record)}` : ''}${health})`);
       }
       const command = recorded.command || fullCommand;
-      const form = command.startsWith('codex-bridge hook ') ? 'short' : 'path';
+      const form = command.startsWith('llm-bridge hook ') ? 'short' : 'path';
       const failure = startFailure(definition, starts[index]);
       // An entry missing from settings is a registration problem whatever the launcher can do;
       // update restores it in the form the proof allows.

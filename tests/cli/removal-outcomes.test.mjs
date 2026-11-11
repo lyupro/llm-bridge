@@ -178,11 +178,11 @@ test('dry run renders each record operation without claiming execution', () => {
 });
 
 test('run artifacts are always last, including empty outcomes and empty plans', (t) => {
-  const previous = process.env.CODEX_RUNS_ROOT;
-  process.env.CODEX_RUNS_ROOT = '/outside/removal/runs';
+  const previous = process.env.LLM_BRIDGE_RUNS_ROOT;
+  process.env.LLM_BRIDGE_RUNS_ROOT = '/outside/removal/runs';
   t.after(() => {
-    if (previous === undefined) delete process.env.CODEX_RUNS_ROOT;
-    else process.env.CODEX_RUNS_ROOT = previous;
+    if (previous === undefined) delete process.env.LLM_BRIDGE_RUNS_ROOT;
+    else process.env.LLM_BRIDGE_RUNS_ROOT = previous;
   });
   const expected = 'Run artifacts in /outside/removal/runs are outside uninstall and stay.';
   const outcomes = [{ kind: 'file', id: 'install-image', relative: 'cli.mjs', result: 'removed', reason: 'last owner' }];
@@ -203,7 +203,7 @@ test('a stale override keeps uninstall messages nonthrowing and names the home r
     version: 1, retired: [{ root: retiredRoot, movedAt: '2026-10-08T12:30:00.000Z' }],
   }));
   for (const [key, value] of Object.entries({
-    CODEX_BRIDGE_HOME: brandRoot, CODEX_RUNS_ROOT: path.join(retiredRoot, 'project'),
+    LLM_BRIDGE_HOME: brandRoot, LLM_BRIDGE_RUNS_ROOT: path.join(retiredRoot, 'project'),
   })) {
     const previous = process.env[key];
     process.env[key] = value;

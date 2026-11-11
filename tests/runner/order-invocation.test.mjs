@@ -140,7 +140,7 @@ test('every old order flag and every unknown flag refuses with header help for a
     for (const argv of [['--agent', 'codex-build', `--${flag}`], [`--${flag}`, '--agent', 'codex-build']]) {
       assert.throws(() => parseArgs(argv), (error) => {
         assert.equal(error.exitCode, 2);
-        assert.equal(error.message, `unknown flag --${flag}: codex-bridge run takes only --agent, --task-file and --no-wait; `
+        assert.equal(error.message, `unknown flag --${flag}: llm-bridge run takes only --agent, --task-file and --no-wait; `
           + 'the order belongs in the task-file header\n' + renderOrderHeaderHelp('codex-build') + '\n' + usageAction);
         return true;
       });

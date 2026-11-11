@@ -1,5 +1,5 @@
 /**
- * One resolver says where run artifacts live: CODEX_RUNS_ROOT, moved, legacy, or default.
+ * One resolver says where run artifacts live: LLM_BRIDGE_RUNS_ROOT, moved, legacy, or default.
  *
  * Plan_77 D7 ships code before the move: an existing legacy directory stays active until
  * the move record exists; a clean installation uses the package home immediately. Records

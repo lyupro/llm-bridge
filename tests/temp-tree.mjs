@@ -6,7 +6,7 @@
  * every other failure stays loud so the suite cannot silently litter the operator's temp dir.
  *
  * It owns creation for the same reason: creation is where the responsibility for removal is handed
- * out. Trees are made inside the suite's own root (`CODEX_BRIDGE_TEST_TMP`, from `npm test`) and
+ * out. Trees are made inside the suite's own root (`LLM_BRIDGE_TEST_TMP`, from `npm test`) and
  * swept when the importing test file finishes, so a caller cannot forget what it never had to do.
  */
 import fs from 'node:fs';
@@ -39,10 +39,10 @@ after(async () => {
 });
 
 export function makeTempTree(prefix) {
-  const root = process.env.CODEX_BRIDGE_TEST_TMP;
+  const root = process.env.LLM_BRIDGE_TEST_TMP;
   if (!root) {
     throw new Error(
-      'CODEX_BRIDGE_TEST_TMP is not set: the suite was started outside npm test, which provides a throwaway root.',
+      'LLM_BRIDGE_TEST_TMP is not set: the suite was started outside npm test, which provides a throwaway root.',
     );
   }
   const dir = fs.mkdtempSync(path.join(root, prefix));

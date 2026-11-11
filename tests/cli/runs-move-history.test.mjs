@@ -87,7 +87,7 @@ test('imports three root-rewritten commits and the current records without touch
     assert.deepEqual(importRunHistory({ from, to, git, tmpdir: root }), { imported: true, commits: 4 });
     assert.deepEqual(checked(git, to, ['log', '--reverse', '--format=%s']).split('\n'), [
       'first run records', 'second run records', 'delete old record',
-      'Import run records moved by codex-bridge (Plan_77)',
+      'Import run records moved by llm-bridge (Plan_77)',
     ]);
     assert.deepEqual(checked(git, to, ['ls-tree', '-r', '--name-only', 'HEAD~3']).split('\n'), ['deleted.txt', 'keep.txt']);
     assert.equal(fs.existsSync(path.join(to, 'deleted.txt')), false);
@@ -95,7 +95,7 @@ test('imports three root-rewritten commits and the current records without touch
     assert.equal(fs.readFileSync(path.join(to, 'new.txt'), 'utf8'), 'untracked\n');
     assert.equal(checked(git, to, ['status', '--porcelain']), '');
     assertSourceUnchanged(git, top, before);
-    assert.ok(!fs.readdirSync(root).some((name) => name.startsWith('codex-bridge-runs-history-')));
+    assert.ok(!fs.readdirSync(root).some((name) => name.startsWith('llm-bridge-runs-history-')));
   }));
 });
 
@@ -174,7 +174,7 @@ for (const step of ['clone', 'checkout', 'subtree', 'init', 'fetch', 'reset', 'a
       assert.equal(fs.existsSync(path.join(to, '.git')), false);
       assert.equal(fs.readFileSync(path.join(to, 'new.txt'), 'utf8'), 'current');
       assertSourceUnchanged(git, top, before);
-      assert.ok(!fs.readdirSync(root).some((name) => name.startsWith('codex-bridge-runs-history-')));
+      assert.ok(!fs.readdirSync(root).some((name) => name.startsWith('llm-bridge-runs-history-')));
     }));
   });
 }
@@ -187,6 +187,6 @@ test('an existing destination repository is not removed when import fails', asyn
     assert.throws(() => importRunHistory({ from, to, tmpdir: root, git: (cwd, args) =>
       args[0] === 'fetch' ? { status: 9, stdout: '', stderr: 'fetch failed' } : git(cwd, args) }), /Git fetch failed \(exit 9\)/);
     assert.equal(fs.existsSync(path.join(to, '.git')), true);
-    assert.ok(!fs.readdirSync(root).some((name) => name.startsWith('codex-bridge-runs-history-')));
+    assert.ok(!fs.readdirSync(root).some((name) => name.startsWith('llm-bridge-runs-history-')));
   }));
 });

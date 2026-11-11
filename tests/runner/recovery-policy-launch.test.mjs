@@ -13,7 +13,7 @@ import { orderDiagnosticMessage } from '../../src/home/lib/order-diagnostics.mjs
 
 const LAUNCHER = new URL('../../src/home/lib/runner/launcher.mjs', import.meta.url).href;
 const TASK = '## Options\n- keep: Keep the boundary.\n- split: Split the boundary.\n## Paths\n- source.mjs\n';
-const BRAKE_KEY = 'CODEX_BRIDGE_AUTO_RECOVERY';
+const BRAKE_KEY = 'LLM_BRIDGE_AUTO_RECOVERY';
 
 function fixture() {
   const root = makeTempTree('recovery-policy-launch-');
@@ -48,7 +48,7 @@ childProcess.spawn = (command, args, options) => {
   if (args.includes('--worker')) {
     const order = JSON.parse(fs.readFileSync(path.join(args[args.indexOf('--worker') + 1], 'worker.json'), 'utf8'));
     if (!order.recovery_policy?.watchdog) throw new Error('Recovery policy and watchdog must exist before worker spawn');
-    if (${JSON.stringify(changeBrake)} && process.env.CODEX_BRIDGE_AUTO_RECOVERY !== 'off') {
+    if (${JSON.stringify(changeBrake)} && process.env.LLM_BRIDGE_AUTO_RECOVERY !== 'off') {
       throw new Error('The fixture must change the host brake before the order is written');
     }
     const fields = Object.keys(order);
@@ -61,7 +61,7 @@ childProcess.spawn = (command, args, options) => {
 if (${JSON.stringify(changeBrake)}) {
   const mockedSpawnSync = childProcess.spawnSync;
   childProcess.spawnSync = (...args) => {
-    process.env.CODEX_BRIDGE_AUTO_RECOVERY = 'off';
+    process.env.LLM_BRIDGE_AUTO_RECOVERY = 'off';
     return mockedSpawnSync(...args);
   };
 }
@@ -78,7 +78,7 @@ catch (error) {
   process.exitCode = error.exitCode;
 }
 `;
-  const env = { ...process.env, CODEX_BRIDGE_HOME: tree.home, CODEX_RUNS_ROOT: tree.runs, CODEX_HOME: tree.codexHome };
+  const env = { ...process.env, LLM_BRIDGE_HOME: tree.home, LLM_BRIDGE_RUNS_ROOT: tree.runs, CODEX_HOME: tree.codexHome };
   delete env[BRAKE_KEY];
   if (brake !== undefined) env[BRAKE_KEY] = brake;
   return spawnSync(process.execPath, ['--input-type=module', '-e', source], {
@@ -153,7 +153,7 @@ test('invalid host brake refuses before any run folder is created', () => {
   const output = launch(tree, { brake: 'maybe' });
   assert.equal(output.error, undefined);
   assert.equal(output.status, 1);
-  assert.match(output.stdout, /FAIL — [^\r\n]*CODEX_BRIDGE_AUTO_RECOVERY[^\r\n]*env[^\r\n]*"maybe"[^\r\n]*on or off\r?\nRun was not started; quota was not spent/);
+  assert.match(output.stdout, /FAIL — [^\r\n]*LLM_BRIDGE_AUTO_RECOVERY[^\r\n]*env[^\r\n]*"maybe"[^\r\n]*on or off\r?\nRun was not started; quota was not spent/);
   const rows = output.stdout.trimEnd().split(/\r?\n/);
   const action = orderDiagnosticMessage('next-action', { variant: 'runner-fault' });
   assert.deepEqual(rows.filter((row) => row.startsWith('Action:')), [action]);

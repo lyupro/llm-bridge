@@ -1,7 +1,7 @@
 /**
  * Lists what lies in the package home, classified by the home registry, without crossing a link.
  *
- * Plan_65 D4 trusts the root as written: a relocated home or CODEX_BRIDGE_HOME may legitimately
+ * Plan_65 D4 trusts the root as written: a relocated home or LLM_BRIDGE_HOME may legitimately
  * reach it through a link. Below that root, links and junctions stay and are named, never read
  * through or removed. Walking ancestors first prevents even an lstat below a discovered link.
  * Only ENOENT means gone; every other read failure must stay visible to a later removal planner.

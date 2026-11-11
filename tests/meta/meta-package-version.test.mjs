@@ -67,7 +67,7 @@ test('a run without runner_version is reported as legacy without a sandbox warni
   assert.doesNotMatch(match[1], /["$`]/, 'the script body must remain safe inside shell double quotes');
   const result = spawnSync(process.execPath, ['-e', match[1]], {
     encoding: 'utf8',
-    env: { ...process.env, CODEX_BRIDGE_HOME: home, CODEX_RUNS_ROOT: root },
+    env: { ...process.env, LLM_BRIDGE_HOME: home, LLM_BRIDGE_RUNS_ROOT: root },
   });
 
   assert.equal(result.status, 0, result.stderr);

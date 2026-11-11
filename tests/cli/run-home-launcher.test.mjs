@@ -9,13 +9,13 @@ import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 import { makeHomeImage } from '../home-image.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const BIN = path.join(ROOT, 'bin', 'codex-bridge.mjs');
+const BIN = path.join(ROOT, 'bin', 'llm-bridge.mjs');
 
 function run(args, home) {
   return spawnSync(process.execPath, [BIN, ...args], {
     encoding: 'utf8',
     windowsHide: true,
-    env: { ...process.env, CODEX_BRIDGE_HOME: home },
+    env: { ...process.env, LLM_BRIDGE_HOME: home },
   });
 }
 
@@ -33,12 +33,12 @@ test('run reports a missing installation and hook home remains dispatchable', as
   t.after(() => removeTempTree(empty));
   const missing = run(['run', '--x'], empty);
   assert.equal(missing.status, 1);
-  assert.match(missing.stderr, new RegExp(`codex-bridge run: codex-bridge is not installed in ${empty.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\. Run codex-bridge install\\.`));
+  assert.match(missing.stderr, new RegExp(`llm-bridge run: llm-bridge is not installed in ${empty.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\. Run llm-bridge install\\.`));
 
   const home = await makeHomeImage(t);
   const hookHome = spawnSync(process.execPath, [BIN, 'hook', '--home'], {
     encoding: 'utf8', windowsHide: true,
-    env: { ...process.env, CODEX_BRIDGE_HOME: home },
+    env: { ...process.env, LLM_BRIDGE_HOME: home },
   });
   assert.equal(hookHome.status, 0, hookHome.stderr);
   assert.deepEqual(JSON.parse(hookHome.stdout), { protocol: 1, dispatch: 'home', homeRoot: home });

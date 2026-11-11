@@ -33,7 +33,7 @@ function prefix(resolution) {
   return path.resolve(resolution.root) + ' (' + resolution.source + ')';
 }
 
-for (const source of ['default', 'moved', 'CODEX_RUNS_ROOT']) {
+for (const source of ['default', 'moved', 'LLM_BRIDGE_RUNS_ROOT']) {
   test(source + ' without a foreign repository is healthy', (t) => {
     const resolution = fixture(t, source);
     let probes = 0;
@@ -50,7 +50,7 @@ test('legacy reports the pending move instead of an additional foreign-git warni
   const resolution = fixture(t, 'legacy');
   assert.deepEqual(runsRootCheck({ resolution, gitTop() { assert.fail('legacy needs no git probe'); } }), {
     key: 'runsRoot', status: 'warn',
-    value: prefix(resolution) + ' — move pending: run codex-bridge runs move when no other project is running.',
+    value: prefix(resolution) + ' — move pending: run llm-bridge runs move when no other project is running.',
   });
 });
 
@@ -59,7 +59,7 @@ test('moved reports a leftover legacy directory before probing git', (t) => {
   fs.mkdirSync(resolution.legacyRoot);
   assert.deepEqual(runsRootCheck({ resolution, gitTop() { assert.fail('leftover warning has priority'); } }), {
     key: 'runsRoot', status: 'warn',
-    value: prefix(resolution) + ' — the old folder ' + resolution.legacyRoot + ' still exists; codex-bridge runs move removes it.',
+    value: prefix(resolution) + ' — the old folder ' + resolution.legacyRoot + ' still exists; llm-bridge runs move removes it.',
   });
 });
 
@@ -70,7 +70,7 @@ test('a leftover legacy file does not count as a directory', (t) => {
 });
 
 test('a stale override fails before pending-move and foreign-git diagnostics', (t) => {
-  const resolution = fixture(t, 'CODEX_RUNS_ROOT');
+  const resolution = fixture(t, 'LLM_BRIDGE_RUNS_ROOT');
   resolution.root = path.join(resolution.legacyRoot, 'project');
   resolution.staleOverride = resolution.legacyRoot;
   resolution.retired = [resolution.legacyRoot];
@@ -79,11 +79,11 @@ test('a stale override fails before pending-move and foreign-git diagnostics', (
     key: 'runsRoot', status: 'fail',
     value: prefix(resolution) + ' — ' + staleOverrideRefusal(resolution),
   });
-  assert.match(result.value, /CODEX_RUNS_ROOT points under a retired runs root/);
+  assert.match(result.value, /LLM_BRIDGE_RUNS_ROOT points under a retired runs root/);
   assert.match(result.value, /No path was remapped/);
 });
 
-for (const source of ['default', 'moved', 'CODEX_RUNS_ROOT']) {
+for (const source of ['default', 'moved', 'LLM_BRIDGE_RUNS_ROOT']) {
   test(source + ' warns when records land in a foreign repository', (t) => {
     const resolution = fixture(t, source);
     const top = path.dirname(resolution.root);
@@ -96,7 +96,7 @@ for (const source of ['default', 'moved', 'CODEX_RUNS_ROOT']) {
 }
 
 test('a repository rooted at the run store is its own, using normalized paths', (t) => {
-  const resolution = fixture(t, 'CODEX_RUNS_ROOT');
+  const resolution = fixture(t, 'LLM_BRIDGE_RUNS_ROOT');
   const top = path.join(resolution.root, '..', path.basename(resolution.root)) + path.sep;
   assert.equal(runsRootCheck({ resolution, gitTop: () => top }).status, 'ok');
   if (process.platform === 'win32') {
@@ -105,7 +105,7 @@ test('a repository rooted at the run store is its own, using normalized paths', 
 });
 
 test('a repository rooted at the brand home is its own, not just resolution.homeRoot', (t) => {
-  const resolution = fixture(t, 'CODEX_RUNS_ROOT');
+  const resolution = fixture(t, 'LLM_BRIDGE_RUNS_ROOT');
   const brandRoot = resolveBrandHome().root;
   assert.notEqual(resolution.homeRoot, brandRoot);
   assert.equal(runsRootCheck({ resolution, gitTop: () => brandRoot + path.sep }).status, 'ok');
@@ -130,7 +130,7 @@ test('a resolution throw becomes a fail check with its original message', () => 
 test('a corrupt move record fails default resolution and keeps all doctor run diagnostics', async (t) => {
   const resolution = fixture(t);
   const brandRoot = path.dirname(resolution.root);
-  setEnv(t, 'CODEX_BRIDGE_HOME', brandRoot);
+  setEnv(t, 'LLM_BRIDGE_HOME', brandRoot);
   fs.mkdirSync(path.join(brandRoot, 'state'));
   fs.writeFileSync(path.join(brandRoot, 'state', 'runs-root.json'), '{invalid JSON');
   let message;
@@ -159,8 +159,8 @@ test('doctor marks stale-root checks unavailable without reading it (Plan_77 F2)
   fs.writeFileSync(path.join(brandRoot, 'state', 'runs-root.json'), JSON.stringify({
     version: 1, retired: [{ root: resolution.legacyRoot, movedAt: '2026-10-08T12:30:00.000Z' }],
   }));
-  setEnv(t, 'CODEX_BRIDGE_HOME', brandRoot);
-  setEnv(t, 'CODEX_RUNS_ROOT', resolution.legacyRoot);
+  setEnv(t, 'LLM_BRIDGE_HOME', brandRoot);
+  setEnv(t, 'LLM_BRIDGE_RUNS_ROOT', resolution.legacyRoot);
   const { host } = await installedFixture(t);
   let staleReads = 0;
   for (const [api, methods] of [[fs, ['readdirSync', 'readFileSync']], [fs.promises, ['readdir', 'readFile']]]) {
@@ -177,19 +177,19 @@ test('doctor marks stale-root checks unavailable without reading it (Plan_77 F2)
   assert.equal(staleReads, 0, 'Plan_77 D6 refuses the retired root before any run reads');
   for (const key of ['projectRuns', 'liveRuns']) {
     assert.deepEqual(result.checks.find((item) => item.key === key), {
-      key, status: 'fail', value: 'unavailable: CODEX_RUNS_ROOT points under a retired runs root',
+      key, status: 'fail', value: 'unavailable: LLM_BRIDGE_RUNS_ROOT points under a retired runs root',
     });
   }
   const root = result.checks.find((item) => item.key === 'runsRoot');
   assert.equal(root.status, 'fail');
-  assert.match(root.value, /CODEX_RUNS_ROOT points under a retired runs root/);
+  assert.match(root.value, /LLM_BRIDGE_RUNS_ROOT points under a retired runs root/);
   assert.equal(result.exitCode, 1);
 });
 
 test('project and live checks use the supplied root rather than a fresh env override', (t) => {
   const resolution = fixture(t);
   fs.mkdirSync(resolution.root);
-  setEnv(t, 'CODEX_RUNS_ROOT', path.join(path.dirname(resolution.root), 'elsewhere'));
+  setEnv(t, 'LLM_BRIDGE_RUNS_ROOT', path.join(path.dirname(resolution.root), 'elsewhere'));
   const project = projectRunsCheck(resolution);
   assert.equal(project.key, 'projectRuns');
   assert.equal(project.status, 'ok');
@@ -200,7 +200,7 @@ test('project and live checks use the supplied root rather than a fresh env over
 });
 
 test('doctor foreign-repository warnings preserve the existing healthy exit code', async (t) => {
-  setEnv(t, 'CODEX_RUNS_ROOT', path.join(process.cwd(), 'cli'));
+  setEnv(t, 'LLM_BRIDGE_RUNS_ROOT', path.join(process.cwd(), 'cli'));
   const { host } = await honestInstalledFixture(t);
   const result = await diagnose({ host, codexProbe, currentPackage: ownPackage });
   const root = result.checks.find((item) => item.key === 'runsRoot');

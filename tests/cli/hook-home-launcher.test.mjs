@@ -8,14 +8,14 @@ import { fileURLToPath } from 'node:url';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const BIN = path.join(ROOT, 'bin', 'codex-bridge.mjs');
+const BIN = path.join(ROOT, 'bin', 'llm-bridge.mjs');
 
 function run(args, home) {
   return spawnSync(process.execPath, [BIN, ...args], {
     encoding: 'utf8',
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, CODEX_BRIDGE_HOME: home },
+    env: { ...process.env, LLM_BRIDGE_HOME: home },
   });
 }
 

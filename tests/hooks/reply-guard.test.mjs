@@ -27,26 +27,26 @@ function runGuard(root, reply, agentId = 'test-reply-guard', transcriptPath = un
     encoding: 'utf8',
     env: {
       ...process.env,
-      CODEX_RUNS_ROOT: path.join(root, 'runs'),
+      LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'),
       HOME: root,
       USERPROFILE: root,
-      CODEX_BRIDGE_HOME: path.join(root, '.lyupro', '.codex-bridge'),
+      LLM_BRIDGE_HOME: path.join(root, '.lyupro', '.llm-bridge'),
     },
   });
 }
 
 async function seedReceipt(root, runReceipt, agentId = 'test-reply-guard') {
-  const bridgeHome = path.join(root, '.lyupro', '.codex-bridge');
-  const previousHome = process.env.CODEX_BRIDGE_HOME;
-  process.env.CODEX_BRIDGE_HOME = bridgeHome;
+  const bridgeHome = path.join(root, '.lyupro', '.llm-bridge');
+  const previousHome = process.env.LLM_BRIDGE_HOME;
+  process.env.LLM_BRIDGE_HOME = bridgeHome;
   const moduleUrl = new URL('../../src/home/lib/brand-home.mjs', import.meta.url);
   moduleUrl.searchParams.set('test-home', bridgeHome);
   let stateDir;
   try {
     ({ BRAND_STATE_DIR: stateDir } = await import(moduleUrl.href));
   } finally {
-    if (previousHome === undefined) delete process.env.CODEX_BRIDGE_HOME;
-    else process.env.CODEX_BRIDGE_HOME = previousHome;
+    if (previousHome === undefined) delete process.env.LLM_BRIDGE_HOME;
+    else process.env.LLM_BRIDGE_HOME = previousHome;
   }
   const sessionId = 'receipt-session';
   await updateDispatcherState({ stateDir, sessionId, agentId }, (current) => ({ ...current, runReceipt }));
@@ -95,14 +95,14 @@ test('a complete host refusal passes immediately without spending try budget', a
   const { root } = await fixture(t);
   const result = runGuard(
     root,
-    'FAIL — host denied order id `probe-refusal`. Run `codex-bridge install` to grant permission.',
+    'FAIL — host denied order id `probe-refusal`. Run `llm-bridge install` to grant permission.',
     'complete-host-refusal',
     undefined, 'receipt-session',
   );
   assert.equal(result.status, 0);
   assert.equal(result.stdout, '');
   await assert.rejects(
-    fs.access(path.join(root, '.lyupro', '.codex-bridge', 'state', 'reply-guard-tries.json')),
+    fs.access(path.join(root, '.lyupro', '.llm-bridge', 'state', 'reply-guard-tries.json')),
     { code: 'ENOENT' },
   );
 });
@@ -111,7 +111,7 @@ test('a host refusal without its order id is blocked with the missing contract p
   const { root } = await fixture(t);
   const result = runGuard(
     root,
-    'FAIL — permission to run the command was denied. Run `codex-bridge install`.',
+    'FAIL — permission to run the command was denied. Run `llm-bridge install`.',
     'host-refusal-without-order',
     undefined, 'receipt-session',
   );

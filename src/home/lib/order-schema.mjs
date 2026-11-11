@@ -94,7 +94,7 @@ const OPTIONAL_ORDER_INPUTS = freezeEntries([
     label: 'repository',
     agents: ORDER_AGENTS,
     explanation: 'The repository the runner works in. Pass its path as a labelled value so the dispatcher needs no cd.',
-    example: 'C:/work/codex-bridge',
+    example: 'C:/work/llm-bridge',
   },
   {
     label: 'scope new',

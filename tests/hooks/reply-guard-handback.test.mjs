@@ -35,16 +35,16 @@ async function writeState(stateDir, state) {
 
 async function stateDirsFor(root) {
   const bridgeHome = path.join(root, 'bridge-home');
-  const previousHome = process.env.CODEX_BRIDGE_HOME;
-  process.env.CODEX_BRIDGE_HOME = bridgeHome;
+  const previousHome = process.env.LLM_BRIDGE_HOME;
+  process.env.LLM_BRIDGE_HOME = bridgeHome;
   const moduleUrl = new URL('../../src/home/lib/brand-home.mjs', import.meta.url);
   moduleUrl.searchParams.set('test-home', bridgeHome);
   try {
     const { BRAND_STATE_DIR } = await import(moduleUrl.href);
     return { bridgeHome, stateDir: BRAND_STATE_DIR };
   } finally {
-    if (previousHome === undefined) delete process.env.CODEX_BRIDGE_HOME;
-    else process.env.CODEX_BRIDGE_HOME = previousHome;
+    if (previousHome === undefined) delete process.env.LLM_BRIDGE_HOME;
+    else process.env.LLM_BRIDGE_HOME = previousHome;
   }
 }
 
@@ -62,8 +62,8 @@ function runGuard(root, bridgeHome, transcriptPath, reply) {
     encoding: 'utf8',
     env: {
       ...process.env,
-      CODEX_BRIDGE_HOME: bridgeHome,
-      CODEX_RUNS_ROOT: path.join(root, 'runs'),
+      LLM_BRIDGE_HOME: bridgeHome,
+      LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'),
       HOME: root,
       USERPROFILE: root,
     },
@@ -219,7 +219,7 @@ test('a later clean delivered stop of the same type recovers the tool-audit viol
         agent_transcript_path: transcriptPath, last_assistant_message: 'Delivered answer.',
       }),
       encoding: 'utf8',
-      env: { ...process.env, CODEX_BRIDGE_HOME: bridgeHome, HOME: root, USERPROFILE: root },
+      env: { ...process.env, LLM_BRIDGE_HOME: bridgeHome, HOME: root, USERPROFILE: root },
     });
     assert.equal(outputOf(result), null);
     const entry = readHandbackWitness({ stateDir }).ledger.entries[key];

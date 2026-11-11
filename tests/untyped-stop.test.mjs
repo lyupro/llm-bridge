@@ -4,7 +4,7 @@ import { untypedStopEvidence } from '../src/home/lib/untyped-stop.mjs';
 import { ORDER_AGENTS } from '../src/home/lib/order-schema.mjs';
 import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
 
-const COMMAND = 'codex-bridge run --agent codex-build --task-file task.md';
+const COMMAND = 'llm-bridge run --agent codex-build --task-file task.md';
 const NO_EVIDENCE = { dispatcher: false, reason: 'no-evidence' };
 const bash = (command) => ({ id: 'run', name: 'Bash', command });
 
@@ -64,10 +64,10 @@ test('shell operators and expansion anywhere in the original command are never e
 test('substrings, prose, wrong verbs and missing or unknown agent values are not evidence', () => {
   for (const command of [
     `echo ${COMMAND}`, `Please execute ${COMMAND}`, `prefix-${COMMAND}`,
-    'codex-bridge runs --agent codex-build', 'codex-bridge run --agent unknown',
-    'codex-bridge run --agent', 'codex-bridge run --task-file task.md',
-    'codex-bridge run --agent=codex-build', 'codex-bridge run --agent codex-build-extra',
-    'codex-bridge run --agent "codex-build"', '', 42,
+    'llm-bridge runs --agent codex-build', 'llm-bridge run --agent unknown',
+    'llm-bridge run --agent', 'llm-bridge run --task-file task.md',
+    'llm-bridge run --agent=codex-build', 'llm-bridge run --agent codex-build-extra',
+    'llm-bridge run --agent "codex-build"', '', 42,
   ]) {
     assert.deepEqual(untypedStopEvidence({ state: null, toolUses: [bash(command)] }), NO_EVIDENCE);
   }

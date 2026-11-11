@@ -25,10 +25,10 @@ test('spawnCaptured returns the exit code and separate UTF-8 output streams', as
 
 test('spawnCaptured captures a real process marker after 70000 bytes', async () => {
   const result = await spawnCaptured(process.execPath, ['-e',
-    "process.stdout.write('x'.repeat(70000) + 'codex-bridge-sandbox-ok')",
+    "process.stdout.write('x'.repeat(70000) + 'llm-bridge-sandbox-ok')",
   ], { timeout: 10_000 });
   assert.equal(result.status, 0);
-  assert.ok(result.stdout.endsWith('codex-bridge-sandbox-ok'));
+  assert.ok(result.stdout.endsWith('llm-bridge-sandbox-ok'));
   assert.equal(result.error, null);
 });
 
@@ -113,11 +113,11 @@ test('spawnCaptured preserves a marker after 65 KiB of stdout', async (t) => {
   await withCapturedChild(t, async ({ child }) => {
     const pending = spawnCaptured('fixture', [], { timeout: 500 });
     child.stdout.write('x'.repeat(65 * 1024));
-    child.stdout.write('codex-bridge-sandbox-ok');
+    child.stdout.write('llm-bridge-sandbox-ok');
     child.emit('close', 0, null);
     const result = await pending;
     assert.equal(result.status, 0);
-    assert.ok(result.stdout.includes('codex-bridge-sandbox-ok'));
+    assert.ok(result.stdout.includes('llm-bridge-sandbox-ok'));
     assert.equal(result.error, null);
   });
 });

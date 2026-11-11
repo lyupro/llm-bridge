@@ -230,7 +230,7 @@ export async function attach({
     }
     const { reply } = writeFailure(runDir, entry.status.agent, 'run worker process died without recording a verdict', {
       action: 'fail-no-result', extraLines: [
-        `Log: codex-bridge read ${runDir}`,
+        `Log: llm-bridge read ${runDir}`,
         'Any Codex changes remain in the tree — check them with git status',
       ],
     });

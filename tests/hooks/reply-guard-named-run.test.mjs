@@ -24,7 +24,7 @@ function runGuard(root, reply, agentId = 'test-reply-guard', transcriptPath = un
       last_assistant_message: reply,
     }),
     encoding: 'utf8',
-    env: { ...process.env, CODEX_RUNS_ROOT: path.join(root, 'runs'), HOME: root, USERPROFILE: root },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'), HOME: root, USERPROFILE: root },
   });
 }
 

@@ -107,7 +107,7 @@ test('a retry refuses a role model changed after catalogue validation through th
         return catalogue(available, other)();
       } });
       assert.equal(result.exitCode, 1);
-      assert.equal(result.output, `codex-bridge model: cannot set ${action === 'set' ? 'profile' : 'speed'}: `
+      assert.equal(result.output, `llm-bridge model: cannot set ${action === 'set' ? 'profile' : 'speed'}: `
         + 'The profile changed while the catalogue was being read; nothing was written. Run the command again.');
       assert.equal(attempts, 1);
       assert.equal(fetches, 1);
@@ -128,7 +128,7 @@ test('a model retry validates the newly retained effort with the original refusa
   });
   const result = await model(['set', 'build', available.slug], { ...data, fetchCatalogue: catalogue(available) });
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output, `codex-bridge model: existing effort "low" is not supported by model "${available.slug}". `
+  assert.equal(result.output, `llm-bridge model: existing effort "low" is not supported by model "${available.slug}". `
     + 'Supported depths: high. Supply a supported effort explicitly. Nothing written.');
   assert.equal(fs.readFileSync(data.configPath, 'utf8'), intruder);
   assert.deepEqual(fs.readdirSync(data.root), ['config.json']);

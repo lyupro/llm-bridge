@@ -78,7 +78,7 @@ test('a matching claim passes and a stale one names both numbers', () => {
 });
 
 test('deleting the sentence does not silence the gate', () => {
-  const message = suiteCountMismatch('# codex-bridge\n\nNo numbers here.\n', TAP(751, 750, 1));
+  const message = suiteCountMismatch('# llm-bridge\n\nNo numbers here.\n', TAP(751, 750, 1));
   assert.match(message, /README no longer states the suite size/);
   assert.match(message, /751 automated tests/);
 });

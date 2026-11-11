@@ -19,8 +19,8 @@ export function runsMove({ dryRun = false, resolution = runsRootResolution(), li
   stateDir, importHistory = importRunHistory, git = runGit } = {}) {
   const { source, root, legacyRoot, homeRoot } = resolution;
   const refuse = (output) => ({ exitCode: 1, output, oldStore: null, homeRoot });
-  if (source === 'CODEX_RUNS_ROOT') {
-    return refuse(`CODEX_RUNS_ROOT is set to ${root}; unset it to move the default run store.`);
+  if (source === 'LLM_BRIDGE_RUNS_ROOT') {
+    return refuse(`LLM_BRIDGE_RUNS_ROOT is set to ${root}; unset it to move the default run store.`);
   }
   if (source === 'moved') {
     try {
@@ -39,7 +39,7 @@ export function runsMove({ dryRun = false, resolution = runsRootResolution(), li
     const live = liveRuns(legacyRoot);
     if (live.length) {
       liveRefusal = `Runs are still live in ${legacyRoot}:\n${live.map(({ dir }) => dir).join('\n')}. `
-        + 'Wait for them or stop them with codex-bridge stop, then repeat.';
+        + 'Wait for them or stop them with llm-bridge stop, then repeat.';
       // Like purge --dry-run: a preview names the refusal and still shows the move, since some
       // project is nearly always running and the operator plans the move from these numbers.
       if (!dryRun) return refuse(liveRefusal);

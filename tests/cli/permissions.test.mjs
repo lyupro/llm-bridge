@@ -40,7 +40,7 @@ const ALL_PERMISSION_RULES = Object.values(PERMISSION_RULES).flat();
 
 async function backups(host) {
   return (await fs.readdir(host.root)).filter((name) =>
-    name.startsWith('settings.json.codex-bridge-backup-'));
+    name.startsWith('settings.json.llm-bridge-backup-'));
 }
 
 test('permissions add builds the complete matrix and preserves foreign settings', async (t) => {
@@ -57,18 +57,18 @@ test('permissions add builds the complete matrix and preserves foreign settings'
   await fs.writeFile(localSettings, 'operator-local-settings');
 
   const result = await permissions({ host, action: 'add' });
-  assert.equal(result.added, 36);
+  assert.equal(result.added, 24);
   assert.equal(result.present, ALL_PERMISSION_RULES.length);
   assert.equal(result.total, ALL_PERMISSION_RULES.length);
-  assert.equal(PERMISSION_RULES.allow.length, 12);
-  assert.equal(PERMISSION_RULES.deny.length, 12);
-  assert.equal(PERMISSION_RULES.ask.length, 12);
+  assert.equal(PERMISSION_RULES.allow.length, 8);
+  assert.equal(PERMISSION_RULES.deny.length, 8);
+  assert.equal(PERMISSION_RULES.ask.length, 8);
   const expectedAsk = ['Bash', 'PowerShell'].flatMap((tool) =>
-    ['codex-bridge', 'codexb', 'node bin/codex-bridge.mjs'].flatMap((command) =>
+    ['llm-bridge', 'node bin/llm-bridge.mjs'].flatMap((command) =>
       [`${tool}(${command} model speed)`, `${tool}(${command} model speed:*)`]));
   assert.deepEqual(new Set(PERMISSION_RULES.ask), new Set(expectedAsk));
   assert.equal(result.askCount, 0);
-  assert.equal(result.output, `Added 36 permission rule strings. ${(await permissions({ host })).output}`);
+  assert.equal(result.output, `Added 24 permission rule strings. ${(await permissions({ host })).output}`);
   assert.doesNotMatch(result.output, /outranks allow/);
 
   const settings = await readSettings(host);
@@ -91,14 +91,14 @@ test('repeated permissions add is idempotent and does not create another backup'
   const second = await permissions({ host, action: 'add' });
   const settings = await readSettings(host);
 
-  assert.equal(first.added, 36);
+  assert.equal(first.added, 24);
   assert.equal(second.added, 0);
   assert.equal(first.present, ALL_PERMISSION_RULES.length);
   assert.equal(second.present, ALL_PERMISSION_RULES.length);
   assert.equal(second.total, ALL_PERMISSION_RULES.length);
   // The 2026-09-07, 0.6.0 install incident made an already complete set sound like a failed add.
   assert.equal(second.output, (await permissions({ host })).output);
-  assert.match(second.output, /Permissions: installed \(36\/36 own strings in allow\/deny\/ask\)/);
+  assert.match(second.output, /Permissions: installed \(24\/24 own strings in allow\/deny\/ask\)/);
   assert.doesNotMatch(second.output, /Added 0/);
   assert.deepEqual(await backups(host), before);
   for (const [name, rules] of Object.entries(PERMISSION_RULES)) {
@@ -123,7 +123,7 @@ test('permissions remove takes back exact strings from allow, deny, and ask only
 
   const result = await permissions({ host, action: 'remove' });
   const remaining = await readSettings(host);
-  assert.equal(result.removed, 36);
+  assert.equal(result.removed, 24);
   for (const name of ['allow', 'deny', 'ask']) {
     assert.deepEqual(ownEntries(remaining.permissions[name], ALL_PERMISSION_RULES), []);
   }
@@ -135,13 +135,13 @@ test('permissions without an action reports absent, partial, and installed state
   const { host } = await fixture(t);
   await writeSettings(host, { permissions: { allow: [], deny: [] } });
 
-  assert.match((await permissions({ host })).output, /Permissions: absent \(0\/36/);
+  assert.match((await permissions({ host })).output, /Permissions: absent \(0\/24/);
   await permissions({ host, action: 'add' });
   const complete = await permissions({ host });
   assert.equal(complete.complete, true);
   assert.equal(complete.askCount, 0);
-  assert.deepEqual(complete.counts, { allow: 12, deny: 12, ask: 12 });
-  assert.match(complete.output, /Permissions: installed \(36\/36 own strings in allow\/deny\/ask\)/);
+  assert.deepEqual(complete.counts, { allow: 8, deny: 8, ask: 8 });
+  assert.match(complete.output, /Permissions: installed \(24\/24 own strings in allow\/deny\/ask\)/);
   const settings = await readSettings(host);
   settings.permissions.deny.pop();
   settings.permissions.ask.pop();
@@ -149,8 +149,8 @@ test('permissions without an action reports absent, partial, and installed state
   const partial = await permissions({ host });
   assert.equal(partial.complete, false);
   assert.equal(partial.askCount, 0);
-  assert.deepEqual(partial.counts, { allow: 12, deny: 11, ask: 11 });
-  assert.match(partial.output, /Permissions: partially installed \(34\/36/);
+  assert.deepEqual(partial.counts, { allow: 8, deny: 7, ask: 7 });
+  assert.match(partial.output, /Permissions: partially installed \(22\/24/);
   assert.doesNotMatch(partial.output, /shadowed/);
 });
 
@@ -167,15 +167,15 @@ test('permissions add names its own strings left sitting in ask', async (t) => {
 
   const partial = await permissions({ host });
   assert.equal(partial.state, 'partially installed, shadowed by ask');
-  assert.equal(partial.present, 35);
+  assert.equal(partial.present, 23);
   assert.equal(partial.askCount, 1);
-  assert.match(partial.output, /shadowed by ask \(35\/36 .*outranks allow/);
+  assert.match(partial.output, /shadowed by ask \(23\/24 .*outranks allow/);
 
   const result = await permissions({ host, action: 'add' });
 
   assert.equal(result.added, 1);
   assert.equal(result.askCount, 1);
-  assert.equal(result.output, 'Added 1 permission rule string. Permissions: shadowed by ask (36/36 own strings in allow/deny/ask).'
+  assert.equal(result.output, 'Added 1 permission rule string. Permissions: shadowed by ask (24/24 own strings in allow/deny/ask).'
     + ' 1 own string(s) also sit in ask, which outranks allow; they were left there.');
   assert.match(result.output, /1 own string\(s\) also sit in ask, which outranks allow/);
   assert.deepEqual((await readSettings(host)).permissions.ask, settings.permissions.ask);
@@ -195,10 +195,10 @@ test('a complete set shadowed by ask is not reported as installed', async (t) =>
 
   const status = await permissions({ host });
 
-  assert.equal(status.present, 36);
+  assert.equal(status.present, 24);
   assert.equal(status.complete, true);
   assert.equal(status.state, 'shadowed by ask');
-  assert.match(status.output, /shadowed by ask \(36\/36 .*outranks allow/);
+  assert.match(status.output, /shadowed by ask \(24\/24 .*outranks allow/);
 });
 
 test('permissions without an action writes nothing at all', async (t) => {
@@ -223,7 +223,7 @@ test('uninstall removes permission strings even without an installation record',
   const result = await uninstall({ host });
   const settings = await readSettings(host);
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /Removed 36 permission rule strings/);
+  assert.match(result.output, /Removed 24 permission rule strings/);
   assert.match(result.output, /not installed/);
   assert.deepEqual(ownEntries(settings.permissions.allow, ALL_PERMISSION_RULES), []);
   assert.deepEqual(ownEntries(settings.permissions.deny, ALL_PERMISSION_RULES), []);
@@ -240,7 +240,7 @@ test('uninstall dry-run counts permission strings without writing settings', asy
   const result = await uninstall({ host, dryRun: true });
 
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /Would remove 36 permission rule strings/);
+  assert.match(result.output, /Would remove 24 permission rule strings/);
   assert.equal(await fs.readFile(host.settingsPath, 'utf8'), before);
   assert.deepEqual(await backups(host), beforeBackups);
 });
@@ -254,7 +254,7 @@ test('a deny string copied into ask does not shadow the allow set', async (t) =>
   const status = await permissions({ host });
   assert.equal(status.state, 'installed');
   assert.equal(status.askCount, 0);
-  assert.equal(status.present, 36);
+  assert.equal(status.present, 24);
 });
 
 test('an older allow/deny installation is partial until speed ask rules are installed', async (t) => {
@@ -264,19 +264,19 @@ test('an older allow/deny installation is partial until speed ask rules are inst
   } });
   const before = await permissions({ host });
   assert.equal(before.state, 'partially installed');
-  assert.equal(before.present, 24);
-  assert.equal(before.total, 36);
-  assert.equal((await permissions({ host, action: 'add' })).added, 12);
+  assert.equal(before.present, 16);
+  assert.equal(before.total, 24);
+  assert.equal((await permissions({ host, action: 'add' })).added, 8);
   assert.equal((await permissions({ host })).state, 'installed');
 });
 
 // Plan_56: doctor must name all three lists its count includes, even when an allow is shadowed.
 for (const [scenario, edit, state, level, present, shadow] of [
-  ['complete', () => {}, 'installed', 'ok', 36, ''],
-  ['partial', (rules) => rules.ask.pop(), 'partially installed', 'warn', 35, ''],
-  ['shadowed', (rules) => rules.ask.push(rules.allow[0]), 'shadowed by ask', 'warn', 36, ', 1 shadowed by ask'],
+  ['complete', () => {}, 'installed', 'ok', 24, ''],
+  ['partial', (rules) => rules.ask.pop(), 'partially installed', 'warn', 23, ''],
+  ['shadowed', (rules) => rules.ask.push(rules.allow[0]), 'shadowed by ask', 'warn', 24, ', 1 shadowed by ask'],
   ['moved allow', (rules) => rules.ask.push(rules.allow.shift()),
-    'partially installed, shadowed by ask', 'warn', 35, ', 1 shadowed by ask'],
+    'partially installed, shadowed by ask', 'warn', 23, ', 1 shadowed by ask'],
 ]) {
   test(`doctor reports truthful permission counts and list names for a ${scenario} set`, async (t) => {
     const { host } = await fixture(t);
@@ -286,6 +286,6 @@ for (const [scenario, edit, state, level, present, shadow] of [
     await writeSettings(host, settings);
     const result = await permissionsCheck(host);
     assert.equal(result.status, level);
-    assert.equal(result.value, `${state} (${present}/36 own strings in allow/deny/ask${shadow})`);
+    assert.equal(result.value, `${state} (${present}/24 own strings in allow/deny/ask${shadow})`);
   });
 }

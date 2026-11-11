@@ -185,13 +185,13 @@ const cliRefusals = [
     'task text was supplied through both stdin and --task-file; choose exactly one channel'],
   ['unexpected-argument', { value: 'task text' }, 'unexpected argument: task text'],
   ['unknown-flag', { name: 'bogus' },
-    'unknown flag --bogus: codex-bridge run takes only --agent, --task-file and --no-wait; ' +
+    'unknown flag --bogus: llm-bridge run takes only --agent, --task-file and --no-wait; ' +
       'the order belongs in the task-file header'],
   ['unknown-flag', { name: 'bogus', help: '' },
-    'unknown flag --bogus: codex-bridge run takes only --agent, --task-file and --no-wait; ' +
+    'unknown flag --bogus: llm-bridge run takes only --agent, --task-file and --no-wait; ' +
       'the order belongs in the task-file header'],
   ['unknown-flag', { name: 'bogus', help: recordOrderText('Header help\nSecond line') },
-    'unknown flag --bogus: codex-bridge run takes only --agent, --task-file and --no-wait; ' +
+    'unknown flag --bogus: llm-bridge run takes only --agent, --task-file and --no-wait; ' +
       'the order belongs in the task-file header\nHeader help\nSecond line'],
   ['boolean-flag-value', { name: 'no-wait', value: '<only if the orchestrator provided continue>' },
     '--no-wait takes no value, or one of 1/true/yes/0/false/no; got "<only if the orchestrator provided continue>". ' +

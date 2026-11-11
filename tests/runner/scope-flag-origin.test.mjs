@@ -30,7 +30,7 @@ function runner(t, scopeOrder) {
   const runs = path.join(root, 'runs');
   // raw argv: Node transports the helper header-backed invocation unchanged (Plan_63 D8).
   const output = spawnSync(process.execPath, [RUN_CODEX, ...argv],
-    { cwd: repo, env: { ...process.env, CODEX_RUNS_ROOT: runs }, input: '', encoding: 'utf8' });
+    { cwd: repo, env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: runs }, input: '', encoding: 'utf8' });
   return { output, runs };
 }
 

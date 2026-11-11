@@ -10,13 +10,13 @@ import { runsMove } from '../../cli/runs-move.mjs';
 import { withTempTree } from '../temp-tree.mjs';
 import { fixture, snapshot } from './runs-move-fixtures.mjs';
 
-for (const source of ['CODEX_RUNS_ROOT', 'default']) {
+for (const source of ['LLM_BRIDGE_RUNS_ROOT', 'default']) {
   test(`${source} resolution refuses before liveness or any write`, async () => {
     await withTempTree('runs-move-refusal-', (root) => {
       const resolution = { ...fixture(root), source };
       const before = snapshot(root);
-      const expected = source === 'CODEX_RUNS_ROOT'
-        ? `CODEX_RUNS_ROOT is set to ${resolution.root}; unset it to move the default run store.`
+      const expected = source === 'LLM_BRIDGE_RUNS_ROOT'
+        ? `LLM_BRIDGE_RUNS_ROOT is set to ${resolution.root}; unset it to move the default run store.`
         : `No run store to move: ${resolution.legacyRoot} does not exist.`;
       for (const dryRun of [false, true]) {
         const result = runsMove({ resolution, dryRun, liveRuns: () => assert.fail('resolution refuses first') });
@@ -33,7 +33,7 @@ test('any live run under the legacy root refuses before destination checks; dry 
     fs.mkdirSync(resolution.homeRoot, { recursive: true });
     fs.writeFileSync(path.join(resolution.homeRoot, 'existing'), 'keep');
     const dirs = [path.join(resolution.legacyRoot, 'project', 'one'), path.join(resolution.legacyRoot, 'other', 'two')];
-    const live = `Runs are still live in ${resolution.legacyRoot}:\n${dirs.join('\n')}. Wait for them or stop them with codex-bridge stop, then repeat.`;
+    const live = `Runs are still live in ${resolution.legacyRoot}:\n${dirs.join('\n')}. Wait for them or stop them with llm-bridge stop, then repeat.`;
     const before = snapshot(root);
     for (const dryRun of [false, true]) {
       let calls = 0;
@@ -110,7 +110,7 @@ test('real move preserves every legacy byte and writes the record that switches 
     const record = readRunsMoveRecord(resolution.stateDir);
     assert.equal(record.retired.length, 1);
     assert.equal(record.retired[0].root, resolution.legacyRoot);
-    const switched = runsRootResolution({ homedir: root, env: { CODEX_BRIDGE_HOME: path.join(root, 'home') } });
+    const switched = runsRootResolution({ homedir: root, env: { LLM_BRIDGE_HOME: path.join(root, 'home') } });
     assert.equal(switched.source, 'moved');
     assert.equal(switched.root, resolution.homeRoot);
   });

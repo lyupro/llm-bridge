@@ -40,7 +40,7 @@ test('hook denies only the exact refusal and records it', async () => {
     assert.equal(substring.stdout, '');
     const entries = fs.readFileSync(rig.dispatcherJournalPath, 'utf8').trim().split('\n').map(JSON.parse);
     assert.equal(entries.length, 3);
-    assert.equal(fs.readFileSync(rig.journalPath, 'utf8'), 'codex-bridge-contract-probe\n');
+    assert.equal(fs.readFileSync(rig.journalPath, 'utf8'), 'llm-bridge-contract-probe\n');
   } finally { removeTempTree(root); }
 });
 

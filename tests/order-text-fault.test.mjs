@@ -17,8 +17,8 @@ function runCase(body, { blocked = false, marker = true, status = 0 } = {}) {
   const root = path.join(tree, 'marker');
   if (blocked) fs.writeFileSync(root, 'not a directory');
   const env = { ...process.env, D9_ROOT: root };
-  if (marker) env.CODEX_BRIDGE_TEST_TMP = root;
-  else delete env.CODEX_BRIDGE_TEST_TMP;
+  if (marker) env.LLM_BRIDGE_TEST_TMP = root;
+  else delete env.LLM_BRIDGE_TEST_TMP;
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
     import assert from 'node:assert/strict';
     import fs from 'node:fs';
@@ -42,7 +42,7 @@ function faultEntries(root, result) {
   const lines = fs.readFileSync(path.join(directory, `${result.pid}.jsonl`), 'utf8')
     .split(/\r?\n/).filter(Boolean);
   assert.equal(result.stderr, lines.map((line) => `${prefix}${line}\n`).join(''));
-  assert.equal(fs.existsSync(orderTextFaultDirectory(process.env.CODEX_BRIDGE_TEST_TMP)), false);
+  assert.equal(fs.existsSync(orderTextFaultDirectory(process.env.LLM_BRIDGE_TEST_TMP)), false);
   return lines.map(JSON.parse);
 }
 
@@ -216,7 +216,7 @@ test('clean checks and checks outside test mode touch no filesystem sinks', () =
       const values = { help: known, empty: '', missing: undefined, data: 'arbitrary' };
       assert.equal(checkOrderTextParameters('clean', null, values, ['data']), values);
       assert.equal(checkOutgoingRefusal(known, 'clean'), known);
-      if (!process.env.CODEX_BRIDGE_TEST_TMP) {
+      if (!process.env.LLM_BRIDGE_TEST_TMP) {
         assert.equal(checkOutgoingRefusal(null, 'disabled'), null);
         assert.equal(checkOrderTextParameters('disabled', null, { help: {} }, []).help.constructor, Object);
       }

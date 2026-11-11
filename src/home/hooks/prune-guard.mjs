@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PreToolUse guard that keeps `codex-bridge prune` out of agent-issued shell commands.
+ * PreToolUse guard that keeps `llm-bridge prune` out of agent-issued shell commands.
  *
  * Deletion is an operator action. The command already refuses without a terminal, but a guard in
  * front of it is the second rubezh Plan_17 asks for: the TTY check lives inside the very process an
@@ -18,7 +18,7 @@ const SHELL_TOOL_NAMES = new Set(SHELL_TOOLS);
 const pass = () => process.exit(0);
 
 // The binary, then the verb, with any path in front of it: an agent reaches the CLI as
-// `codex-bridge`, as `node bin/codex-bridge.mjs`, or through an absolute path, and a guard that
+// `llm-bridge`, as `node bin/llm-bridge.mjs`, or through an absolute path, and a guard that
 // only knew the bare name would be bypassed by the spelling everyone uses inside a clone. Plan_19
 // adds a second executable spelling, so build this matcher from the shared list instead of
 // repeating names here. Matching a lone `prune` is not an option either — `git prune` and
@@ -63,8 +63,8 @@ process.stdout.write(JSON.stringify({
   hookSpecificOutput: {
     hookEventName: 'PreToolUse',
     permissionDecision: 'deny',
-    permissionDecisionReason: 'codex-bridge prune deletes run artifacts and is an operator action, '
+    permissionDecisionReason: 'llm-bridge prune deletes run artifacts and is an operator action, '
       + 'not an agent one. There is deliberately no bypass flag. Ask the operator to run it in '
-      + 'their own terminal; `codex-bridge projects` shows the same store read-only.',
+      + 'their own terminal; `llm-bridge projects` shows the same store read-only.',
   },
 }));

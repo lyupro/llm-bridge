@@ -30,7 +30,7 @@ test('update stops on an unrecorded file in a newly planned path and leaves it a
   const { host, newPackage, target } = await hostWithNewRulesFile(t, 'Operator rules\n');
   const result = await update({ host, packageRoot: newPackage });
   assert.equal(result.exitCode, 1, result.output);
-  assert.match(result.output, /^ {2}claude\/rules\/codex-bridge\/core\.md \(unowned\)$/m);
+  assert.match(result.output, /^ {2}claude\/rules\/llm-bridge\/core\.md \(unowned\)$/m);
   assert.equal(await fs.readFile(target, 'utf8'), 'Operator rules\n');
 });
 

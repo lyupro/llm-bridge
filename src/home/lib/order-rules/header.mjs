@@ -214,7 +214,7 @@ export const RULES = Object.freeze({
         `(slug ${slug}, started_at ${startedAt})`;
       if (violation === 'predates-hash-scheme') {
         return `${identity}, recorded before the task header (hash scheme ${hashScheme}), so its task cannot be compared. ` +
-          `Its answer is already on disk in that folder (codex-bridge read "${ownerDir}"). ` +
+          `Its answer is already on disk in that folder (llm-bridge read "${ownerDir}"). ` +
           'Another pass of that order needs a continue:/retry: header line; a new task needs a new order id.';
       }
       if (violation === 'different-task') {

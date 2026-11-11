@@ -115,7 +115,7 @@ test('removal hint names the host and shared home', async (t) => {
 
   const hint = removalHint(host);
 
-  assert.ok(hint.startsWith(`Run codex-bridge uninstall --host "${host.root}" again in a terminal`));
+  assert.ok(hint.startsWith(`Run llm-bridge uninstall --host "${host.root}" again in a terminal`));
   assert.ok(hint.endsWith(`no other host uses ${host.brandRoot} and remove it.`));
 });
 

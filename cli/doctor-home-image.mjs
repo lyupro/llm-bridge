@@ -11,7 +11,7 @@ import { check } from './doctor-format.mjs';
 
 export async function homeImageCheck(host, record) {
   try {
-    if (!record) return check('homeImage', 'warn', 'Home image was not checked; run codex-bridge install');
+    if (!record) return check('homeImage', 'warn', 'Home image was not checked; run llm-bridge install');
     const plan = (await buildInstallPlan(host)).filter((item) => item.root === 'brand');
     const paths = new Set(plan.map((item) => item.relativeToRoot));
     const groups = { missing: [], changed: [], unreadable: [], extra: [] };
@@ -37,7 +37,7 @@ export async function homeImageCheck(host, record) {
       .map(([group, files]) => `${group}: ${files.slice(0, 5).join(', ')}${files.length > 5 ? `, +${files.length - 5} more` : ''}`);
     if (differences.length) {
       const ownPackage = await packageInfo();
-      return check('homeImage', 'fail', `${differences.join('; ')}; the home image does not belong to the package of this command (${ownPackage.name}@${ownPackage.version}); run codex-bridge update --force with this same command to replace it`);
+      return check('homeImage', 'fail', `${differences.join('; ')}; the home image does not belong to the package of this command (${ownPackage.name}@${ownPackage.version}); run llm-bridge update --force with this same command to replace it`);
     }
     return check('homeImage', 'ok', `${plan.length} image file(s) on disk match this package`);
   } catch (err) {

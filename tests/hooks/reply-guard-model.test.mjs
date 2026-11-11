@@ -16,7 +16,7 @@ const GUARD = fileURLToPath(new URL('../../src/home/hooks/reply-guard.mjs', impo
 const agentType = 'codex-build';
 const sessionId = 'model-test-session';
 const agentId = 'model-test-dispatcher';
-const alarm = 'codex-bridge: dispatcher codex-build ran on sonnet while the installed contract pins haiku — Claude quota was spent on it; run codex-bridge doctor.';
+const alarm = 'llm-bridge: dispatcher codex-build ran on sonnet while the installed contract pins haiku — Claude quota was spent on it; run llm-bridge doctor.';
 
 async function fixture(root, { model = 'claude-sonnet-4-5', state, toolUses = [] } = {}) {
   const brandRoot = path.join(root, 'bridge-home');
@@ -46,7 +46,7 @@ function runGuard(root, { brandRoot, transcriptPath }, overrides = {}) {
     }),
     encoding: 'utf8',
     env: {
-      ...process.env, CODEX_BRIDGE_HOME: brandRoot, CODEX_RUNS_ROOT: path.join(root, 'runs'),
+      ...process.env, LLM_BRIDGE_HOME: brandRoot, LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'),
       HOME: root, USERPROFILE: root,
     },
   });
@@ -74,7 +74,7 @@ test('foreign-family models are recorded before delivered handback yields, along
     });
     const output = runGuard(root, dirs);
     assert.deepEqual(Object.keys(output), ['systemMessage']);
-    assert.equal(output.systemMessage, `${alarm} codex-bridge: dispatcher codex-build used Bash outside the dispatcher gate — do not trust its answer; run codex-bridge doctor.`);
+    assert.equal(output.systemMessage, `${alarm} llm-bridge: dispatcher codex-build used Bash outside the dispatcher gate — do not trust its answer; run llm-bridge doctor.`);
     violationOf(dirs.stateDir);
   });
 });

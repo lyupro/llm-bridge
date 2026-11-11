@@ -79,6 +79,6 @@ export async function askPurgeConsent(host, kind, options, detail = []) {
 }
 
 export function removalHint(host) {
-  return `Run codex-bridge uninstall --host "${host.root}" again in a terminal to confirm that no other host uses `
+  return `Run llm-bridge uninstall --host "${host.root}" again in a terminal to confirm that no other host uses `
     + `${host.brandRoot} and remove it.`;
 }

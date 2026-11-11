@@ -1,5 +1,5 @@
 {
-  "name": "@lyupro/codex-bridge",
+  "name": "@lyupro/llm-bridge",
   "version": "0.6.26",
   "description": "Claude Code-to-Codex delegation with 8 guards, 5900 tests, zero runtime dependencies, and zero build steps.",
   "keywords": [
@@ -23,8 +23,7 @@
   "homepage": "https://github.com/lyupro/codex-bridge#readme",
   "type": "module",
   "bin": {
-    "codex-bridge": "bin/codex-bridge.mjs",
-    "codexb": "bin/codex-bridge.mjs"
+    "llm-bridge": "bin/llm-bridge.mjs"
   },
   "engines": {
     "node": ">=24.0.0"
@@ -40,7 +39,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "dev:install": "node bin/codex-bridge.mjs update --force",
+    "dev:install": "node bin/llm-bridge.mjs update --force",
     "test": "node scripts/run-tests.mjs",
     "release-check:rules-load-claude": "node scripts/release-check/rules-load-claude.mjs",
     "check:size": "node scripts/check-file-size.mjs",

@@ -170,7 +170,7 @@ test('an archived FAIL reply without assessments adds only its Action row', () =
     'Artifacts: events.jsonl 0 B · stderr.log 0 B · result.json empty or missing · exit=1',
     'Action: the run left no usable result; read the log and git status before deciding; repeat only through a grant this reply offers or the operator approves, never take over the task yourself',
     'Worktree: no new changes',
-    `Log: codex-bridge read ${dir}`,
+    `Log: llm-bridge read ${dir}`,
   ].join('\n'));
 });
 
@@ -184,7 +184,7 @@ test('a usable-result FAIL does not access or render stop assessments', () => {
     'FAIL — verification failed',
     'Artifacts: events.jsonl 0 B · stderr.log 0 B · result.json filled · exit=1',
     'Action: the run returned a result that did not pass; read the report and git status before deciding; a repeat of this pass needs your retry: grant, the next pass your continue: grant',
-    `Log: codex-bridge read ${dir}`,
+    `Log: llm-bridge read ${dir}`,
   ]);
 });
 
@@ -205,7 +205,7 @@ for (const agent of ['codex-build', 'codex-advisor']) {
       'Situation: evidence-unknown · silence=unknown · threshold=unconfigured · command=unknown',
       continuation,
       'Treatment: inspect-evidence · diagnostic only, nothing runs it',
-      `Log: codex-bridge read ${dir}`,
+      `Log: llm-bridge read ${dir}`,
     ].join('\n'));
   });
 }

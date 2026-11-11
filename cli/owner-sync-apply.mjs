@@ -101,7 +101,7 @@ export function ownerApplyLines(result) {
       return [`Updated ${owner.files} file(s) and ${owner.hooks} hook(s) of ${owner.root}.`];
     }
     if (owner.status === 'failed') {
-      return [`Left ${owner.root} behind: ${owner.reason}; run codex-bridge update --host "${owner.root}".`];
+      return [`Left ${owner.root} behind: ${owner.reason}; run llm-bridge update --host "${owner.root}".`];
     }
     return ownerSyncLines({ owners: [owner] });
   });

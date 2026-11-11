@@ -1,4 +1,4 @@
-/** Installs codex-bridge files into the Claude and brand roots with conflict-safe idempotency. */
+/** Installs llm-bridge files into the Claude and brand roots with conflict-safe idempotency. */
 import fs from 'node:fs/promises';
 import {
   buildInstallPlan,
@@ -86,7 +86,7 @@ function permissionOutput(result, settingsPath) {
   // off the count of what was added would state the opposite of the truth on a host someone had
   // edited by hand, and permission windows are exactly what the operator would then not understand.
   if (result.present < result.total) {
-    return `${result.present} of ${result.total} permission rules are in place in ${settingsPath}; run codex-bridge install --force to restore the rest.`;
+    return `${result.present} of ${result.total} permission rules are in place in ${settingsPath}; run llm-bridge install --force to restore the rest.`;
   }
   return `All ${result.total} permission rules are already in place in ${settingsPath}, so the host runs the package command without asking.`;
 }
@@ -129,7 +129,7 @@ async function installInRun(options = {}) {
     version: currentHostVersion,
   });
   const noObservedHostMessage = currentHostVersion === null
-    ? 'Host contracts are judged once a session has run a shell command; then run codex-bridge doctor.' : null;
+    ? 'Host contracts are judged once a session has run a shell command; then run llm-bridge doctor.' : null;
   if (noObservedHostMessage) hostContract = { ...hostContract, message: noObservedHostMessage };
   const plan = await buildInstallPlan(host, packageRoot);
   const { writer, idFor: copyId } = planHomeWriter(host.brandRoot, plan);
@@ -196,12 +196,12 @@ async function installInRun(options = {}) {
         hostContract,
         retentionOutput(
           configuredRetentionLine,
-          `codex-bridge is already installed; nothing to do.\n${permissionOutput(permissionResult, host.settingsPath)}`,
+          `llm-bridge is already installed; nothing to do.\n${permissionOutput(permissionResult, host.settingsPath)}`,
         ),
       ));
     }
     return ownerSyncOutput(host, { packageRoot, env, dryRun },
-      contractOutput(hostContract, retentionOutput(configuredRetentionLine, 'codex-bridge is already installed; nothing to do.')));
+      contractOutput(hostContract, retentionOutput(configuredRetentionLine, 'llm-bridge is already installed; nothing to do.')));
   }
 
   if (dryRun) {

@@ -32,12 +32,12 @@ async function writeRawRecord(host, record) {
 test('detects a format-1 record as a transition', async (t) => {
   const { host } = await fixture(t);
   await writeRawRecord(host, {
-    name: '@lyupro/codex-bridge',
+    name: '@lyupro/llm-bridge',
     version: '0.1.0',
     installedAt: '2026-08-10T20:00:00.000Z',
     mode: 'copy',
     files: [{ root: 'brand', path: 'lib/runner.mjs' }],
-    hooks: [{ event: 'SubagentStop', root: 'brand', path: 'hooks/reply-guard.mjs', command: 'codex-bridge hook reply-guard' }],
+    hooks: [{ event: 'SubagentStop', root: 'brand', path: 'hooks/reply-guard.mjs', command: 'llm-bridge hook reply-guard' }],
   });
 
   assert.deepEqual(await detectTransition(host), { transition: true, homeHadImage: false });

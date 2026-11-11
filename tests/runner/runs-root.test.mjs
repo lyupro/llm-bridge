@@ -14,7 +14,7 @@ async function withHome(work) {
   const tree = makeTempTree('runs-root-');
   const homedir = path.join(tree, 'home');
   const brandHome = path.join(tree, 'brand');
-  const env = { CODEX_BRIDGE_HOME: brandHome };
+  const env = { LLM_BRIDGE_HOME: brandHome };
   const legacyRoot = path.join(homedir, '.claude', 'codex-runs');
   const homeRoot = path.join(brandHome, 'runs');
   const stateDir = path.join(brandHome, 'state');
@@ -35,7 +35,7 @@ async function withHome(work) {
 test('a clean home uses the default package root without creating anything', async () => {
   await withHome(({ tree, homedir, env, legacyRoot, homeRoot }) => {
     for (const override of [undefined, '', '   ']) {
-      assert.deepEqual(runsRootResolution({ env: { ...env, CODEX_RUNS_ROOT: override }, homedir }), {
+      assert.deepEqual(runsRootResolution({ env: { ...env, LLM_BRIDGE_RUNS_ROOT: override }, homedir }), {
         root: homeRoot, source: 'default', legacyRoot, homeRoot, retired: [], staleOverride: null,
       });
     }
@@ -62,7 +62,7 @@ test('runs root accepts only the exact environment key named by package identity
 test('the default brand home is derived from the injected home', async () => {
   await withHome(({ homedir }) => {
     const result = runsRootResolution({ env: {}, homedir });
-    assert.equal(result.root, path.join(homedir, '.lyupro', '.codex-bridge', 'runs'));
+    assert.equal(result.root, path.join(homedir, '.lyupro', '.llm-bridge', 'runs'));
     assert.equal(result.source, 'default');
   });
 });
@@ -110,11 +110,11 @@ test('a trimmed override wins over both the legacy store and a move record', asy
   await withHome(({ tree, homedir, env, legacyRoot, homeRoot, retired, writeRecord }) => {
     fs.mkdirSync(legacyRoot, { recursive: true });
     const root = path.join(tree, 'custom');
-    const overridden = { ...env, CODEX_RUNS_ROOT: `  ${root}  ` };
-    assert.equal(runsRootResolution({ env: overridden, homedir }).source, 'CODEX_RUNS_ROOT');
+    const overridden = { ...env, LLM_BRIDGE_RUNS_ROOT: `  ${root}  ` };
+    assert.equal(runsRootResolution({ env: overridden, homedir }).source, 'LLM_BRIDGE_RUNS_ROOT');
     writeRecord();
     assert.deepEqual(runsRootResolution({ env: overridden, homedir }), {
-      root, source: 'CODEX_RUNS_ROOT', legacyRoot, homeRoot, retired, staleOverride: null,
+      root, source: 'LLM_BRIDGE_RUNS_ROOT', legacyRoot, homeRoot, retired, staleOverride: null,
     });
     assert.equal(fs.existsSync(root), false);
   });
@@ -125,9 +125,9 @@ test('an override under a retired root is reported without remapping or creating
     writeRecord();
     for (const suffix of ['', 'Project/Run-ID']) {
       const root = suffix ? path.join(legacyRoot, suffix) : legacyRoot;
-      const result = runsRootResolution({ env: { ...env, CODEX_RUNS_ROOT: root }, homedir });
+      const result = runsRootResolution({ env: { ...env, LLM_BRIDGE_RUNS_ROOT: root }, homedir });
       assert.equal(result.root, root);
-      assert.equal(result.source, 'CODEX_RUNS_ROOT');
+      assert.equal(result.source, 'LLM_BRIDGE_RUNS_ROOT');
       assert.deepEqual(result.retired, retired);
       assert.deepEqual(result.staleOverride, { root: legacyRoot, suffix });
       assert.equal(fs.existsSync(legacyRoot), false);
@@ -137,23 +137,23 @@ test('an override under a retired root is reported without remapping or creating
 
 test('runsRoot refuses retired overrides and preserves ordinary overrides (Plan_77 F2)', async (t) => {
   await withHome(({ tree, env, legacyRoot, writeRecord }) => {
-    for (const key of ['CODEX_BRIDGE_HOME', 'CODEX_RUNS_ROOT']) {
+    for (const key of ['LLM_BRIDGE_HOME', 'LLM_BRIDGE_RUNS_ROOT']) {
       const previous = process.env[key];
       t.after(() => {
         if (previous === undefined) delete process.env[key];
         else process.env[key] = previous;
       });
     }
-    process.env.CODEX_BRIDGE_HOME = env.CODEX_BRIDGE_HOME;
+    process.env.LLM_BRIDGE_HOME = env.LLM_BRIDGE_HOME;
     writeRecord();
     for (const suffix of ['', 'Project/Run-ID']) {
-      process.env.CODEX_RUNS_ROOT = path.join(legacyRoot, suffix);
+      process.env.LLM_BRIDGE_RUNS_ROOT = path.join(legacyRoot, suffix);
       const message = staleOverrideRefusal(runsRootResolution());
-      assert.match(message, /CODEX_RUNS_ROOT points under a retired runs root/);
+      assert.match(message, /LLM_BRIDGE_RUNS_ROOT points under a retired runs root/);
       assert.throws(() => runsRoot(), { name: 'Error', message });
     }
     const root = path.join(tree, 'custom');
-    process.env.CODEX_RUNS_ROOT = `  ${root}  `;
+    process.env.LLM_BRIDGE_RUNS_ROOT = `  ${root}  `;
     assert.equal(runsRoot(), root);
     assert.equal(fs.existsSync(root), false);
     assert.equal(fs.existsSync(legacyRoot), false);
@@ -202,7 +202,7 @@ test('every corrupt record defect names the file and propagates even with an ove
       };
       assert.throws(() => readRunsMoveRecord(path.dirname(file)), namesDefect);
       for (const override of [undefined, path.join(tree, 'custom')]) {
-        assert.throws(() => runsRootResolution({ env: { ...env, CODEX_RUNS_ROOT: override }, homedir }), namesDefect);
+        assert.throws(() => runsRootResolution({ env: { ...env, LLM_BRIDGE_RUNS_ROOT: override }, homedir }), namesDefect);
       }
     }
   });
@@ -275,16 +275,16 @@ test('staleOverrideRefusal returns null for current roots and names a stale over
     writeRecord();
     for (const override of [undefined, homeRoot, path.join(tree, 'custom')]) {
       assert.equal(staleOverrideRefusal(runsRootResolution({
-        env: { ...env, CODEX_RUNS_ROOT: override }, homedir,
+        env: { ...env, LLM_BRIDGE_RUNS_ROOT: override }, homedir,
       })), null);
     }
     for (const suffix of ['', 'Project/Run-ID']) {
       const root = path.join(legacyRoot, suffix);
-      const resolution = runsRootResolution({ env: { ...env, CODEX_RUNS_ROOT: `  ${root}  ` }, homedir });
+      const resolution = runsRootResolution({ env: { ...env, LLM_BRIDGE_RUNS_ROOT: `  ${root}  ` }, homedir });
       assert.equal(staleOverrideRefusal(resolution),
         `Run records moved from ${legacyRoot} to ${homeRoot}. Equivalent path: ${path.join(homeRoot, suffix)}. ` +
         'Update advice: or pass this new path explicitly. No path was remapped.\n' +
-        'CODEX_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.');
+        'LLM_BRIDGE_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.');
       assert.equal(resolution.root, root);
     }
     assert.equal(fs.existsSync(legacyRoot), false);

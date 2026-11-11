@@ -30,7 +30,7 @@ export function deriveRecoveryBudgetMs(calibration) {
 export const AUTOMATIC_RECOVERY_ENABLED = Object.freeze({ 'advisor.advise': false });
 
 export function resolveRecoveryBrake({ env = process.env } = {}) {
-  const key = 'CODEX_BRIDGE_AUTO_RECOVERY';
+  const key = 'LLM_BRIDGE_AUTO_RECOVERY';
   const received = env[key];
   const value = received?.trim();
   if (value === undefined || value === '') return { key, value: 'on', source: 'default' };

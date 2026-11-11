@@ -11,7 +11,7 @@ const prompt = `task file: ${taskFile}`;
 test('each dispatcher template uses the canonical command spelling and quoting', () => {
   for (const agent of ORDER_AGENTS) {
     assert.equal(renderRunCommandTemplate(agent),
-      `codex-bridge run --agent ${agent} --task-file "<task-file path from the orchestrator>"`);
+      `llm-bridge run --agent ${agent} --task-file "<task-file path from the orchestrator>"`);
     assert.equal(renderRunCommandTemplate(agent).replace('<task-file path from the orchestrator>', taskFile),
       canonicalRunCommand(agent, prompt).command);
   }
@@ -26,7 +26,7 @@ test('command templates throw for unknown and missing dispatcher agents', () => 
 test('each dispatcher produces exactly the agent and task-file command with no other tokens', () => {
   for (const agent of ORDER_AGENTS) {
     assert.deepEqual(canonicalRunCommand(agent, prompt), {
-      command: `codex-bridge run --agent ${agent} --task-file "${taskFile}"`,
+      command: `llm-bridge run --agent ${agent} --task-file "${taskFile}"`,
     });
   }
 });
@@ -35,7 +35,7 @@ test('the command quotes a path with spaces without accessing the task file', ()
   for (const agent of ORDER_AGENTS) {
     const value = 'C:/nonexistent scratch/absent task.md';
     assert.deepEqual(canonicalRunCommand(agent, `task file: ${value}`), {
-      command: `codex-bridge run --agent ${agent} --task-file "${value}"`,
+      command: `llm-bridge run --agent ${agent} --task-file "${value}"`,
     });
   }
 });

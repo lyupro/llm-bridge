@@ -18,7 +18,7 @@ function host(root, scope = 'project') {
 function record(label = 'alpha', overrides = {}) {
   const ownerPath = 'agents/' + label + '/reply-guard.mjs';
   return {
-    name: '@lyupro/codex-bridge',
+    name: '@lyupro/llm-bridge',
     version: '1.2.3',
     installedAt: '2026-09-27T17:00:00.000Z',
     mode: 'copy',
@@ -37,7 +37,7 @@ function record(label = 'alpha', overrides = {}) {
       event: 'SubagentStop',
       root: 'claude',
       path: ownerPath,
-      command: 'codex-bridge hook reply-guard',
+      command: 'llm-bridge hook reply-guard',
     }],
     ...overrides,
   };

@@ -2,8 +2,8 @@
  * Resolves where the package's host-side files live: the brand home and the files seeded into it.
  *
  * One resolver, because the rule existed twice and the two copies disagreed. Until 2026-08-26 the
- * runtime built the path to config.json from its own module directory, so `codex-bridge run` read
- * the seed shipped inside the package while the operator edited `~/.lyupro/.codex-bridge/config.json`.
+ * runtime built the path to config.json from its own module directory, so `llm-bridge run` read
+ * the seed shipped inside the package while the operator edited `~/.lyupro/.llm-bridge/config.json`.
  * A model and an effort pinned there on 5 August never reached a single run — every run silently
  * used defaults, `env.json` recorded `"models": {}`, three releases shipped with it, and `doctor`
  * kept confirming the setting because the CLI resolved the path correctly.

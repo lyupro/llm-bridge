@@ -3,7 +3,7 @@ description: Show the ChatGPT quota spent on runs delegated to Codex — by day,
 allowed-tools: Bash
 ---
 
-<!-- Part of the agents/codex-bridge/ package. The file lives here out of necessity: the slash
+<!-- Part of the agents/llm-bridge/ package. The file lives here out of necessity: the slash
      command name is set by its location under commands/<namespace>/, and Claude Code understands neither
      symlinks nor pointer files (verified 2026-08-02). Edit it here; it travels as a copy when the
      package is installed. -->
@@ -12,7 +12,7 @@ Count how much ChatGPT quota the runs delegated to Codex burned. This is spendin
 not on the Claude side.
 
 The root of the run folders comes from the runner's own resolver, so usage counts exactly where
-runs are written: the `CODEX_RUNS_ROOT` override, `~/.lyupro/.codex-bridge/runs/` after the move,
+runs are written: the `LLM_BRIDGE_RUNS_ROOT` override, `~/.lyupro/.llm-bridge/runs/` after the move,
 or `~/.claude/codex-runs/` while the move is pending.
 
 The source is the `meta.json` in each run folder: it holds the spending, the model and the sandbox.
@@ -34,7 +34,7 @@ Run exactly this command and recompute nothing by hand:
 ```bash
 node -e "
 const fs=require('fs'),path=require('path'),os=require('os');
-const home=(process.env.CODEX_BRIDGE_HOME||'').trim()||path.join(os.homedir(),'.lyupro','.codex-bridge');
+const home=(process.env.LLM_BRIDGE_HOME||'').trim()||path.join(os.homedir(),'.lyupro','.llm-bridge');
 import(require('url').pathToFileURL(path.join(home,'lib','runner','runs-root.mjs')).href).then(m=>{
 const root=m.runsRoot();
 if(!fs.existsSync(root)){console.log('No runs yet.');process.exit(0)}

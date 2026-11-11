@@ -7,7 +7,7 @@ import { fetchCatalogue, parseCatalogue } from './model-catalogue.mjs';
 import { describe, readProfiles } from './model-set.mjs';
 import { withCommandHelp } from './command-help.mjs';
 
-const failure = (exitCode, message) => ({ exitCode, output: `codex-bridge model: ${message}` });
+const failure = (exitCode, message) => ({ exitCode, output: `llm-bridge model: ${message}` });
 const refusal = (message) => Object.assign(new Error(message), { exitCode: 2 });
 const unexpected = (argument) => {
   const result = failure(2, `unexpected argument "${argument}".`);
@@ -87,7 +87,7 @@ export async function editModelSpeed(argv, options) {
         exitCode: 0,
         output: `Preview — ${change}\nCatalogue description: "${tier.description}"\n`
           + 'Credit multipliers: https://learn.chatgpt.com/docs/agent-configuration/speed\n'
-          + `Run a second call ending in confirm to apply: codex-bridge model speed ${role} ${speed} confirm\nNothing written.`,
+          + `Run a second call ending in confirm to apply: llm-bridge model speed ${role} ${speed} confirm\nNothing written.`,
       };
     }
     await editRunConfig('models', transform, configPath);

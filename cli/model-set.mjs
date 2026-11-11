@@ -7,7 +7,7 @@ import { editRunConfig } from '../src/home/lib/config-edit.mjs';
 import { fetchCatalogue, parseCatalogue } from './model-catalogue.mjs';
 import { withCommandHelp } from './command-help.mjs';
 
-const failure = (exitCode, message) => ({ exitCode, output: `codex-bridge model: ${message}` });
+const failure = (exitCode, message) => ({ exitCode, output: `llm-bridge model: ${message}` });
 const refusal = (message) => Object.assign(new Error(message), { exitCode: 2 });
 
 function parseChanges(args) {

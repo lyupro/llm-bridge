@@ -5,7 +5,7 @@ import { recognizeHostRefusal } from '../../src/home/lib/host-refusal.mjs';
 
 test('recognises a complete host refusal and reports no missing parts', () => {
   const result = recognizeHostRefusal(
-    'FAIL — order id `probe-20260816` was refused. Run `codex-bridge install`.',
+    'FAIL — order id `probe-20260816` was refused. Run `llm-bridge install`.',
   );
   assert.deepEqual(result, {
     recognized: true,
@@ -22,6 +22,6 @@ test('reports each missing host-refusal part', () => {
     declaresFailure: false,
     namesOrderId: false,
     namesInstallRemedy: false,
-    missing: ['FAIL declaration', 'order id', 'codex-bridge install remedy'],
+    missing: ['FAIL declaration', 'order id', 'llm-bridge install remedy'],
   });
 });

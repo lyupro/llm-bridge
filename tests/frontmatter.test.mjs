@@ -16,7 +16,7 @@ import { renderStopSummary } from '../src/home/lib/stop-contract.mjs';
 function intendedValues(source, installationRoot, agentType) {
   const sourceValues = parseFrontmatter(normalizeFrontmatter(source));
   const replacements = new Map([
-    ['{{CODEX_BRIDGE_DIR}}', path.resolve(installationRoot).split(path.sep).join('/')],
+    ['{{LLM_BRIDGE_DIR}}', path.resolve(installationRoot).split(path.sep).join('/')],
     ['{{CODEX_REQUIRED_INPUTS_SUMMARY}}', renderRequiredInputSummary(agentType)],
     ['{{CODEX_DISPATCHER_PROTOCOL}}', renderDispatcherProtocol(agentType)],
     ['{{CODEX_NO_SELF_EXECUTION}}', renderNoSelfExecution()],

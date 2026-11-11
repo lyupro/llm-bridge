@@ -132,7 +132,7 @@ test('withOwner records read back only when the inventory is explicitly complete
     const host = { root: path.join(brandRoot, 'host', '.claude'), scope: 'project' };
     const ownerPath = 'agents/alpha/reply-guard.mjs';
     const record1 = {
-      name: '@lyupro/codex-bridge',
+      name: '@lyupro/llm-bridge',
       version: '1.2.3',
       installedAt: '2026-09-27T17:00:00.000Z',
       mode: 'copy',
@@ -141,14 +141,14 @@ test('withOwner records read back only when the inventory is explicitly complete
         claude: { [ownerPath]: 'a'.repeat(64) },
         brand: { 'lib/runner.mjs': 'b'.repeat(64) },
       },
-      hooks: [{ event: 'SubagentStop', root: 'claude', path: ownerPath, command: 'codex-bridge hook reply-guard' }],
+      hooks: [{ event: 'SubagentStop', root: 'claude', path: ownerPath, command: 'llm-bridge hook reply-guard' }],
     };
     const file = recordPath(brandRoot);
     fs.writeFileSync(file, JSON.stringify(withOwner(null, host, record1, { inventory: 'complete' })));
     assert.deepEqual(readOwnerRoots({ brandRoot }), { roots: [host.root] });
     fs.writeFileSync(file, JSON.stringify(withOwner(null, host, record1)));
     assert.deepEqual(readOwnerRoots({ brandRoot }), {
-      problem: 'inventory-incomplete', detail: `Installation record at ${file} has an incomplete inventory; if the recorded hosts are all the hosts using this home, run codex-bridge inventory confirm.`,
+      problem: 'inventory-incomplete', detail: `Installation record at ${file} has an incomplete inventory; if the recorded hosts are all the hosts using this home, run llm-bridge inventory confirm.`,
     });
   });
 });

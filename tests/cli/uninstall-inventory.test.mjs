@@ -37,7 +37,7 @@ function countingPrompt(answer) {
 }
 
 function hintFor(host) {
-  return `Run codex-bridge uninstall --host "${host.root}" again in a terminal`;
+  return `Run llm-bridge uninstall --host "${host.root}" again in a terminal`;
 }
 
 async function assertGone(host, files) {

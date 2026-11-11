@@ -42,7 +42,7 @@ test('judgeProbe keeps every unmeasured outcome inconclusive', () => {
 });
 
 async function runProbeScenario(name, runHost, seenVersion = '2.1.240') {
-  const root = makeTempTree(`codex-bridge-probe-${name}-`);
+  const root = makeTempTree(`llm-bridge-probe-${name}-`);
   const host = { brandRoot: path.join(root, 'brand') };
   const rigRoot = path.join(root, 'rig-root');
   let rigDir;

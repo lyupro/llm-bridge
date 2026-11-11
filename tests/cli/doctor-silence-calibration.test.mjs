@@ -199,10 +199,10 @@ test('the check writes nothing while reading run records', async (t) => {
 test('diagnose shares one runs-root resolution, inserts four evidence rows after projectRuns, and preserves exit code', async (t) => {
   const { host } = await installedFixture(t);
   await withTempTree('silence-diagnose-', async (root) => {
-    const previous = { CODEX_BRIDGE_HOME: process.env.CODEX_BRIDGE_HOME, CODEX_RUNS_ROOT: process.env.CODEX_RUNS_ROOT };
-    process.env.CODEX_BRIDGE_HOME = root;
-    process.env.CODEX_RUNS_ROOT = path.join(root, 'runs');
-    fs.mkdirSync(process.env.CODEX_RUNS_ROOT);
+    const previous = { LLM_BRIDGE_HOME: process.env.LLM_BRIDGE_HOME, LLM_BRIDGE_RUNS_ROOT: process.env.LLM_BRIDGE_RUNS_ROOT };
+    process.env.LLM_BRIDGE_HOME = root;
+    process.env.LLM_BRIDGE_RUNS_ROOT = path.join(root, 'runs');
+    fs.mkdirSync(process.env.LLM_BRIDGE_RUNS_ROOT);
     const options = {
       host, codexProbe, currentPackage: ownPackage,
       bridgeProbe: () => ({ available: true, value: 'fixture' }),
@@ -229,7 +229,7 @@ test('diagnose shares one runs-root resolution, inserts four evidence rows after
       const result = await diagnose({ ...options, silenceCalibration: async (input) => {
         calls += 1;
         sharedRecords = input.records;
-        assert.deepEqual(input, { runsRoot: process.env.CODEX_RUNS_ROOT, now, records: {
+        assert.deepEqual(input, { runsRoot: process.env.LLM_BRIDGE_RUNS_ROOT, now, records: {
           records: [], unreadable: 0, statusUnreadable: 0, days: 30,
           windowStart: now.getTime() - 30 * 24 * 60 * 60 * 1000, windowEnd: now.getTime(),
         } });
@@ -237,19 +237,19 @@ test('diagnose shares one runs-root resolution, inserts four evidence rows after
       }, silenceWatchdogShadow: async (input) => {
         shadowCalls += 1;
         assert.strictEqual(input.records, sharedRecords);
-        assert.equal(input.runsRoot, process.env.CODEX_RUNS_ROOT);
+        assert.equal(input.runsRoot, process.env.LLM_BRIDGE_RUNS_ROOT);
         assert.equal(input.now, now);
         return check('silenceWatchdogShadow', 'warn', 'fixture false stop');
       }, recoveryBudgetDrift: async (input) => {
         driftCalls += 1;
         assert.strictEqual(input.records, sharedRecords);
-        assert.equal(input.runsRoot, process.env.CODEX_RUNS_ROOT);
+        assert.equal(input.runsRoot, process.env.LLM_BRIDGE_RUNS_ROOT);
         assert.equal(input.now, now);
         return check('recoveryBudgetDrift', 'warn', 'fixture recovery drift');
       }, recoveryEnablingGates: async (input) => {
         gateCalls += 1;
         assert.strictEqual(input.records, sharedRecords);
-        assert.equal(input.runsRoot, process.env.CODEX_RUNS_ROOT);
+        assert.equal(input.runsRoot, process.env.LLM_BRIDGE_RUNS_ROOT);
         assert.equal(input.now, now);
         return check('recoveryEnablingGates', 'warn', 'fixture enabling gate');
       } });
@@ -268,7 +268,7 @@ test('diagnose shares one runs-root resolution, inserts four evidence rows after
 
       fs.mkdirSync(path.dirname(moveFile), { recursive: true });
       for (const moveRecord of ['{', JSON.stringify({ version: 1, retired: [
-        { root: process.env.CODEX_RUNS_ROOT, movedAt: '2026-10-14T00:00:00.000Z' },
+        { root: process.env.LLM_BRIDGE_RUNS_ROOT, movedAt: '2026-10-14T00:00:00.000Z' },
       ] })]) {
         fs.writeFileSync(moveFile, moveRecord);
         const unavailable = await diagnose({ ...options,
@@ -313,10 +313,10 @@ test('a supplied scan is used without touching a missing runs root', async (t) =
 test('diagnose reads sampled metadata once and both evidence callbacks reuse the shared scan', async (t) => {
   const { host } = await installedFixture(t);
   await withTempTree('silence-shared-scan-', async (root) => {
-    const previous = { CODEX_BRIDGE_HOME: process.env.CODEX_BRIDGE_HOME, CODEX_RUNS_ROOT: process.env.CODEX_RUNS_ROOT };
-    process.env.CODEX_BRIDGE_HOME = root;
-    process.env.CODEX_RUNS_ROOT = path.join(root, 'runs');
-    const metaFile = record(process.env.CODEX_RUNS_ROOT, recent, successful());
+    const previous = { LLM_BRIDGE_HOME: process.env.LLM_BRIDGE_HOME, LLM_BRIDGE_RUNS_ROOT: process.env.LLM_BRIDGE_RUNS_ROOT };
+    process.env.LLM_BRIDGE_HOME = root;
+    process.env.LLM_BRIDGE_RUNS_ROOT = path.join(root, 'runs');
+    const metaFile = record(process.env.LLM_BRIDGE_RUNS_ROOT, recent, successful());
     const options = {
       host, codexProbe, currentPackage: ownPackage,
       bridgeProbe: () => ({ available: true, value: 'fixture' }),
@@ -358,7 +358,7 @@ test('diagnose reads sampled metadata once and both evidence callbacks reuse the
       const moveFile = path.join(root, 'state', 'runs-root.json');
       fs.mkdirSync(path.dirname(moveFile), { recursive: true });
       for (const moveRecord of ['{', JSON.stringify({ version: 1, retired: [
-        { root: process.env.CODEX_RUNS_ROOT, movedAt: '2026-10-14T00:00:00.000Z' },
+        { root: process.env.LLM_BRIDGE_RUNS_ROOT, movedAt: '2026-10-14T00:00:00.000Z' },
       ] })]) {
         fs.writeFileSync(moveFile, moveRecord);
         await diagnose({ ...options,

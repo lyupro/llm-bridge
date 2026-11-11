@@ -44,9 +44,9 @@ for (const version of [null, '0.5.4']) {
     const before = await Promise.all(watched.map(async (target) => (await fs.stat(target)).mtimeMs));
     // The working directory is named explicitly: the suite itself runs inside a checkout, and the
     // mismatch warning below is exactly what that combination is supposed to produce.
-    const env = { ...process.env, CODEX_BRIDGE_CWD: packageRoot };
+    const env = { ...process.env, LLM_BRIDGE_CWD: packageRoot };
     const result = await update({ host, packageRoot, force: Boolean(version), env });
-    assert.deepEqual(result, { exitCode: 0, output: `codex-bridge is up to date with ${source}` });
+    assert.deepEqual(result, { exitCode: 0, output: `llm-bridge is up to date with ${source}` });
     assert.deepEqual(
       await Promise.all(watched.map(async (target) => (await fs.stat(target)).mtimeMs)),
       before,
@@ -161,7 +161,7 @@ test('--dry-run reports future actions without changing files, record, or settin
   const result = await update({ host, dryRun: true });
   assert.equal(result.exitCode, 0);
   assert.match(result.output, /Would update/);
-  assert.ok(result.output.startsWith(`Would update codex-bridge with ${SOURCE}.\n`));
+  assert.ok(result.output.startsWith(`Would update llm-bridge with ${SOURCE}.\n`));
   for (const [file, content] of before.files) {
     assert.deepEqual(await fs.readFile(recordTarget(host, file)), content);
   }
@@ -205,10 +205,10 @@ test('update names the checkout the operator is standing in when it is not the c
   const packageRoot = await packageFixture(root, path.join('node_modules', PACKAGE.name), { version: '0.5.4' });
   const checkout = await packageFixture(root, 'checkout', { version: '9.9.9' });
   await install({ host, packageRoot });
-  const env = { ...process.env, CODEX_BRIDGE_CWD: checkout };
+  const env = { ...process.env, LLM_BRIDGE_CWD: checkout };
   const result = await update({ host, packageRoot, force: true, env });
   assert.equal(result.exitCode, 0);
-  assert.match(result.output, /up to date with @lyupro\/codex-bridge@0\.5\.4 /);
+  assert.match(result.output, /up to date with @lyupro\/llm-bridge@0\.5\.4 /);
   assert.match(result.output, /Run from 0\.5\.4; the checkout at .* is 9\.9\.9\./);
-  assert.match(result.output, /npm i -g @lyupro\/codex-bridge@9\.9\.9/);
+  assert.match(result.output, /npm i -g @lyupro\/llm-bridge@9\.9\.9/);
 });

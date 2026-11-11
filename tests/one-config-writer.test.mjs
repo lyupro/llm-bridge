@@ -27,7 +27,7 @@ function withoutComments(source) {
 
 function knowsConfigPath(source) {
   return /\b(?:BRAND_CONFIG_PATH|CONFIG_PATH|brandConfigPath)\b|\bBRAND_HOME\s*\.\s*configPath\b/.test(source)
-    || /["'`][^"'`]*\.codex-bridge[/\\]+config\.json["'`]/.test(source)
+    || /["'`][^"'`]*\.llm-bridge[/\\]+config\.json["'`]/.test(source)
     || /\b(?:join|resolve)\s*\([^;]*?["']config\.json["']\s*\)/.test(source)
     || /\b(?:writeFile(?:Sync)?|appendFile(?:Sync)?|createWriteStream|open(?:Sync)?)\s*\(\s*["']config\.json["']/.test(source);
 }
@@ -78,7 +78,7 @@ test('the guard fails on planted config writers in either scanned directory', ()
     "import { BRAND_CONFIG_PATH as target } from './brand-home.mjs'; await fs.writeFile(target, '{}');",
     "import { writeFile as persist } from 'node:fs/promises'; persist(CONFIG_PATH, '{}');",
     "const target = path.join(root, 'config.json'); fs.renameSync(temporary, target);",
-    "const target = '/home/operator/.codex-bridge/config.json'; fs.appendFileSync(target, '{}');",
+    "const target = '/home/operator/.llm-bridge/config.json'; fs.appendFileSync(target, '{}');",
     "const target = path.resolve(root, 'config.json'); createWriteStream(target);",
     "await fs.open(BRAND_HOME.configPath, 'w');",
     "fs.openSync(CONFIG_PATH, 'r+');",

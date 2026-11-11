@@ -45,7 +45,7 @@ test('foreign hook in a package hook group survives uninstall', async (t) => {
   const settings = JSON.parse(await fs.readFile(host.settingsPath, 'utf8'));
   const own = findOwnHooks(settings, host)[0];
   const group = settings.hooks[own.event][own.groupIndex];
-  const foreignCommand = 'foreign hook in a codex-bridge group';
+  const foreignCommand = 'foreign hook in a llm-bridge group';
   group.hooks.push({ type: 'command', command: foreignCommand });
   await fs.writeFile(host.settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
   const result = await uninstall({ host });
@@ -70,8 +70,8 @@ test('unparseable settings block image and record removal without changing setti
   assert.deepEqual(await fs.readFile(recordPath), recordBefore);
   for (const file of imageFiles) await assert.doesNotReject(() => fs.access(recordTarget(host, file)));
   assert.match(result.output, /Left the shared image .* because this host's hooks could not be removed/);
-  assert.match(result.output, /^Did not finish uninstalling codex-bridge:/);
-  assert.doesNotMatch(result.output, /Uninstalled codex-bridge\./);
+  assert.match(result.output, /^Did not finish uninstalling llm-bridge:/);
+  assert.doesNotMatch(result.output, /Uninstalled llm-bridge\./);
   for (const file of record.files.filter((entry) => entry.root !== 'brand')) {
     await assert.doesNotReject(() => fs.access(recordTarget(host, file)));
   }
@@ -87,7 +87,7 @@ test('host marks are cleaned when the installation record is missing', async (t)
   const result = await uninstall({ host });
   const settings = JSON.parse(await fs.readFile(host.settingsPath, 'utf8'));
   assert.equal(result.exitCode, 0);
-  assert.doesNotMatch(result.output, /codex-bridge is not installed/);
+  assert.doesNotMatch(result.output, /llm-bridge is not installed/);
   for (const file of hostFiles) await assert.rejects(() => fs.access(recordTarget(host, file)), { code: 'ENOENT' });
   assert.equal(findOwnHooks(settings, host).length, 0);
   await assert.doesNotReject(() => fs.access(recordTarget(host, imageFile)));
@@ -97,5 +97,5 @@ test('host with no record or package marks reports not installed', async (t) => 
   const host = hostFor(t, 'empty');
   const result = await uninstall({ host });
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /codex-bridge is not installed\./);
+  assert.match(result.output, /llm-bridge is not installed\./);
 });

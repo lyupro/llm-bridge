@@ -12,7 +12,7 @@ import { taskPreflight } from '../../src/home/lib/runner/preflight.mjs';
 
 const LAUNCHER = new URL('../../src/home/lib/runner/launcher.mjs', import.meta.url).href;
 const FREE = 'The run folder was not created; quota was not spent.';
-const OVERRIDE = 'CODEX_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.';
+const OVERRIDE = 'LLM_BRIDGE_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.';
 
 function fixture(t) {
   const root = makeTempTree('retired-root-refusal-');
@@ -72,7 +72,7 @@ catch (error) {
 `;
   return spawnSync(process.execPath, ['--input-type=module', '-e', source], {
     cwd: tree.repo, encoding: 'utf8', timeout: 10_000, windowsHide: true,
-    env: { ...process.env, CODEX_BRIDGE_HOME: tree.home, CODEX_RUNS_ROOT: override },
+    env: { ...process.env, LLM_BRIDGE_HOME: tree.home, LLM_BRIDGE_RUNS_ROOT: override },
   });
 }
 

@@ -284,7 +284,7 @@ test('a sessionAgents warning follows agents and leaves diagnose exit code at ze
   const fixture = await transcriptFixture(stateDir, { initialOnly: true });
   await writeWitness(stateDir, { [fixture.sessionId]: witnessed(fixture) });
   const result = await diagnose({ host, codexProbe, currentPackage: ownPackage,
-    bridgeProbe: () => ({ available: true, value: 'codex-bridge test' }),
+    bridgeProbe: () => ({ available: true, value: 'llm-bridge test' }),
     launcherProbe: () => ({ ok: true }),
   });
   const agentsIndex = result.checks.findIndex((row) => row.key === 'agents');

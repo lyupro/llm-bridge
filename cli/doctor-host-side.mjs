@@ -16,7 +16,7 @@ import { INVENTORY_CONFIRM_COMMAND } from './inventory-confirm.mjs';
 
 const inventoryRepair = `; run ${INVENTORY_CONFIRM_COMMAND} if the recorded hosts are all of them`;
 
-const ownerRepair = '; install into each host first: run codex-bridge install --host "<path>"';
+const ownerRepair = '; install into each host first: run llm-bridge install --host "<path>"';
 
 // Format 1 is not migrated here: asFormat2 would record this host as the owner, and doctor only reads.
 export function ownerEntry(rawRecord, host) {
@@ -29,7 +29,7 @@ export function hostSideCheck(host, inspection) {
     return check('host files', 'fail', `settings could not be read: ${inspection.settingsError}`);
   }
   if (!hasPackageMarks(inspection)) {
-    return check('host files', 'warn', `no codex-bridge files or hooks in ${host.root}`);
+    return check('host files', 'warn', `no llm-bridge files or hooks in ${host.root}`);
   }
 
   const kept = inspection.files.filter((file) => file.disposition === 'keep'
@@ -74,7 +74,7 @@ export async function homeOwnersCheck(host, rawRecord, inspection) {
     inventoryComplete ? 'inventory complete'
       : `inventory incomplete: an old record did not name every host${roots.length ? inventoryRepair : ownerRepair}`,
     ...(unrecordedMarks
-      ? [`${host.root} has package files or hooks but is not recorded: run codex-bridge install --host "${host.root}"`]
+      ? [`${host.root} has package files or hooks but is not recorded: run llm-bridge install --host "${host.root}"`]
       : []),
   ];
   return check('home owners', inventoryComplete && !unrecordedMarks ? 'ok' : 'warn', parts.join('; '));
@@ -106,7 +106,7 @@ export function ownersInSyncCheck(rawRecord) {
     const why = owner.version === rawRecord.image.version
       ? `verified against an earlier image of ${owner.version}`
       : `recorded ${owner.version}, image ${rawRecord.image.version}`;
-    parts.push(`${owner.root} (${why}): run codex-bridge update --host "${owner.root}"`);
+    parts.push(`${owner.root} (${why}): run llm-bridge update --host "${owner.root}"`);
   }
   if (unstamped.length) parts.push(`not yet verified by image fingerprint: ${unstamped.join(', ')}`);
   if (!inventoryComplete) parts.push(`inventory incomplete${inventoryRepair}`);

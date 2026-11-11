@@ -40,24 +40,24 @@ function parseArgs(argv) {
   let all = false;
   for (const arg of argv) {
     if (arg === '--all') {
-      if (all) return { error: withCommandHelp('unlock', 'codex-bridge unlock accepts --all only once.') };
+      if (all) return { error: withCommandHelp('unlock', 'llm-bridge unlock accepts --all only once.') };
       all = true;
       continue;
     }
     if (typeof arg !== 'string' || arg.startsWith('-')) {
-      return { error: withCommandHelp('unlock', `codex-bridge unlock: unknown option "${arg}".`) };
+      return { error: withCommandHelp('unlock', `llm-bridge unlock: unknown option "${arg}".`) };
     }
     positional.push(arg);
   }
   if (all && positional.length) {
-    return { error: withCommandHelp('unlock', 'codex-bridge unlock accepts either --all or one project name.') };
+    return { error: withCommandHelp('unlock', 'llm-bridge unlock accepts either --all or one project name.') };
   }
   if (positional.length > 1) {
-    return { error: withCommandHelp('unlock', 'codex-bridge unlock accepts at most one project name.') };
+    return { error: withCommandHelp('unlock', 'llm-bridge unlock accepts at most one project name.') };
   }
   const project = positional[0] || null;
   if (project && (path.isAbsolute(project) || path.dirname(project) !== '.')) {
-    return { error: 'codex-bridge unlock requires a bare project name.' };
+    return { error: 'llm-bridge unlock requires a bare project name.' };
   }
   return { all, project };
 }
@@ -78,7 +78,7 @@ function allProjects(root) {
 
 function namedProject(root, projectName) {
   const entry = directories(root).find((candidate) => candidate.name === projectName);
-  if (!entry) return { error: `codex-bridge unlock: unknown project "${projectName}".` };
+  if (!entry) return { error: `llm-bridge unlock: unknown project "${projectName}".` };
   return [{ name: entry.name, dir: path.join(root, entry.name) }];
 }
 
@@ -206,9 +206,9 @@ function renderReport(plan, records, closed, failures, options) {
   if (alive.length) {
     lines.push(
       `Refused to close ${alive.length} confirmed-alive run${alive.length === 1 ? '' : 's'}; `
-        + 'use codex-bridge stop <run> instead.',
+        + 'use llm-bridge stop <run> instead.',
     );
-    for (const run of alive) lines.push(`  codex-bridge stop ${run.run}`);
+    for (const run of alive) lines.push(`  llm-bridge stop ${run.run}`);
   }
   if (unverified.length) {
     lines.push(

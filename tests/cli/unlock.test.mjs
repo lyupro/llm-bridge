@@ -33,35 +33,35 @@ test('unlock refuses unknown options with command help', () => {
   const result = unlock(['--bogus']);
 
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output, 'codex-bridge unlock: unknown option "--bogus".\nRun codex-bridge unlock -h for usage.');
+  assert.equal(result.output, 'llm-bridge unlock: unknown option "--bogus".\nRun llm-bridge unlock -h for usage.');
 });
 
 test('unlock refuses repeated --all with command help', () => {
   const result = unlock(['--all', '--all']);
 
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output, 'codex-bridge unlock accepts --all only once.\nRun codex-bridge unlock -h for usage.');
+  assert.equal(result.output, 'llm-bridge unlock accepts --all only once.\nRun llm-bridge unlock -h for usage.');
 });
 
 test('unlock refuses --all with a project name with command help', () => {
   const result = unlock(['--all', 'alpha']);
 
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output, 'codex-bridge unlock accepts either --all or one project name.\nRun codex-bridge unlock -h for usage.');
+  assert.equal(result.output, 'llm-bridge unlock accepts either --all or one project name.\nRun llm-bridge unlock -h for usage.');
 });
 
 test('unlock refuses extra project names with command help', () => {
   const result = unlock(['a', 'b']);
 
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output, 'codex-bridge unlock accepts at most one project name.\nRun codex-bridge unlock -h for usage.');
+  assert.equal(result.output, 'llm-bridge unlock accepts at most one project name.\nRun llm-bridge unlock -h for usage.');
 });
 
 test('unlock refuses a non-bare project name without command help', () => {
   const result = unlock(['../alpha']);
 
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output, 'codex-bridge unlock requires a bare project name.');
+  assert.equal(result.output, 'llm-bridge unlock requires a bare project name.');
   assert.doesNotMatch(result.output, /-h for usage/);
 });
 
@@ -123,7 +123,7 @@ test('unlock refuses a confirmed-alive record and names stop', (t) => {
 
   assert.equal(result.exitCode, 0);
   assert.match(result.output, /Refused to close 1 confirmed-alive run/);
-  assert.match(result.output, new RegExp(`codex-bridge stop ${run}`));
+  assert.match(result.output, new RegExp(`llm-bridge stop ${run}`));
   assert.match(result.output, /identity[\s\S]*alive/);
   assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'status.json'), 'utf8')).state, 'running');
   assert.equal(fs.existsSync(path.join(dir, 'meta.json')), false);

@@ -8,7 +8,7 @@ export function launcherEnv(t, homeRoot) {
   t.after(() => removeTempTree(directory));
   const answer = JSON.stringify({ protocol: HOOK_LAUNCHER_PROTOCOL, dispatch: 'home', homeRoot });
   const windows = process.platform === 'win32';
-  fsSync.writeFileSync(path.join(directory, windows ? 'codex-bridge.cmd' : 'codex-bridge'),
+  fsSync.writeFileSync(path.join(directory, windows ? 'llm-bridge.cmd' : 'llm-bridge'),
     windows ? `@echo off\r\nif "%*"=="hook --home" echo ${answer}\r\n`
       : `#!/bin/sh\nprintf '%s\\n' '${answer}'\n`, { mode: 0o755 });
   return windows ? { PATH: directory, PATHEXT: '.CMD' } : { PATH: directory };

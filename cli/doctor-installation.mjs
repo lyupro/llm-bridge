@@ -30,7 +30,7 @@ export async function isFile(target) {
 }
 
 export async function agentsCheck(host, record) {
-  if (!record) return check('agents', 'warn', 'Agent definitions were not checked; run codex-bridge install');
+  if (!record) return check('agents', 'warn', 'Agent definitions were not checked; run llm-bridge install');
   const plan = await buildInstallPlan(host);
   // Selected by where the file lands, not by where it comes from: Plan_64 B1 moved the sources
   // under src/claude/, a source-path pattern matched nothing, and this check reported
@@ -58,15 +58,15 @@ export async function agentsCheck(host, record) {
   // the package command — in an installed definition: doctor kept exit 0 while every delegation
   // would stop on a permission prompt. A definition that is not this package's is not judged healthy.
   if (unreadable.length) {
-    return check('agents', 'fail', `Installed agent definitions cannot be read: ${unreadable.join(', ')}; run codex-bridge update --force`);
+    return check('agents', 'fail', `Installed agent definitions cannot be read: ${unreadable.join(', ')}; run llm-bridge update --force`);
   }
   return mismatches.length
-    ? check('agents', 'fail', `Installed agent definitions differ from this package: ${mismatches.join(', ')}; run codex-bridge update --force`)
+    ? check('agents', 'fail', `Installed agent definitions differ from this package: ${mismatches.join(', ')}; run llm-bridge update --force`)
     : check('agents', 'ok', `${agents.length} agent definition file(s) on disk match this package; whether a Claude Code session loaded them is shown by the sessionAgents row`);
 }
 
 export async function claudeRulesCheck(host, record) {
-  if (!record) return check('claudeRules', 'warn', 'Host rules were not checked; run codex-bridge install');
+  if (!record) return check('claudeRules', 'warn', 'Host rules were not checked; run llm-bridge install');
   const plan = await buildInstallPlan(host);
   // Plan_64 B1: source-path selection hid an empty plan as a healthy installation.
   const rules = plan.filter((item) => path.dirname(item.target) === host.rulesDir);
@@ -78,7 +78,7 @@ export async function claudeRulesCheck(host, record) {
   }
   // Plan_64 B3: equal bytes imply no paths frontmatter; tests/claude-rules-core.test.mjs guards the package core.
   return mismatches.length
-    ? check('claudeRules', 'fail', `Host rules differ from this package or are missing: ${mismatches.join(', ')}; run codex-bridge update --force`)
+    ? check('claudeRules', 'fail', `Host rules differ from this package or are missing: ${mismatches.join(', ')}; run llm-bridge update --force`)
     : check('claudeRules', 'ok', `${rules.length} host rules file(s) match this package`);
 }
 

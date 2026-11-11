@@ -24,6 +24,6 @@ Do not turn a small implementation order into a repository audit. Narrow the ord
 
 ## After a deadline FAIL
 
-Inspect `git status` and the working-tree diff first: deadline termination can leave useful or incomplete changes. Then inspect the available result, report and events, using `codex-bridge read <run>` to render the event stream. Check which requested work and verification actually completed before deciding the next order.
+Inspect `git status` and the working-tree diff first: deadline termination can leave useful or incomplete changes. Then inspect the available result, report and events, using `llm-bridge read <run>` to render the event stream. Check which requested work and verification actually completed before deciding the next order.
 
 Never resend the same order unchanged. Preserve the existing work and define a smaller remaining slice with an appropriate `continue:` or `retry:` grant and its reason. A deadline FAIL is not evidence that nothing was written or that the work is complete.

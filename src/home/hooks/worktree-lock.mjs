@@ -112,6 +112,6 @@ process.stdout.write(JSON.stringify({
       // healthy run, which reads as "it hung, kill it" and would cost the operator 20 minutes of
       // work they meant to keep.
       + `It is working; last progress ${formatSilence(heartbeatAge(dir))} ago. `
-      + `To take the repository back before it finishes: codex-bridge stop ${path.basename(dir)}.`,
+      + `To take the repository back before it finishes: llm-bridge stop ${path.basename(dir)}.`,
   },
 }));

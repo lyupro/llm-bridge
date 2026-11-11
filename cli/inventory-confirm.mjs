@@ -9,10 +9,10 @@ import { withLifecycle } from './lifecycle-transaction.mjs';
 import { readRulesRegistry } from './rules-owners.mjs';
 import { askYesNo, isInteractive } from './terminal-question.mjs';
 
-export const INVENTORY_CONFIRM_COMMAND = 'codex-bridge inventory confirm';
+export const INVENTORY_CONFIRM_COMMAND = 'llm-bridge inventory confirm';
 
 const question = 'Are these all the hosts using this home?';
-const updateHint = 'Run codex-bridge update to migrate the installation record.';
+const updateHint = 'Run llm-bridge update to migrate the installation record.';
 
 async function confirmInRun(host, dryRun, questionOptions) {
   let record;
@@ -40,7 +40,7 @@ async function confirmInRun(host, dryRun, questionOptions) {
     ...registryHintLines(host, (await readRulesRegistry(host))?.owners ?? []),
     "Confirming lets the last recorded host's uninstall remove the shared image. "
       + 'A host that uses this home but is not listed must be enrolled first: '
-      + 'codex-bridge install --host "<path>".',
+      + 'llm-bridge install --host "<path>".',
   ].join('\n');
   if (dryRun) return { exitCode: 0, output: `${screen}\nDry run: nothing changed.` };
   const prompt = `${screen}\n${question}`;

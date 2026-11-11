@@ -10,11 +10,11 @@ export function recognizeHostRefusal(reply) {
   const text = String(reply ?? '');
   const declaresFailure = /(^|\n)\s*`*FAIL\b/i.test(text);
   const namesOrderId = ORDER_ID_PATTERNS.some((pattern) => pattern.test(text));
-  const namesInstallRemedy = /\bcodex-bridge\s+install\b/i.test(text);
+  const namesInstallRemedy = /\bllm-bridge\s+install\b/i.test(text);
   const missing = [
     ...(!declaresFailure ? ['FAIL declaration'] : []),
     ...(!namesOrderId ? ['order id'] : []),
-    ...(!namesInstallRemedy ? ['codex-bridge install remedy'] : []),
+    ...(!namesInstallRemedy ? ['llm-bridge install remedy'] : []),
   ];
   return { recognized: missing.length === 0, declaresFailure, namesOrderId, namesInstallRemedy, missing };
 }

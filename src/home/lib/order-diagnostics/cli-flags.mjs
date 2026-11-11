@@ -21,7 +21,7 @@ export const DIAGNOSTICS = Object.freeze({
     data: Object.freeze(['name']),
     category: 'cli-flags',
     message: ({ name, help }) =>
-      `unknown flag --${name}: codex-bridge run takes only --agent, --task-file and --no-wait; ` +
+      `unknown flag --${name}: llm-bridge run takes only --agent, --task-file and --no-wait; ` +
       'the order belongs in the task-file header' + (help ? `\n${help}` : ''),
   }),
   'boolean-flag-value': Object.freeze({

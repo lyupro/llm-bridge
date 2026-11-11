@@ -52,7 +52,7 @@ for (const current of [false, true]) {
     const result = await install({ host: f.a, env, packageRoot: PACKAGE_ROOT });
     const record = await readInstallRecordFile(f.a);
     assert.equal(result.exitCode, 0);
-    assert.ok(result.output.startsWith(current ? 'codex-bridge is already installed; nothing to do.\n' : 'Installed '));
+    assert.ok(result.output.startsWith(current ? 'llm-bridge is already installed; nothing to do.\n' : 'Installed '));
     assert.ok(result.output.includes(`Updated 1 file(s) and 0 hook(s) of ${f.b.root}.`));
     assert.deepEqual(await fs.readFile(f.agent.target), await plannedContent(f.agent, f.b.brandRoot));
     assert.notEqual(record.owners[key(f.b)].fingerprints.claude[f.agent.relativeToRoot], before);
@@ -69,7 +69,7 @@ for (const current of [false, true]) {
     const result = await install({ host: f.a, env });
     const record = await readInstallRecordFile(f.a);
     assert.equal(result.exitCode, 1);
-    assert.ok(result.output.startsWith(current ? 'codex-bridge is already installed; nothing to do.\n' : 'Installed '));
+    assert.ok(result.output.startsWith(current ? 'llm-bridge is already installed; nothing to do.\n' : 'Installed '));
     assert.ok(result.output.includes(`Left ${f.b.root} behind: ${f.agent.relativeToRoot} (changed)`));
     assert.equal(await fs.readFile(f.agent.target, 'utf8'), edited);
     assert.deepEqual(record.owners[key(f.b)], f.record.owners[key(f.b)]);
@@ -98,7 +98,7 @@ for (const current of [false, true]) {
     assert.ok(result.output.includes(`Would update 1 file(s) and 0 hook(s) of ${f.b.root}.`));
     assert.doesNotMatch(result.output, /Updated 1 file/);
     assert.deepEqual(after, before);
-    if (current) assert.equal(result.output.split('\n')[0], 'codex-bridge is already installed; nothing to do.');
+    if (current) assert.equal(result.output.split('\n')[0], 'llm-bridge is already installed; nothing to do.');
     else await assert.rejects(fs.access(path.join(f.a.root, f.agent.relativeToRoot)), { code: 'ENOENT' });
   });
 }
@@ -123,7 +123,7 @@ test('current A and B keep the existing no-op output byte-identical and do not r
   const result = await install({ host: f.a, env });
   assert.equal(result.exitCode, 0);
   assert.equal(result.output, f.baseline.output);
-  assert.equal(result.output.split('\n')[0], 'codex-bridge is already installed; nothing to do.');
+  assert.equal(result.output.split('\n')[0], 'llm-bridge is already installed; nothing to do.');
   assert.deepEqual(await fs.readFile(f.a.brandInstallRecordPath), before);
   assert.equal((await fs.stat(f.a.brandInstallRecordPath)).mtimeMs, beforeMtime);
 });
@@ -157,7 +157,7 @@ test('install restores a missing B hook without granting permissions or replacin
   settings.operatorSetting = 'keep me';
   await fs.writeFile(f.b.settingsPath, JSON.stringify(settings, null, 2) + '\n');
   await fs.writeFile(f.b.brandConventionsPath, 'Operator conventions\n');
-  const protectedPaths = [f.b.brandConventionsPath, f.b.brandConfigPath, path.join(f.b.codexRulesDir, 'codex-bridge.rules')];
+  const protectedPaths = [f.b.brandConventionsPath, f.b.brandConfigPath, path.join(f.b.codexRulesDir, 'llm-bridge.rules')];
   const before = await Promise.all(protectedPaths.map((file) => fs.readFile(file)));
   const result = await install({ host: f.a, env });
   const after = JSON.parse(await fs.readFile(f.b.settingsPath, 'utf8'));
@@ -226,7 +226,7 @@ for (const stamp of ['aged', 'missing']) {
     const refreshed = await fs.readFile(f.a.brandInstallRecordPath);
     const second = await install({ host: f.a, env });
     assert.equal(second.exitCode, 0);
-    assert.ok(second.output.startsWith('codex-bridge is already installed; nothing to do.'));
+    assert.ok(second.output.startsWith('llm-bridge is already installed; nothing to do.'));
     assert.deepEqual(await fs.readFile(f.a.brandInstallRecordPath), refreshed);
   });
 }

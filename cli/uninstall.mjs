@@ -38,7 +38,7 @@ settings could not be read: ${inspection.settingsError}`;
 }
 
 export function stillAttachedLine(host) {
-  return `Did not finish uninstalling codex-bridge: ${host.root} still has its hooks; fix \
+  return `Did not finish uninstalling llm-bridge: ${host.root} still has its hooks; fix \
 ${host.settingsPath} and run uninstall again.`;
 }
 
@@ -124,8 +124,8 @@ and the inventory is incomplete.`;
   const hasMarks = hasPackageMarks(inspection);
   const heading = !hostSide.detached
     ? stillAttachedLine(host)
-    : hasMarks ? 'Uninstalled codex-bridge.'
-      : `No codex-bridge files or hooks were found in ${host.root}.`;
+    : hasMarks ? 'Uninstalled llm-bridge.'
+      : `No llm-bridge files or hooks were found in ${host.root}.`;
   return {
     exitCode: answer === 'remove' && hostSide.detached ? outcomeExitCode(outcomes) : 1,
     output: [heading, permissionLine, ...hostSide.lines, imageLine, hint, ...outcomeLines(outcomes, { host })]
@@ -173,7 +173,7 @@ async function uninstallInRun(options = {}) {
   if (!record && !hostMarks) {
     return {
       exitCode: 1,
-      output: [permissionLine, 'codex-bridge is not installed.', ...outcomeLines([], { host })].join('\n'),
+      output: [permissionLine, 'llm-bridge is not installed.', ...outcomeLines([], { host })].join('\n'),
     };
   }
   const writer = record ? recordHomeWriter(host, record.files) : null;
@@ -224,7 +224,7 @@ using ${host.brandRoot}.`);
   const imageLine = blockedImageLine || (!decision.removeImage
     ? imageDispositionLine(host, decision, false) : null);
   const heading = hostSide.detached
-    ? 'Uninstalled codex-bridge.'
+    ? 'Uninstalled llm-bridge.'
     : stillAttachedLine(host);
   return {
     exitCode: decision.reason === 'incomplete-inventory' || !hostSide.detached ? 1 : outcomeExitCode(outcomes),

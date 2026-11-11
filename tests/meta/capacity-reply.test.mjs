@@ -12,7 +12,7 @@ const fixture = fs.readFileSync(
   'utf8',
 );
 const firstRow = 'CAPACITY — selected model is at capacity; work not completed';
-const actionRow = "Action: wait or change this role's model (/codex-bridge:model), then repeat the same order once with a retry: grant; never resume: this run; a second CAPACITY for the same order goes to the next executor";
+const actionRow = "Action: wait or change this role's model (/llm-bridge:model), then repeat the same order once with a retry: grant; never resume: this run; a second CAPACITY for the same order goes to the next executor";
 
 function assertNoContinuation(rows) {
   assert.equal(rows.some((row) => /^(?:resume:|retry:|continue:|Continuation:|Situation:)/.test(row)), false);
@@ -29,7 +29,7 @@ test('a build capacity reply names the signal and action, then the worktree and 
   assert.equal(rows[2], actionRow);
   assert.ok(rows[2].includes('never resume: this run'));
   assert.equal(rows[3], 'Worktree: no new changes');
-  assert.equal(rows.at(-1), `Log: codex-bridge read ${dir}`);
+  assert.equal(rows.at(-1), `Log: llm-bridge read ${dir}`);
   assert.equal(rows.length, 5);
   assertNoContinuation(rows);
 });
@@ -40,7 +40,7 @@ test('a scout capacity reply has no worktree or continuation rows', () => {
   const rows = reply.split('\n');
 
   assert.equal(meta.status, 'CAPACITY');
-  assert.deepEqual(rows, [firstRow, `Signal: ${meta.reason}`, actionRow, `Log: codex-bridge read ${dir}`]);
+  assert.deepEqual(rows, [firstRow, `Signal: ${meta.reason}`, actionRow, `Log: llm-bridge read ${dir}`]);
   assert.equal(rows.some((row) => row.startsWith('Worktree:')), false);
   assertNoContinuation(rows);
 });
@@ -55,7 +55,7 @@ test('capacity reuses the LIMIT worktree row and cuts the signal', () => {
   assert.ok(rows[1].length <= 'Signal: '.length + 170);
   assert.equal(rows[3], 'Worktree: no new changes');
   assert.equal(rows[3], limitReply(ctx, meta)[3]);
-  assert.equal(rows.at(-1), `Log: codex-bridge read ${dir}`);
+  assert.equal(rows.at(-1), `Log: llm-bridge read ${dir}`);
   assertNoContinuation(rows);
 });
 
@@ -69,7 +69,7 @@ test('the existing profile wrapper adds exactly one model row before the capacit
   assert.equal(rows[0], firstRow);
   assert.equal(rows.filter((row) => row.startsWith('Model:')).length, 1);
   assert.equal(rows.at(-2), 'Model: test-model at high effort (order)');
-  assert.equal(rows.at(-1), `Log: codex-bridge read ${dir}`);
+  assert.equal(rows.at(-1), `Log: llm-bridge read ${dir}`);
   assertNoContinuation(rows);
 });
 

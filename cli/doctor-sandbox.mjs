@@ -30,7 +30,7 @@ export async function sandboxChecks({
     }
     // Plan_57: if taskkill fails, only cmd.exe dies; Codex may still update shared sandbox state.
     if (agent === 'codex-build' && readOnlyInconclusive) {
-      rows.push(check(key, 'warn', `not probed: the read-only probe was inconclusive; rerun codex-bridge doctor; probed folder: ${folder}`));
+      rows.push(check(key, 'warn', `not probed: the read-only probe was inconclusive; rerun llm-bridge doctor; probed folder: ${folder}`));
       continue;
     }
     const result = await probe({ agent, repo: root, platform, timeoutMs });
@@ -45,7 +45,7 @@ export async function sandboxChecks({
         rows.push(check(key, 'fail', [
           result.reason,
           ...diagnosis.map((line) => `    ${line}`),
-          '    Repair the host sandbox and rerun codex-bridge doctor.',
+          '    Repair the host sandbox and rerun llm-bridge doctor.',
           `    Probed folder: ${folder}`,
         ].join('\n')));
         break;

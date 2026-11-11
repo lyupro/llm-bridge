@@ -2,7 +2,7 @@
 /**
  * Runs one delegated Codex job end to end:
  *   node run-codex.mjs --agent <codex-scout|codex-build|codex-review> [options] < task.txt
- *   codex-bridge run --agent <codex-scout|codex-build|codex-review> [options] --task-file task.txt
+ *   llm-bridge run --agent <codex-scout|codex-build|codex-review> [options] --task-file task.txt
  *
  * Options:
  *   --agent     codex-scout | codex-build | codex-review   (required)
@@ -96,7 +96,7 @@ export function installRunnerCrashBoundary() {
         `Runner crashed after the verdict was recorded: ${
           String(err.message).replace(/\s+/g, ' ').slice(0, 150)
         }`,
-        `Log: codex-bridge read ${currentRun}`,
+        `Log: llm-bridge read ${currentRun}`,
       ].join('\n'));
       process.exit(exitCodeFor(meta.status));
     };
@@ -108,7 +108,7 @@ export function installRunnerCrashBoundary() {
           replyWithVerdict(meta);
         }
         const { reply } = writeFailure(currentRun, currentAgent, `Codex runner crashed: ${err.message}`, {
-          action: 'fail-no-result', extraLines: [`Log: codex-bridge read ${currentRun}`],
+          action: 'fail-no-result', extraLines: [`Log: llm-bridge read ${currentRun}`],
         });
         emitReply(reply);
         process.exit(EXIT.FAIL);

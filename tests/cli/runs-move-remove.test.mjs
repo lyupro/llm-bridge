@@ -98,7 +98,7 @@ test('non-interactive stdin keeps the old store and prints the terminal hint wit
     const result = await removeOldStore({ ...stores, questionOptions: { stdin: { isTTY: false } },
       ask: () => assert.fail('non-interactive stdin must not ask') });
     assert.deepEqual(result, { exitCode: 0,
-      output: `The old folder ${stores.from} is still there; run codex-bridge runs move in a terminal to remove it.` });
+      output: `The old folder ${stores.from} is still there; run llm-bridge runs move in a terminal to remove it.` });
     assert.deepEqual(snapshot(stores.from), before);
   });
 });

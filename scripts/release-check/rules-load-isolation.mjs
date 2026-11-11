@@ -10,9 +10,9 @@ import { parseJsonText } from '../../src/home/lib/json-file.mjs';
 
 export const DELETED_ENV_NAMES = Object.freeze([
   'CLAUDECODE', 'CLAUDE_AGENT_SDK_VERSION', 'CLAUDE_PROJECT_DIR',
-  'GIT_DIR', 'GIT_WORK_TREE', 'NODE_OPTIONS', 'CODEX_BRIDGE_TEST_TMP',
+  'GIT_DIR', 'GIT_WORK_TREE', 'NODE_OPTIONS', 'LLM_BRIDGE_TEST_TMP',
 ]);
-const TREE_PREFIX = 'codex-bridge-release-check-';
+const TREE_PREFIX = 'llm-bridge-release-check-';
 const RETRYABLE_CODES = new Set(['EPERM', 'EBUSY', 'ENOTEMPTY']);
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const envName = (name) => process.platform === 'win32' ? name.toUpperCase() : name;
@@ -60,7 +60,7 @@ export function createRoleTree({ role, tmpRoot = os.tmpdir(), run }) {
 export function isolatedEnv({ baseEnv, tree }) {
   if (!baseEnv || typeof baseEnv !== 'object') throw new Error('The base environment is required.');
   const env = { ...baseEnv };
-  const roots = { CODEX_BRIDGE_HOME: tree.brand, CODEX_HOME: tree.codex, CODEX_RUNS_ROOT: tree.runs };
+  const roots = { LLM_BRIDGE_HOME: tree.brand, CODEX_HOME: tree.codex, LLM_BRIDGE_RUNS_ROOT: tree.runs };
   for (const key of Object.keys(env)) {
     const name = envName(key);
     if ((name.startsWith('CLAUDE_CODE_') && name !== 'CLAUDE_CODE_OAUTH_TOKEN')
@@ -75,11 +75,11 @@ function outputTail(result) {
 
 export function installCandidate({ repositoryRoot, tree, env, run }) {
   try {
-    if (!env || env.CODEX_BRIDGE_HOME !== tree.brand || env.CODEX_HOME !== tree.codex
-      || env.CODEX_RUNS_ROOT !== tree.runs) {
+    if (!env || env.LLM_BRIDGE_HOME !== tree.brand || env.CODEX_HOME !== tree.codex
+      || env.LLM_BRIDGE_RUNS_ROOT !== tree.runs) {
       return { ok: false, reason: 'The installer requires the isolated environment for this tree.' };
     }
-    const result = run(process.execPath, [path.join(repositoryRoot, 'bin', 'codex-bridge.mjs'), 'install', '--scope', 'project'], {
+    const result = run(process.execPath, [path.join(repositoryRoot, 'bin', 'llm-bridge.mjs'), 'install', '--scope', 'project'], {
       cwd: tree.project, env, shell: false, windowsHide: true, encoding: 'utf8', timeout: 120_000,
     });
     if (!result || result.error || result.signal || result.status !== 0) {
@@ -93,7 +93,7 @@ export function installCandidate({ repositoryRoot, tree, env, run }) {
 }
 
 function installedCore(tree) {
-  return path.join(tree.project, '.claude', 'rules', 'codex-bridge', 'core.md');
+  return path.join(tree.project, '.claude', 'rules', 'llm-bridge', 'core.md');
 }
 
 function installSnapshot(tree) {

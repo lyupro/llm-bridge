@@ -21,7 +21,7 @@ function countingPrompt(answer) {
 }
 
 function hintFor(host) {
-  return `Run codex-bridge uninstall --host "${host.root}" again in a terminal`;
+  return `Run llm-bridge uninstall --host "${host.root}" again in a terminal`;
 }
 
 async function orphanFixture(t, name = 'orphan') {
@@ -137,7 +137,7 @@ test('another host with no marks reaches the orphan question instead of reportin
   const result = await uninstall({ host: other, isTTY: true, prompt });
   assert.equal(prompt.calls, 1);
   assert.equal(result.exitCode, 1);
-  assert.doesNotMatch(result.output, /codex-bridge is not installed/);
+  assert.doesNotMatch(result.output, /llm-bridge is not installed/);
 });
 
 test('orphan dry run does not prompt or change record bytes', async (t) => {

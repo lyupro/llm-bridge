@@ -114,7 +114,7 @@ test('a store in the old larger repository is refused without staging anything',
   withFixture((root) => {
     initRepo(root);
     const runDir = makeRun(path.join(root, '.claude', 'codex-runs'));
-    assert.deepEqual(commitRunRecord({ runDir, brandRoot: path.join(root, '.lyupro', '.codex-bridge') }),
+    assert.deepEqual(commitRunRecord({ runDir, brandRoot: path.join(root, '.lyupro', '.llm-bridge') }),
       { committed: false, reason: 'repository is not the run store' });
     assert.equal(checkedGit(root, 'diff', '--cached', '--name-only'), '');
     assert.equal(fs.readFileSync(path.join(runDir, 'stderr.log'), 'utf8'), '');
@@ -280,8 +280,8 @@ test('the default brand home and synchronous sleep work with the real Git adapte
   withFixture((root) => {
     initRepo(root);
     const runDir = makeRun(path.join(root, 'runs'));
-    const saved = process.env.CODEX_BRIDGE_HOME;
-    process.env.CODEX_BRIDGE_HOME = root;
+    const saved = process.env.LLM_BRIDGE_HOME;
+    process.env.LLM_BRIDGE_HOME = root;
     let calls = 0;
     try {
       const result = commitRunRecord({ runDir, waitMs: 1, git: (cwd, args) => {
@@ -294,8 +294,8 @@ test('the default brand home and synchronous sleep work with the real Git adapte
       assert.equal(calls, 2);
       assert.equal(checkedGit(root, 'status', '--porcelain'), '');
     } finally {
-      if (saved === undefined) delete process.env.CODEX_BRIDGE_HOME;
-      else process.env.CODEX_BRIDGE_HOME = saved;
+      if (saved === undefined) delete process.env.LLM_BRIDGE_HOME;
+      else process.env.LLM_BRIDGE_HOME = saved;
     }
   });
 });

@@ -36,20 +36,20 @@ function fixture() {
     },
     createRoleTree: ({ role, tmpRoot }) => {
       calls.created.push(role);
-      const root = path.join(tmpRoot, `codex-bridge-release-check-${role}-fixture`);
+      const root = path.join(tmpRoot, `llm-bridge-release-check-${role}-fixture`);
       const tree = { root, ...Object.fromEntries(['project', 'brand', 'codex', 'runs'].map((name) => [name, path.join(root, name)])) };
       trees[role] = tree;
       return tree;
     },
     isolatedEnv,
     installCandidate: ({ env, tree }) => { assert.equal(env.CODEX_HOME, tree.codex); return { ok: true }; },
-    freezeInstall: ({ tree }) => ({ expectedPath: path.join(tree.project, '.claude', 'rules', 'codex-bridge', 'core.md'), sha256, snapshot: 'frozen' }),
+    freezeInstall: ({ tree }) => ({ expectedPath: path.join(tree.project, '.claude', 'rules', 'llm-bridge', 'core.md'), sha256, snapshot: 'frozen' }),
     spawn: async (executable, args, options) => { calls.sessions.push({ executable, args, options }); return { status: 0, signal: null, stdout: 'OK', stderr: '' }; },
     awaitWitness: ({ sessionId, stateDir }) => {
       const tree = Object.values(trees).find((value) => path.join(value.brand, 'state') === stateDir);
       assert.ok(tree);
       return { sessions: { [sessionId]: { transcriptPath: path.join(tree.project, 'transcript.jsonl'), loads: [
-        { path: path.join(tree.project, '.claude', 'rules', 'codex-bridge', 'core.md'), loadReason: 'session_start', sha256 },
+        { path: path.join(tree.project, '.claude', 'rules', 'llm-bridge', 'core.md'), loadReason: 'session_start', sha256 },
       ] } } };
     },
     recheckFrozen: () => null, escapedWitness: () => [], removeRoleTree: ({ tree }) => { calls.removed.push(tree.root); return { ok: true }; },
@@ -162,8 +162,8 @@ test('session spawn receives exactly the hardened flags, temporary roots and no 
       '--session-id', cell.sessionId, '-p', 'Reply with the single word OK.']);
     assert.equal(options.timeout, 120_000); assert.equal(options.shell, false); assert.equal(options.windowsHide, true);
     assert.equal(options.cwd, f.trees[role].project); assert.equal(options.env.CLAUDE_CODE_ENTRYPOINT, undefined);
-    assert.equal(options.env.CLAUDE_CODE_EXECPATH, undefined); assert.equal(options.env.CODEX_BRIDGE_HOME, f.trees[role].brand);
-    assert.equal(options.env.CODEX_HOME, f.trees[role].codex); assert.equal(options.env.CODEX_RUNS_ROOT, f.trees[role].runs);
+    assert.equal(options.env.CLAUDE_CODE_EXECPATH, undefined); assert.equal(options.env.LLM_BRIDGE_HOME, f.trees[role].brand);
+    assert.equal(options.env.CODEX_HOME, f.trees[role].codex); assert.equal(options.env.LLM_BRIDGE_RUNS_ROOT, f.trees[role].runs);
   }
 });
 
@@ -255,9 +255,9 @@ test('witness polling waits for this session with at least one load and bounds t
 
 test('witness polling with an expected path waits past an earlier user-core load', async () => {
   let clock = 0; let reads = 0;
-  const userOnly = { sessions: { wanted: { loads: [{ path: 'C:/home/.claude/rules/codex-bridge/core.md' }] } } };
-  const both = { sessions: { wanted: { loads: [...userOnly.sessions.wanted.loads, { path: 'C:\\tmp\\project\\.claude\\rules\\codex-bridge\\core.md' }] } } };
-  const result = await awaitWitness({ stateDir: 'fake', sessionId: 'wanted', expectedPath: 'C:/tmp/project/.claude/rules/codex-bridge/core.md',
+  const userOnly = { sessions: { wanted: { loads: [{ path: 'C:/home/.claude/rules/llm-bridge/core.md' }] } } };
+  const both = { sessions: { wanted: { loads: [...userOnly.sessions.wanted.loads, { path: 'C:\\tmp\\project\\.claude\\rules\\llm-bridge\\core.md' }] } } };
+  const result = await awaitWitness({ stateDir: 'fake', sessionId: 'wanted', expectedPath: 'C:/tmp/project/.claude/rules/llm-bridge/core.md',
     deadlineMs: 100, pollMs: 30, now: () => clock, sleep: async (ms) => { clock += ms; },
     read: () => (++reads < 3 ? userOnly : both) });
   assert.equal(result, both); assert.equal(reads, 3);

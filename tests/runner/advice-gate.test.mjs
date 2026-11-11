@@ -72,7 +72,7 @@ catch (error) {
   // raw argv: isolate the launcher with mocked process APIs in a Node module.
   return spawnSync(process.execPath, ['--input-type=module', '-e', source], {
     cwd: tree.repo, input: raw && !taskFile ? taskText : '', encoding: 'utf8', timeout: 10_000, windowsHide: true,
-    env: { ...process.env, CODEX_BRIDGE_HOME: tree.home, CODEX_RUNS_ROOT: tree.runs },
+    env: { ...process.env, LLM_BRIDGE_HOME: tree.home, LLM_BRIDGE_RUNS_ROOT: tree.runs },
   });
 }
 

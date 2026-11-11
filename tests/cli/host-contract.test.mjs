@@ -27,7 +27,7 @@ test('the CLI answers to the command every message advises', async () => {
   // `doctor --probe-contract`, because the CLI answered `unknown doctor option`. Advice nobody can
   // run is the same defect in the other direction, so this asks the argument parser itself instead
   // of trusting the string. It parses rather than runs: running would spend host quota per suite.
-  const { commandOptions } = await import('../../bin/codex-bridge.mjs');
+  const { commandOptions } = await import('../../bin/llm-bridge.mjs');
   const [, command, flag] = PROBE_COMMAND.split(' ');
   assert.equal(command, 'doctor');
   assert.deepEqual(commandOptions(command, [flag]), { probeContract: true });
@@ -145,7 +145,7 @@ test('detectHostVersion returns null when command execution throws', () => {
 });
 
 test('readHostContract returns null for a missing file, malformed JSON, or missing version', async () => {
-  const root = makeTempTree('codex-bridge-host-contract-read-');
+  const root = makeTempTree('llm-bridge-host-contract-read-');
   const host = { brandRoot: root };
   try {
     assert.equal(await readHostContract(host), null);
@@ -159,7 +159,7 @@ test('readHostContract returns null for a missing file, malformed JSON, or missi
 });
 
 test('readHostContract returns the host map and migrates a valid legacy record', async () => {
-  const root = makeTempTree('codex-bridge-host-contract-valid-');
+  const root = makeTempTree('llm-bridge-host-contract-valid-');
   const host = { brandRoot: root };
   const record = {
     version: '2.1.240',
@@ -178,7 +178,7 @@ test('readHostContract returns the host map and migrates a valid legacy record',
 });
 
 test('writeHostContract creates a missing brand root and round-trips atomically', async () => {
-  const parent = makeTempTree('codex-bridge-host-contract-write-');
+  const parent = makeTempTree('llm-bridge-host-contract-write-');
   const host = { brandRoot: path.join(parent, 'missing-brand-root') };
   const now = new Date('2026-08-24T10:30:00.000Z');
   try {
@@ -194,7 +194,7 @@ test('writeHostContract creates a missing brand root and round-trips atomically'
 });
 
 test('writeHostContract refuses a target outside its writer root before creating either root', async () => {
-  const parent = makeTempTree('codex-bridge-host-contract-layout-');
+  const parent = makeTempTree('llm-bridge-host-contract-layout-');
   const targetRoot = path.join(parent, 'target-brand-root');
   const writerRoot = path.join(parent, 'different-writer-root');
   let brandRootReads = 0;
@@ -217,7 +217,7 @@ test('writeHostContract refuses a target outside its writer root before creating
 });
 
 test('writes preserve both host versions and expire entries older than 180 days', async () => {
-  const root = makeTempTree('codex-bridge-host-contract-versions-'); const host = { brandRoot: root };
+  const root = makeTempTree('llm-bridge-host-contract-versions-'); const host = { brandRoot: root };
   try {
     await writeHostContract(host, { version: '2.1.281', result: 'honored', now: new Date('2026-09-25T00:00:00Z') });
     await writeHostContract(host, { version: '2.1.282', result: 'honored', now: new Date('2026-09-25T01:00:00Z') });

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { resolveProjectRunsDir } from '../../src/home/lib/runner/project-dir.mjs';
-import { main } from '../../bin/codex-bridge.mjs';
+import { main } from '../../bin/llm-bridge.mjs';
 import { read } from '../../cli/read.mjs';
 import { resolveRunFolder } from '../../cli/run-lookup.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
@@ -188,8 +188,8 @@ test('read names itself when the run argument is missing', (t) => {
   const result = read({ run: '', cwd: data.project, runsRootPath: data.runsRoot });
 
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /codex-bridge read: read requires a run folder/);
-  assert.doesNotMatch(result.output, /codex-bridge stop/);
+  assert.match(result.output, /llm-bridge read: read requires a run folder/);
+  assert.doesNotMatch(result.output, /llm-bridge stop/);
 });
 
 test('the dispatcher routes read output for an absolute run path and rejects log', async (t) => {
@@ -239,7 +239,7 @@ test('read lookup refuses an absolute retired path before stat and names its equ
   const stat = t.mock.method(fs, 'statSync');
   const result = resolveRunFolder({ command: 'read', run, cwd: data.project, resolution });
   assert.deepEqual(result, { runDir: null,
-    error: `codex-bridge read: Run records moved from ${oldRoot} to ${data.runsRoot}. ` +
+    error: `llm-bridge read: Run records moved from ${oldRoot} to ${data.runsRoot}. ` +
       `Equivalent path: ${path.join(data.runsRoot, 'Project', 'Run-ID')}. ` +
       'Update advice: or pass this new path explicitly. No path was remapped.' });
   assert.equal(stat.mock.callCount(), 0);
@@ -265,10 +265,10 @@ test('read lookup refuses a stale default override but honors an explicit curren
   const stat = t.mock.method(fs, 'statSync');
   const result = resolveRunFolder({ command: 'read', run: path.basename(dir), cwd: data.project, resolution });
   assert.equal(result.runDir, null);
-  assert.equal(result.error, `codex-bridge read: Run records moved from ${oldRoot} to ${data.runsRoot}. ` +
+  assert.equal(result.error, `llm-bridge read: Run records moved from ${oldRoot} to ${data.runsRoot}. ` +
     `Equivalent path: ${path.join(data.runsRoot, 'Project')}. ` +
     'Update advice: or pass this new path explicitly. No path was remapped.\n' +
-    'CODEX_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.');
+    'LLM_BRIDGE_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.');
   assert.equal(stat.mock.callCount(), 0);
   stat.mock.restore();
   assert.deepEqual(resolveRunFolder({

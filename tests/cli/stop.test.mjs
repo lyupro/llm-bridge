@@ -23,7 +23,7 @@ if (process.platform === 'win32') {
   syncBuiltinESMExports();
 }
 const { stop } = await import('../../cli/stop.mjs');
-const { main } = await import('../../bin/codex-bridge.mjs');
+const { main } = await import('../../bin/llm-bridge.mjs');
 after(() => {
   if (process.platform === 'win32') {
     childProcess.spawnSync = realSpawnSync;
@@ -188,7 +188,7 @@ for (const state of ['running', undefined]) {
 
     assert.equal(result.exitCode, 0);
     assert.equal(result.output, `Run ${runDir} already has a verdict (FAIL); no changes made.` +
-      ` It was continued automatically in ${childDir} (state: ${state || 'unknown'}); to stop that run, use codex-bridge stop ${childName}.`);
+      ` It was continued automatically in ${childDir} (state: ${state || 'unknown'}); to stop that run, use llm-bridge stop ${childName}.`);
     assert.equal(alive(worker.pid), true, 'the shared parent/child worker must not be signalled');
     assert.deepEqual(snapshot(), before, 'every parent and child file must remain byte-identical');
   });

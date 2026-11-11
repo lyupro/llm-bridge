@@ -111,22 +111,22 @@ const scoutHelp = 'order id: plan-13-scout-20260804\n' +
   'continue: 2026-08-05_092913_plan14-build — LIMIT at step 3, tests unwritten\n' +
   'retry: 2026-10-03_172017_cc-d66-advisor — model at capacity, same pass again\n' +
   'resume: 2026-10-16_140740_ow066-b2-resume-grant — advise stalled after reading, continue its thread\n' +
-  'repository: C:/work/codex-bridge\nslug: plan-76-parser\neffort: high';
+  'repository: C:/work/llm-bridge\nslug: plan-76-parser\neffort: high';
 const buildHelp = 'order id: plan-13-build-20260804\nscope: src/home/lib/runner/**,tests/runner/**\n' +
   'continue: 2026-08-05_092913_plan14-build — LIMIT at step 3, tests unwritten\n' +
   'retry: 2026-10-03_172017_cc-d66-advisor — model at capacity, same pass again\n' +
-  'repository: C:/work/codex-bridge\nscope new: src/home/lib/dispatcher-call.mjs,tests/dispatcher-call.test.mjs\n' +
+  'repository: C:/work/llm-bridge\nscope new: src/home/lib/dispatcher-call.mjs,tests/dispatcher-call.test.mjs\n' +
   'slug: plan-76-parser\neffort: high';
 const reviewHelp = 'order id: plan-13-review-20260804\n' +
   'continue: 2026-08-05_092913_plan14-build — LIMIT at step 3, tests unwritten\n' +
   'retry: 2026-10-03_172017_cc-d66-advisor — model at capacity, same pass again\n' +
   'resume: 2026-10-16_140740_ow066-b2-resume-grant — advise stalled after reading, continue its thread\n' +
-  'repository: C:/work/codex-bridge\nslug: plan-76-parser\neffort: high\nchangeset: base:main';
+  'repository: C:/work/llm-bridge\nslug: plan-76-parser\neffort: high\nchangeset: base:main';
 const advisorHelp = 'order id: plan-59-advisor-20260922\nphase: scope\n' +
   'continue: 2026-08-05_092913_plan14-build — LIMIT at step 3, tests unwritten\n' +
   'retry: 2026-10-03_172017_cc-d66-advisor — model at capacity, same pass again\n' +
   'resume: 2026-10-16_140740_ow066-b2-resume-grant — advise stalled after reading, continue its thread\n' +
-  'repository: C:/work/codex-bridge\nslug: plan-76-parser\neffort: high';
+  'repository: C:/work/llm-bridge\nslug: plan-76-parser\neffort: high';
 
 for (const [agent, expected] of [
   ['codex-scout', scoutHelp], ['codex-build', buildHelp],
@@ -188,7 +188,7 @@ function runProbe(body) {
     import { orderInputName, orderFromHeader, renderOrderProblems, renderOrderHeaderHelp } from ${JSON.stringify(schema)};
     import { parseTaskHeader } from ${JSON.stringify(header)};
     ${body}
-  `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+  `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const directory = path.join(root, 'order-text-violations');

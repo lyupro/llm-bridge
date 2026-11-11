@@ -97,7 +97,7 @@ test('emits one row per active version and does not inherit evidence across vers
       { key: `claudeRulesLoad:${version}`, status: 'ok' },
       { key: 'claudeRulesLoad:2.1.2', status: 'warn' },
     ]);
-    assert.equal(rows[1].value, 'no session on host 2.1.2 has witnessed the rules core loading yet; open a new Claude Code session, then rerun codex-bridge doctor');
+    assert.equal(rows[1].value, 'no session on host 2.1.2 has witnessed the rules core loading yet; open a new Claude Code session, then rerun llm-bridge doctor');
   });
 });
 
@@ -175,7 +175,7 @@ test('a newest valid load restores evidence and counts distinct qualifying sessi
 
 test('the right hash at another root is not evidence and is not pending', async () => {
   await scenario(async ({ root, load, session, write, checks }) => {
-    await write({ witness: session([load({ path: path.join(root, 'other', 'rules', 'codex-bridge', 'core.md') })]) });
+    await write({ witness: session([load({ path: path.join(root, 'other', 'rules', 'llm-bridge', 'core.md') })]) });
     let calls = 0;
     const rows = await checks({ readVersion: async () => { calls += 1; return version; } });
     assert.equal(rows[0].status, 'warn');

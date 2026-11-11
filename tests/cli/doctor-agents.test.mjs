@@ -8,7 +8,7 @@ import { parseFrontmatter } from '../../src/home/lib/frontmatter.mjs';
 import { recordTarget } from '../../cli/manifest.mjs';
 import { codexProbe, installedFixture, ownPackage } from './doctor-fixtures.mjs';
 
-const bridgeProbe = () => ({ available: true, value: 'codex-bridge 0.1.0' });
+const bridgeProbe = () => ({ available: true, value: 'llm-bridge 0.1.0' });
 
 test('doctor confirms installed agent definitions match the package tree', async (t) => {
   const { host } = await installedFixture(t);
@@ -32,7 +32,7 @@ test('doctor renders agent drift as an unbracketed update command', async (t) =>
     bridgeProbe,
     currentPackage: ownPackage,
   }));
-  assert.match(rendered, /^Installed agent definitions differ.*codex-build\.md.*codex-bridge update --force$/m);
+  assert.match(rendered, /^Installed agent definitions differ.*codex-build\.md.*llm-bridge update --force$/m);
   assert.doesNotMatch(rendered, /^\[(?:ok|warn)] agents:/m);
 });
 
@@ -59,7 +59,7 @@ test('doctor fails when an installed agent has unreadable frontmatter', async (t
   const agents = result.checks.find((item) => item.key === 'agents');
   assert.equal(result.exitCode, 1);
   assert.equal(agents.status, 'fail');
-  assert.match(agents.value, /codex-build\.md.*codex-bridge update --force/);
+  assert.match(agents.value, /codex-build\.md.*llm-bridge update --force/);
 });
 
 test('doctor fails when an installed agent name does not match its type', async (t) => {
@@ -73,10 +73,10 @@ test('doctor fails when an installed agent name does not match its type', async 
   const agents = result.checks.find((item) => item.key === 'agents');
   assert.equal(result.exitCode, 1);
   assert.equal(agents.status, 'fail');
-  assert.match(agents.value, /codex-build\.md.*expected "codex-build".*codex-bridge update --force/);
+  assert.match(agents.value, /codex-build\.md.*expected "codex-build".*llm-bridge update --force/);
 });
 
-test('doctor names the install command when codex-bridge is absent from PATH', async (t) => {
+test('doctor names the install command when llm-bridge is absent from PATH', async (t) => {
   const { host } = await installedFixture(t);
   const result = await diagnose({
     host,
@@ -86,6 +86,6 @@ test('doctor names the install command when codex-bridge is absent from PATH', a
   });
   const rendered = renderDoctor(result);
   assert.equal(result.checks.find((item) => item.key === 'command').status, 'warn');
-  assert.match(rendered, /^codex-bridge does not resolve on PATH.*npm i -g @lyupro\/codex-bridge$/m);
+  assert.match(rendered, /^llm-bridge does not resolve on PATH.*npm i -g @lyupro\/llm-bridge$/m);
   assert.doesNotMatch(rendered, /^\[(?:ok|warn)] command:/m);
 });

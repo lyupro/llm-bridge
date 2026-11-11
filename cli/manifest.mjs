@@ -73,7 +73,7 @@ const posix = (value) => value.split(path.sep).join('/');
 export function replacePlaceholders(content, installationRoot) {
   const agentType = content.match(/^name:\s*([^\r\n]+)$/m)?.[1].trim();
   const replaced = content
-    .replaceAll('{{CODEX_BRIDGE_DIR}}', posix(path.resolve(installationRoot)))
+    .replaceAll('{{LLM_BRIDGE_DIR}}', posix(path.resolve(installationRoot)))
     .replaceAll('{{CODEX_REQUIRED_INPUTS_SUMMARY}}', renderRequiredInputSummary(agentType))
     .replaceAll('{{CODEX_DISPATCHER_PROTOCOL}}', ORDER_AGENTS.includes(agentType)
       ? renderDispatcherProtocol(agentType) : '{{CODEX_DISPATCHER_PROTOCOL}}')

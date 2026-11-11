@@ -43,7 +43,7 @@ function fixture(t, { initialize = true, commit = true } = {}) {
     GIT_CONFIG_GLOBAL: path.join(root, 'absent-config'),
     GIT_CONFIG_SYSTEM: path.join(root, 'absent-config'),
     GIT_CONFIG_COUNT: undefined,
-    CODEX_RUNS_ROOT: path.join(root, 'runs'),
+    LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'),
   });
   const git = (...args) => {
     const result = spawnSync('git', ['-C', repoRoot, '-c', 'core.autocrlf=false', ...args], {
@@ -160,7 +160,7 @@ test('an internal run store excludes tracked and untracked artifacts without hid
   fs.mkdirSync(store);
   fs.writeFileSync(path.join(store, 'tracked.txt'), 'before\n');
   git('add', '--', 'прогоны/tracked.txt');
-  environment(t, { CODEX_RUNS_ROOT: store });
+  environment(t, { LLM_BRIDGE_RUNS_ROOT: store });
   fs.writeFileSync(path.join(store, 'tracked.txt'), 'artifact\n');
   fs.writeFileSync(path.join(store, 'untracked.txt'), 'artifact\n');
   const runDir = path.join(store, 'current');

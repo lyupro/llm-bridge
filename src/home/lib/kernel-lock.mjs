@@ -25,8 +25,8 @@ export function kernelLockAddress(purpose, digest, platform = process.platform) 
   if (typeof purpose !== 'string' || !/^[a-z][a-z-]*$/.test(purpose)) {
     throw new TypeError('purpose must match ^[a-z][a-z-]*$');
   }
-  if (platform === 'win32') return `\\\\.\\pipe\\codex-bridge-${purpose}-${digest}`;
-  return platform === 'linux' ? `\0codex-bridge-${purpose}-${digest}` : null;
+  if (platform === 'win32') return `\\\\.\\pipe\\llm-bridge-${purpose}-${digest}`;
+  return platform === 'linux' ? `\0llm-bridge-${purpose}-${digest}` : null;
 }
 
 export function directoryDigest(directory, { suffix } = {}) {

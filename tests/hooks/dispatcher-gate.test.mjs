@@ -16,14 +16,14 @@ const ORDER = 'task file: C:/abs/task.md';
 const COMMAND = canonicalRunCommand('codex-build', ORDER).command;
 
 test('the transcript call has the two-flag canonical runner command', () => {
-  assert.equal(COMMAND, 'codex-bridge run --agent codex-build --task-file "C:/abs/task.md"');
+  assert.equal(COMMAND, 'llm-bridge run --agent codex-build --task-file "C:/abs/task.md"');
 });
 
 function runGate(root, payload) {
   return spawnSync(process.execPath, [GATE], {
     input: JSON.stringify(payload),
     encoding: 'utf8',
-    env: { ...process.env, CODEX_BRIDGE_HOME: path.join(root, 'home'), CLAUDE_AGENT_SDK_VERSION: '0.3.999' },
+    env: { ...process.env, LLM_BRIDGE_HOME: path.join(root, 'home'), CLAUDE_AGENT_SDK_VERSION: '0.3.999' },
   });
 }
 

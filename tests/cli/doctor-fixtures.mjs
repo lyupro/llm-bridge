@@ -21,7 +21,7 @@ import {
 } from '../../cli/manifest.mjs';
 import { copyPlannedFile, planHomeWriter } from '../../cli/copy.mjs';
 
-export const ownPackage = { name: '@lyupro/codex-bridge', version: '0.1.0' };
+export const ownPackage = { name: '@lyupro/llm-bridge', version: '0.1.0' };
 export const codexProbe = () => ({ available: true, value: 'codex-cli 1.2.3' });
 
 export async function hostFixture(t) {
@@ -48,8 +48,8 @@ export async function installedFixture(t) {
       || path.dirname(item.target) === host.rulesDir);
   const hookFiles = [...new Set(HOOK_DEFINITIONS.map(({ file }) => file))];
   const files = [
-    { root: 'claude', path: 'agents/codex-bridge/run-codex.mjs' },
-    { root: 'claude', path: 'agents/codex-bridge/required-inputs.mjs' },
+    { root: 'claude', path: 'agents/llm-bridge/run-codex.mjs' },
+    { root: 'claude', path: 'agents/llm-bridge/required-inputs.mjs' },
     ...hostPlan.map((item) => ({ root: item.root, path: item.relativeToRoot })),
     ...hookFiles.map((file) => ({ root: 'brand', path: `hooks/${file}` })),
   ];
@@ -95,11 +95,11 @@ export async function installedFixture(t) {
 
 export async function runsRootFixture(t) {
   const root = makeTempTree('bridge-runs-');
-  const previous = process.env.CODEX_RUNS_ROOT;
-  process.env.CODEX_RUNS_ROOT = root;
+  const previous = process.env.LLM_BRIDGE_RUNS_ROOT;
+  process.env.LLM_BRIDGE_RUNS_ROOT = root;
   t.after(async () => {
-    if (previous === undefined) delete process.env.CODEX_RUNS_ROOT;
-    else process.env.CODEX_RUNS_ROOT = previous;
+    if (previous === undefined) delete process.env.LLM_BRIDGE_RUNS_ROOT;
+    else process.env.LLM_BRIDGE_RUNS_ROOT = previous;
     await removeTempTree(root);
   });
   return root;

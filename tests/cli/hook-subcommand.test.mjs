@@ -10,7 +10,7 @@ import { encodeSnapshot } from '../../src/home/lib/meta/snapshot-format.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const BIN = path.join(ROOT, 'bin', 'codex-bridge.mjs');
+const BIN = path.join(ROOT, 'bin', 'llm-bridge.mjs');
 
 function run(args, input, env = {}) {
   return spawnSync(process.execPath, [BIN, ...args], {
@@ -24,8 +24,8 @@ function run(args, input, env = {}) {
 async function fixture(t, prefix = 'bridge-hook-') {
   const root = makeTempTree(prefix);
   t.after(() => removeTempTree(root));
-  await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({ name: '@lyupro/codex-bridge', version: '0.6.6' }));
-  await fs.cp(path.join(ROOT, 'src', 'home'), path.join(root, '.lyupro', '.codex-bridge'), { recursive: true });
+  await fs.writeFile(path.join(root, 'package.json'), JSON.stringify({ name: '@lyupro/llm-bridge', version: '0.6.6' }));
+  await fs.cp(path.join(ROOT, 'src', 'home'), path.join(root, '.lyupro', '.llm-bridge'), { recursive: true });
   return root;
 }
 
@@ -49,8 +49,8 @@ function hookEnvironment(root, runsRoot = path.join(root, 'runs')) {
   return {
     HOME: root,
     USERPROFILE: root,
-    CODEX_RUNS_ROOT: runsRoot,
-    CODEX_BRIDGE_HOME: path.join(root, '.lyupro', '.codex-bridge'),
+    LLM_BRIDGE_RUNS_ROOT: runsRoot,
+    LLM_BRIDGE_HOME: path.join(root, '.lyupro', '.llm-bridge'),
   };
 }
 
@@ -63,7 +63,7 @@ test('every definition name reaches its existing top-level guard', async (t) => 
       const result = run(['hook', definition.name], JSON.stringify(input), env);
       assert.equal(result.status, 0, `${definition.name}: ${result.stderr}`);
       const saved = JSON.parse(await fs.readFile(
-        path.join(root, '.lyupro', '.codex-bridge', 'state', 'diagnostics', 'reply-guard.last.json'),
+        path.join(root, '.lyupro', '.llm-bridge', 'state', 'diagnostics', 'reply-guard.last.json'),
         'utf8',
       ));
       assert.deepEqual(saved, input, definition.name);
@@ -81,7 +81,7 @@ test('every definition name reaches its existing top-level guard', async (t) => 
       assert.equal(result.status, 0, definition.name);
       assert.match(result.stdout, /Order gate denied/, definition.name);
       const saved = JSON.parse(await fs.readFile(path.join(
-        root, '.lyupro', '.codex-bridge', 'state', 'diagnostics', 'order-gate.last.json',
+        root, '.lyupro', '.llm-bridge', 'state', 'diagnostics', 'order-gate.last.json',
       ), 'utf8'));
       assert.deepEqual(saved, input, definition.name);
       await assert.rejects(fs.access(path.join(root, '.claude', 'logs')), { code: 'ENOENT' });
@@ -133,14 +133,14 @@ test('every definition name reaches its existing top-level guard', async (t) => 
     if (definition.file === 'prune-guard.mjs') {
       const result = run(['hook', definition.name], JSON.stringify({
         tool_name: 'Bash',
-        tool_input: { command: 'codex-bridge prune project -f' },
+        tool_input: { command: 'llm-bridge prune project -f' },
       }), env);
       assert.equal(result.status, 0, definition.name);
       assert.equal(JSON.parse(result.stdout).hookSpecificOutput.permissionDecision, 'deny');
       continue;
     }
     if (definition.file === 'load-witness.mjs') {
-      const core = path.join(root, '.claude', 'rules', 'codex-bridge', 'core.md');
+      const core = path.join(root, '.claude', 'rules', 'llm-bridge', 'core.md');
       await fs.mkdir(path.dirname(core), { recursive: true });
       await fs.writeFile(core, 'core\n');
       const result = run(['hook', definition.name], JSON.stringify({
@@ -150,7 +150,7 @@ test('every definition name reaches its existing top-level guard', async (t) => 
       assert.equal(result.status, 0, `${definition.name}: ${result.stderr}`);
       assert.equal(result.stdout, '', definition.name);
       const saved = JSON.parse(await fs.readFile(
-        path.join(root, '.lyupro', '.codex-bridge', 'state', 'load-witness.json'), 'utf8'));
+        path.join(root, '.lyupro', '.llm-bridge', 'state', 'load-witness.json'), 'utf8'));
       assert.equal(saved.sessions['session-load-witness'].loads[0].path, core, definition.name);
       continue;
     }
@@ -167,7 +167,7 @@ test('every definition name reaches its existing top-level guard', async (t) => 
       await fs.cp(path.join(ROOT, 'src', 'home'), root, { recursive: true });
       const result = run(['hook', definition.name], JSON.stringify(input), {
         ...env,
-        CODEX_BRIDGE_HOME: root,
+        LLM_BRIDGE_HOME: root,
       });
       assert.equal(result.status, 0, definition.name);
       if (definition.event === 'PreToolUse') {
@@ -206,7 +206,7 @@ test('stdin and the guard exit status pass through the CLI unchanged', async (t)
   assert.equal(dispatched.stderr, direct.stderr);
   assert.deepEqual(
     JSON.parse(await fs.readFile(path.join(
-      root, '.lyupro', '.codex-bridge', 'state', 'diagnostics', 'order-gate.last.json',
+      root, '.lyupro', '.llm-bridge', 'state', 'diagnostics', 'order-gate.last.json',
     ), 'utf8')),
     JSON.parse(input),
   );
@@ -216,7 +216,7 @@ test('stdin and the guard exit status pass through the CLI unchanged', async (t)
 test('unknown, missing, and extra names fail with exit 1', async (t) => {
   const names = HOOK_DEFINITIONS.map(({ name }) => name);
   const root = await fixture(t);
-  const env = { CODEX_BRIDGE_HOME: path.join(root, '.lyupro', '.codex-bridge') };
+  const env = { LLM_BRIDGE_HOME: path.join(root, '.lyupro', '.llm-bridge') };
   const cases = [
     ['hook'],
     ['hook', 'not-a-hook'],
@@ -226,6 +226,6 @@ test('unknown, missing, and extra names fail with exit 1', async (t) => {
     const result = run(args, '', env);
     assert.equal(result.status, 1, args.join(' '));
     if (args.length === 2) assert.match(result.stderr, /unknown hook name/, args.join(' '));
-    else assert.match(result.stderr, /Usage: codex-bridge hook/, args.join(' '));
+    else assert.match(result.stderr, /Usage: llm-bridge hook/, args.join(' '));
   }
 });

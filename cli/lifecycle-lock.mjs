@@ -10,7 +10,7 @@
  * pipe on Windows, an abstract socket on Linux — both reproduced on real machines (hard kill, name
  * free at once, nothing on disk), which matters on a machine that lost power six times in two weeks.
  * macOS has no abstract namespace, so it gets an exclusively created file that only its own holder
- * removes, and a crash leaves it for `codex-bridge unlock --lifecycle` (D8).
+ * removes, and a crash leaves it for `llm-bridge unlock --lifecycle` (D8).
  *
  * The name comes from the home directory's `dev`+`ino`, not its path: a junction, another letter
  * case or forward slashes reach the same home and must reach the same lock. A second listen inside
@@ -162,7 +162,7 @@ async function acquireFileLock(homeRoot, writer, holder, { waitMs, retryMs }) {
         throw busyMessage(
           homeRoot,
           current,
-          '. If no install, update or uninstall is running, the lock was left by a crash: codex-bridge unlock --lifecycle',
+          '. If no install, update or uninstall is running, the lock was left by a crash: llm-bridge unlock --lifecycle',
         );
       }
       await wait(Math.min(retryMs, remaining));

@@ -73,7 +73,7 @@ function runWitness(root, runsRoot, cwd, input = {}) {
     encoding: 'utf8',
     env: {
       ...process.env,
-      CODEX_RUNS_ROOT: runsRoot,
+      LLM_BRIDGE_RUNS_ROOT: runsRoot,
       HOME: root,
       USERPROFILE: root,
     },
@@ -176,7 +176,7 @@ test('a change outside scope is reported with the path and release command', asy
   assert.match(output.additionalContext, new RegExp(runDir.replaceAll('\\', '\\\\')));
   assert.match(output.additionalContext, /agent codex-build/);
   assert.match(output.additionalContext, /slug split-guard-20260816/);
-  assert.match(output.additionalContext, /codex-bridge stop 2026-08-16_split-guard/);
+  assert.match(output.additionalContext, /llm-bridge stop 2026-08-16_split-guard/);
   assert.match(output.additionalContext, /keep further changes out of this tree until the run ends/);
   assert.match(output.additionalContext, /If they are not yours, leave them alone and report them to the operator, because reverting would destroy someone else's work/);
 });
@@ -369,7 +369,7 @@ test('malformed and missing inputs pass silently', async (t) => {
   const malformedJson = spawnSync(process.execPath, [WITNESS], {
     input: '{',
     encoding: 'utf8',
-    env: { ...process.env, CODEX_RUNS_ROOT: runsRoot, HOME: root, USERPROFILE: root },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: runsRoot, HOME: root, USERPROFILE: root },
   });
   assertPass(malformedJson);
   await fs.rm(path.join(runDir, 'state-before.txt'));

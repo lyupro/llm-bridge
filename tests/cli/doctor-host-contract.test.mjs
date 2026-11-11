@@ -104,5 +104,5 @@ test('doctor warns when no session host has been observed', async (t) => {
 test('installer uses the session-host guidance when no host was observed', async (t) => {
   const { host } = await fixture(t);
   const result = await install({ host, dryRun: true, observations: { hosts: {} } });
-  assert.ok(result.output.endsWith('Host contracts are judged once a session has run a shell command; then run codex-bridge doctor.'));
+  assert.ok(result.output.endsWith('Host contracts are judged once a session has run a shell command; then run llm-bridge doctor.'));
 });

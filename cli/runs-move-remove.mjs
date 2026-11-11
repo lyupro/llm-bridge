@@ -59,7 +59,7 @@ export async function removeOldStore({ from, to, ask = askYesNo, interactive = i
     if (differences.count) return differencesResult(from, differences);
     if (!interactive(questionOptions)) {
       return { exitCode: 0,
-        output: `The old folder ${from} is still there; run codex-bridge runs move in a terminal to remove it.` };
+        output: `The old folder ${from} is still there; run llm-bridge runs move in a terminal to remove it.` };
     }
     const answer = await ask(`Remove the old folder ${from}? Every file in it has an identical copy in ${to}. `
       + 'It stays in the history of the git repository that holds it until that project commits the removal.', questionOptions);

@@ -327,7 +327,7 @@ test('issued hints compose cleanly and handwritten hints journal a parameter vio
       violation: 'unfinished', labelName: ${JSON.stringify('`continue:`')}, previous: 'C:/runs/B', hints: 'hand-written grant refusal',
     });
     checkOutgoingRefusal(text, 'grants-probe');
-  `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+  `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const directory = path.join(root, 'order-text-violations');

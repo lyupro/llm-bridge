@@ -29,7 +29,7 @@ test('transcriptToolUses preserves only assistant Bash string commands', async (
   const root = makeTempTree('bridge-dispatcher-stop-');
   t.after(() => removeTempTree(root));
   const transcript = path.join(root, 'agent.jsonl');
-  const command = 'codex-bridge run --agent codex-build --task-file task.md';
+  const command = 'llm-bridge run --agent codex-build --task-file task.md';
   const lines = [
     { type: 'assistant', message: { content: [
       { type: 'tool_use', id: 'bash', name: 'Bash', input: { command } },

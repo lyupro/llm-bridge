@@ -20,13 +20,13 @@ const failures = [
     id: 'runtime-file-locked',
     line: 'setup error: runtime read/execute validation failed: file.dll: open ACL target for root-only update (os error 32)',
     summary: 'A file under the Codex runtimes folder is held open by another process, so sandbox setup cannot update its access rights (openai/codex #51634).',
-    repair: () => 'Find and close the process holding the file named in the line (on 2026-10-10, the Codex desktop app\'s computer-use helper), then rerun codex-bridge doctor; on Codex CLI 0.162.x the proven workaround is npm install -g @openai/codex@0.160.1.',
+    repair: () => 'Find and close the process holding the file named in the line (on 2026-10-10, the Codex desktop app\'s computer-use helper), then rerun llm-bridge doctor; on Codex CLI 0.162.x the proven workaround is npm install -g @openai/codex@0.160.1.',
   },
   {
     id: 'deny-read-state-corrupt',
     line: 'setup error: deny_read_acl_state.json: expected value at line 1 column 1',
     summary: 'The sandbox state file is empty or corrupt.',
-    repair: (home) => `Back up and rename ${path.join(home, '.sandbox', 'deny_read_acl_state.json')}, then rerun codex-bridge doctor; the helper recreates it.`,
+    repair: (home) => `Back up and rename ${path.join(home, '.sandbox', 'deny_read_acl_state.json')}, then rerun llm-bridge doctor; the helper recreates it.`,
   },
 ];
 
@@ -47,8 +47,8 @@ function expectedRefusal(reason, platform, rows = []) {
       'kernel.apparmor_restrict_unprivileged_userns=0: it lifts the restriction for every program on the host.',
     ] : []),
     platform === 'linux'
-      ? 'Operator check (run from the repository directory): codex sandbox -- echo codex-bridge-sandbox-ok'
-      : 'Operator check (run from the repository directory): codex sandbox -- cmd /d /c echo codex-bridge-sandbox-ok',
+      ? 'Operator check (run from the repository directory): codex sandbox -- echo llm-bridge-sandbox-ok'
+      : 'Operator check (run from the repository directory): codex sandbox -- cmd /d /c echo llm-bridge-sandbox-ok',
     'flagged stderr:\n> first error\n> second error\n> third error',
     'control stderr:\n> (empty)',
     ...(rows.length ? [rows.join('\n')] : []),
@@ -183,10 +183,10 @@ const probeCases = reasons.flatMap(([response, flagged, control]) => [
   ['inconclusive', [response], flagged], ['inconclusive', [{ status: 1 }, response], control],
 ]);
 probeCases.push(
-  ['alive', [{ status: 0, stdout: 'codex-bridge-sandbox-ok' }], 'The Codex sandbox started a process.'],
-  ['inconclusive', [{ status: 3, stdout: 'codex-bridge-sandbox-ok' }],
+  ['alive', [{ status: 0, stdout: 'llm-bridge-sandbox-ok' }], 'The Codex sandbox started a process.'],
+  ['inconclusive', [{ status: 3, stdout: 'llm-bridge-sandbox-ok' }],
     'The flagged sandbox probe printed the marker but exited 3.'],
-  ['inconclusive', [{ status: 1 }, { status: 0, stdout: 'codex-bridge-sandbox-ok' }],
+  ['inconclusive', [{ status: 1 }, { status: 0, stdout: 'llm-bridge-sandbox-ok' }],
     'This version of Codex no longer accepts the package sandbox flags.'],
   ['dead', [{ status: 1 }, { status: 1 }, { status: 0 }], dead],
 );
@@ -258,7 +258,7 @@ test('D6 journals handwritten unknown parameters in an isolated child marker', a
     const child = spawnSync(process.execPath, ['--input-type=module', '-e', `
       import { orderDiagnosticMessage } from ${JSON.stringify(diagnostics)};
       orderDiagnosticMessage('sandbox-probe-reason', { variant: 'dead', unknown: 'handwritten sandbox text' });
-    `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: marker },
+    `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: marker },
       encoding: 'utf8', windowsHide: true, timeout: 10_000 });
     assert.ifError(child.error);
     assert.equal(child.status, 0, child.stderr || child.stdout);
@@ -316,7 +316,7 @@ test('real probe refusals compose registered outputs without journaling host evi
           } });
         checkOutgoingRefusal(sandboxRefusal(result, platform), 'sandbox-test');
       }
-    `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: marker },
+    `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: marker },
       encoding: 'utf8', windowsHide: true, timeout: 10_000 });
     assert.ifError(child.error);
     assert.equal(child.status, 0, child.stderr || child.stdout);

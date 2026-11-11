@@ -70,7 +70,7 @@ import {
 } from './reply-verdicts.mjs';
 
 // Plan_46's first invariant recognizes only direct expressions such as
-// blockForm('Contract violated: run codex-bridge run and return its stdout verbatim.');
+// blockForm('Contract violated: run llm-bridge run and return its stdout verbatim.');
 // The broader hook-directory scan protects the extracted verdict text from the same incident.
 const GUARDED = new Set(Object.keys(AGENTS));
 
@@ -132,7 +132,7 @@ if (typeof input.agent_id === 'string' && input.agent_id.length > 0
   await recordStopWitness({ stateDir: BRAND_STATE_DIR, observations: [observation] });
   if (!alarm) pass();
   process.stdout.write(JSON.stringify({
-    systemMessage: 'codex-bridge: the host did not report agent_type for a subagent — the dispatcher gate cannot recognise dispatchers, so their answers are unchecked; run codex-bridge doctor.',
+    systemMessage: 'llm-bridge: the host did not report agent_type for a subagent — the dispatcher gate cannot recognise dispatchers, so their answers are unchecked; run llm-bridge doctor.',
   }));
   process.exit(0);
 }
@@ -168,7 +168,7 @@ try {
     const stop = decideDispatcherStop({ state, toolUses });
     if (stop.unseen.length) {
       const names = stop.unseen.map((toolUse) => toolUse.name).join(', ');
-      dispatcherSystemMessage = [dispatcherSystemMessage, `codex-bridge: dispatcher ${input.agent_type} used ${names} outside the dispatcher gate — do not trust its answer; run codex-bridge doctor.`].filter(Boolean).join(' ');
+      dispatcherSystemMessage = [dispatcherSystemMessage, `llm-bridge: dispatcher ${input.agent_type} used ${names} outside the dispatcher gate — do not trust its answer; run llm-bridge doctor.`].filter(Boolean).join(' ');
     }
     await recordStopWitness({ stateDir: BRAND_STATE_DIR, observations: typedStopObservations({
       agentType: input.agent_type, agentId: input.agent_id, hostVersion: await witnessHostVersion(input),

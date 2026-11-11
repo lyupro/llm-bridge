@@ -24,7 +24,7 @@ export async function ownerRecord({ plan, rule, targets, hookResults, prior, cur
       root: 'brand',
       path: relative,
       command,
-      form: command.startsWith('codex-bridge hook ') ? 'short' : 'path',
+      form: command.startsWith('llm-bridge hook ') ? 'short' : 'path',
       ...(createdGroup ? { createdGroup: true } : {}),
     };
   });

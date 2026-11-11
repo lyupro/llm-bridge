@@ -25,7 +25,7 @@ const prompt = 'task file: C:/abs/task.md';
 const command = canonicalRunCommand('codex-build', prompt).command;
 
 test('the task-file call produces only the two canonical command flags', () => {
-  assert.equal(command, 'codex-bridge run --agent codex-build --task-file "C:/abs/task.md"');
+  assert.equal(command, 'llm-bridge run --agent codex-build --task-file "C:/abs/task.md"');
 });
 
 test('the handback tool string literal is defined only in hook-definitions', () => {
@@ -114,7 +114,7 @@ test('decidePreToolUse passes only the canonical foreground Bash command', () =>
       payload: { tool_name: 'Bash', tool_input }, order: { command }, state: {},
     });
     assert.equal(decision.kind, 'deny');
-    assert.match(decision.reason, /^codex-bridge dispatcher gate:/);
+    assert.match(decision.reason, /^llm-bridge dispatcher gate:/);
     assert.ok(decision.reason.endsWith(`\n${command}\nRun it exactly, in the foreground; repeating it attaches to the same run.`));
   }
 });

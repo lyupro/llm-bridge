@@ -72,7 +72,7 @@ function fakeEnv(tree, scenario) {
   const bin = installFakeCodex(tree.root, scenario);
   // Windows env keys are case-insensitive: retain exactly one PATH so the shim wins resolution.
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== 'PATH'));
-  return { ...env, PATH: [bin, process.env.PATH].filter(Boolean).join(path.delimiter), CODEX_RUNS_ROOT: tree.runsRoot };
+  return { ...env, PATH: [bin, process.env.PATH].filter(Boolean).join(path.delimiter), LLM_BRIDGE_RUNS_ROOT: tree.runsRoot };
 }
 
 function calls(root) {
@@ -137,7 +137,7 @@ function statusFiles(root) {
 }
 
 function assertSilentProbe(output) {
-  assert.doesNotMatch(`${output.stdout}\n${output.stderr}`, /codex-bridge-sandbox-ok|sandbox probe|sandbox flags/i);
+  assert.doesNotMatch(`${output.stdout}\n${output.stderr}`, /llm-bridge-sandbox-ok|sandbox probe|sandbox flags/i);
   assert.equal(output.stderr, '');
 }
 
@@ -296,7 +296,7 @@ Object.defineProperty(process, 'platform', { value: 'darwin' });
 ${launcherProcessMocks({ worker: 'spawn', probe: 'forbidden' })}
 `;
   const output = mockedLauncher(source, baseArgs('codex-review', tree.repo), {
-    ...process.env, CODEX_RUNS_ROOT: tree.runsRoot,
+    ...process.env, LLM_BRIDGE_RUNS_ROOT: tree.runsRoot,
   }, tree.repo);
 
   assert.equal(output.status, 0, `${output.stdout}\n${output.stderr}`);

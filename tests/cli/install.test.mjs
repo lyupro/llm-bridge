@@ -24,7 +24,7 @@ import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
 async function backups(host) {
   try {
-    return (await fs.readdir(host.root)).filter((name) => name.startsWith('settings.json.codex-bridge-backup-'));
+    return (await fs.readdir(host.root)).filter((name) => name.startsWith('settings.json.llm-bridge-backup-'));
   } catch (err) {
     if (err.code === 'ENOENT') return [];
     throw err;
@@ -90,9 +90,9 @@ test('install copies the exact plan, expands placeholders, and writes a valid re
   assert.match(result.output, new RegExp(`Granted ${permissionTotal} of ${permissionTotal} permission rule\\(s\\)`));
   const record = await readInstallRecord(host);
   assert.deepEqual(record.files, plan.map((item) => ({ root: item.root, path: item.relativeToRoot })));
-  assert.equal(record.rules.path, path.join(host.codexRulesDir, 'codex-bridge.rules'));
+  assert.equal(record.rules.path, path.join(host.codexRulesDir, 'llm-bridge.rules'));
   const rulesBytes = await fs.readFile(record.rules.path);
-  assert.deepEqual(rulesBytes, await fs.readFile('src/codex/rules/codex-bridge.rules'));
+  assert.deepEqual(rulesBytes, await fs.readFile('src/codex/rules/llm-bridge.rules'));
   assert.equal(record.rules.fingerprint, createHash('sha256').update(rulesBytes).digest('hex'));
   // From the definitions, not restated: a literal list here has to be edited every time the
   // package registers another hook, and until someone remembers, it contradicts the installer.
@@ -117,8 +117,8 @@ test('install copies the exact plan, expands placeholders, and writes a valid re
     const content = await fs.readFile(item.target, 'utf8');
     const source = await fs.readFile(item.source, 'utf8');
     assert.equal(record.fingerprints[item.root][item.relativeToRoot], createHash('sha256').update(content).digest('hex'));
-    assert.doesNotMatch(content, /\{\{CODEX_BRIDGE_DIR\}\}/);
-    if (source.includes('{{CODEX_BRIDGE_DIR}}')) {
+    assert.doesNotMatch(content, /\{\{LLM_BRIDGE_DIR\}\}/);
+    if (source.includes('{{LLM_BRIDGE_DIR}}')) {
       assert.ok(content.includes(host.brandRunnerDir.replaceAll('\\', '/')));
       assert.notEqual(record.fingerprints[item.root][item.relativeToRoot], createHash('sha256').update(source).digest('hex'));
     }
@@ -284,16 +284,16 @@ test('unrecorded conflict fails untouched and --force overwrites it', async (t) 
 
 test('a foreign rules file conflicts unless --force replaces it', async (t) => {
   const { host } = await fixture(t);
-  const target = path.join(host.codexRulesDir, 'codex-bridge.rules');
+  const target = path.join(host.codexRulesDir, 'llm-bridge.rules');
   await fs.mkdir(host.codexRulesDir, { recursive: true });
   await fs.writeFile(target, 'foreign rules');
   const refused = await install({ host });
   assert.equal(refused.exitCode, 1);
-  assert.match(refused.output, /codex-bridge\.rules/);
+  assert.match(refused.output, /llm-bridge\.rules/);
   assert.match(refused.output, /--force/);
   assert.equal(await fs.readFile(target, 'utf8'), 'foreign rules');
   assert.equal((await install({ host, force: true })).exitCode, 0);
-  assert.deepEqual(await fs.readFile(target), await fs.readFile('src/codex/rules/codex-bridge.rules'));
+  assert.deepEqual(await fs.readFile(target), await fs.readFile('src/codex/rules/llm-bridge.rules'));
 });
 
 test('recorded manual changes conflict instead of being overwritten', async (t) => {
@@ -316,7 +316,7 @@ test('install restores a missing recorded rules file instead of reporting a no-o
   const restored = await install({ host });
   assert.equal(restored.exitCode, 0);
   assert.doesNotMatch(restored.output, /nothing to do/);
-  assert.deepEqual(await fs.readFile(record.rules.path), await fs.readFile('src/codex/rules/codex-bridge.rules'));
+  assert.deepEqual(await fs.readFile(record.rules.path), await fs.readFile('src/codex/rules/llm-bridge.rules'));
   assert.equal((await readInstallRecord(host)).rules.fingerprint, await fileHash(record.rules.path));
 });
 

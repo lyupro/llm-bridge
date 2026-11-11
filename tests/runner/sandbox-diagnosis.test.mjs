@@ -84,7 +84,7 @@ for (const { id, line, fragments } of signatures) {
       assert.ok(rows.includes(result.signature.repair));
       assert.equal(rows.includes(NO_REPAIR), false);
       assert.equal(rows.some((row) => /quota|run folder/i.test(row)), false);
-      assert.match(result.signature.repair, /codex-bridge doctor/);
+      assert.match(result.signature.repair, /llm-bridge doctor/);
       if (id === 'runtime-file-locked') {
         assert.match(result.signature.summary, /openai\/codex #51634/);
         assert.match(result.signature.repair, /Codex CLI 0\.162\.x/);

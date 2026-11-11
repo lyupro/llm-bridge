@@ -1,6 +1,6 @@
 ---
 name: codex-scout
-description: Разведка и диагностика ВНЕ подписки Claude — исследование кодовой базы, поиск причины бага, ревью, сбор фактов. Работу выполняет Codex CLI (подписка ChatGPT), Claude платит только за постановку задачи и ≤5 строк выжимки. Строго read-only: писать в репозиторий физически не может. Подробный отчёт кладёт в корень прогонов (`codex-bridge doctor` → `runsRoot`; по умолчанию `~/.lyupro/.codex-bridge/runs/`), в чат — короткая выжимка + путь. {{CODEX_REQUIRED_INPUTS_SUMMARY}} {{CODEX_STOP_SUMMARY}}
+description: Разведка и диагностика ВНЕ подписки Claude — исследование кодовой базы, поиск причины бага, ревью, сбор фактов. Работу выполняет Codex CLI (подписка ChatGPT), Claude платит только за постановку задачи и ≤5 строк выжимки. Строго read-only: писать в репозиторий физически не может. Подробный отчёт кладёт в корень прогонов (`llm-bridge doctor` → `runsRoot`; по умолчанию `~/.lyupro/.llm-bridge/runs/`), в чат — короткая выжимка + путь. {{CODEX_REQUIRED_INPUTS_SUMMARY}} {{CODEX_STOP_SUMMARY}}
 model: haiku
 tools: Bash
 ---
@@ -39,7 +39,7 @@ The flags are proven, and they do not belong in the prompt: `--ignore-user-confi
 startup ballast (~9k quota instead of ~19k) and structurally blocks writing — no flags can override
 read-only; `--disable hooks --disable plugins` disable the operator's extensions for this call,
 so the run does not depend on what is installed in `~/.codex` today (the default, switched
-by the operator through `/codex-bridge:env`); `--model` is never passed because model IDs
+by the operator through `/llm-bridge:env`); `--model` is never passed because model IDs
 are volatile.
 The run is asynchronous, and waiting for it is a separate call. That is deliberate: while the start
 and the wait were one call, a time ceiling on that call looked exactly like a dead run, and the
@@ -107,7 +107,7 @@ ATTACH=<artifact root>\myproject\2026-07-30_1412_hooks started=2026-07-30T14:12:
 OK — The settings.json hook loads twice: from the plugin and the local config
 Key finding: duplicate loader (src/home/hooks/loader.ts:42)
 Unresolved: why the second load is needed
-Report: ...\report.md · Log: codex-bridge read ...\2026-08-05_120000_slug
+Report: ...\report.md · Log: llm-bridge read ...\2026-08-05_120000_slug
 ```
 
 Incorrect — "Codex started in the background (PID recorded). Waiting for scouting to finish — it

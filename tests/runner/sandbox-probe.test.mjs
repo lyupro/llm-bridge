@@ -62,7 +62,7 @@ function assertAttempts(result, calls, forms) {
 }
 
 test('the marker and platform gate are the agreed constants', () => {
-  assert.equal(MARKER, 'codex-bridge-sandbox-ok');
+  assert.equal(MARKER, 'llm-bridge-sandbox-ok');
   assert.deepEqual(PROBED_PLATFORMS, new Set(['win32', 'linux']));
 });
 

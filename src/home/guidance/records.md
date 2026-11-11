@@ -6,9 +6,9 @@ Find run artifacts through runner receipts and the project inventory without nam
 
 Use the absolute run-folder path printed in the runner's `RUN=` or `ATTACH=` line. Keep that returned path as the run identity; do not reconstruct it from a timestamp, project name, package installation, home directory or another run.
 
-For earlier runs, use `codex-bridge projects [<project>] --json`. Use the run object's `path` field, which is the absolute run-folder path. If no project is supplied, first find the project in the inventory; do not concatenate names to invent a path.
+For earlier runs, use `llm-bridge projects [<project>] --json`. Use the run object's `path` field, which is the absolute run-folder path. If no project is supplied, first find the project in the inventory; do not concatenate names to invent a path.
 
-Render the selected run with `codex-bridge read <run>`, passing the returned run path. This renders its structured event stream. The inventory and receipt are the lookup contract; diagnostics are not a substitute for them.
+Render the selected run with `llm-bridge read <run>`, passing the returned run path. This renders its structured event stream. The inventory and receipt are the lookup contract; diagnostics are not a substitute for them.
 
 ## Read the artifacts
 
@@ -37,7 +37,7 @@ Every non-OK reply and every refusal carries one `Action:` row with the next ste
 
 `UNAVAILABLE` means Codex is signed out on this host; the task could not run. A pre-start availability refusal may leave no run folder. Neither verdict is a reason to retry the same bridge. Preserve the verdict and any existing artifacts.
 
-`CAPACITY` (exit 6) means the role's model is overloaded right now, not a task error: wait or change the role's model (`/codex-bridge:model`), then repeat the order once with `retry:`; never `resume:` it. A second `CAPACITY` of the same order goes to the next executor. The reply has no ready grant line on purpose; the runner refuses `resume:` of a CAPACITY run and refuses a second consecutive capacity retry as `capacity-repeated`. Preserve the verdict and artifacts.
+`CAPACITY` (exit 6) means the role's model is overloaded right now, not a task error: wait or change the role's model (`/llm-bridge:model`), then repeat the order once with `retry:`; never `resume:` it. A second `CAPACITY` of the same order goes to the next executor. The reply has no ready grant line on purpose; the runner refuses `resume:` of a CAPACITY run and refuses a second consecutive capacity retry as `capacity-repeated`. Preserve the verdict and artifacts.
 
 A `FAIL` whose Action names the output limit means the order was too large for one answer: narrow it and use `retry:` with the revised task; never `resume:` it, which sent OW-078's resumed pass into the same ceiling.
 

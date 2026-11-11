@@ -50,7 +50,7 @@ Order matters: early refusals must happen before Codex is invoked, and the worke
 complete job before detaching from the launcher.
 
 1. `loadRunEnv()` reads the host's `config.json` — resolved by `brand-home.mjs` from
-   `CODEX_BRIDGE_HOME` or `~/.lyupro/.codex-bridge/`, never from the package directory — and fixes
+   `LLM_BRIDGE_HOME` or `~/.lyupro/.llm-bridge/`, never from the package directory — and fixes
    the environment flags. A configuration error ends the command without creating a run directory.
 2. `parseArgs()` validates the CLI: `--agent` and `--task-file` are mandatory, and `--no-wait` is
    the only optional flag. Every other flag is a free refusal. A flag name in place of a required
@@ -253,7 +253,7 @@ directory creation, immediately after finding the chain and before the missing-g
   new `order id:`, or a `continue:`/`retry:` header grant. If the owner lacks
   `task_hash_scheme` and its hash differs, the refusal explains that the owner predates the task
   header and its task cannot be compared, points to the saved answer in that folder with
-  `codex-bridge read "<directory>"`, and gives the same remedies. Nothing is printed from the other
+  `llm-bridge read "<directory>"`, and gives the same remedies. Nothing is printed from the other
   run, no folder is created and no quota is spent. Checked before every branch below, and skipped
   with a `continue:` or `retry:` header grant and whenever
   either task hash is unknown, so runs older than the `task_hash` field keep attaching as they did.
@@ -309,7 +309,7 @@ Complete step 3 and write the remaining tests.
 ```
 
 ```bash
-codex-bridge run --agent codex-build --task-file "/abs/path/to/follow-up.md"
+llm-bridge run --agent codex-build --task-file "/abs/path/to/follow-up.md"
 ```
 
 The grant names the run after which execution continues and gives the reason. Each value must be
@@ -390,7 +390,7 @@ run as a scope result.
 If the named CAPACITY run's own `retry_of` predecessor also ended CAPACITY,
 rule `retry-grant-usable` refuses for free as `capacity-repeated`; repeating later requires
 a new order id. A capacity retry starts fresh with the role's current model: wait or change it
-with `/codex-bridge:model` first; a second CAPACITY of the same order goes to the next executor.
+with `/llm-bridge:model` first; a second CAPACITY of the same order goes to the next executor.
 
 The new run records the named folder in `status.json#retry_of` and does not count as another
 continuation of the order. Appending it spends the grant; repeating the identical retry command
@@ -434,7 +434,7 @@ a third pass. A scout run followed by failed and successful resumes still has it
 
 ## Manual stop
 
-`codex-bridge stop <run>` closes a hung run: it kills the recorded pid with its entire process tree and
+`llm-bridge stop <run>` closes a hung run: it kills the recorded pid with its entire process tree and
 closes the directory as abandoned — `meta.json` with status `FAIL` and a list of what the run left in
 the tree. A run with a completed verdict is untouched, and a nonexistent directory produces a clear
 error. Killing reuses the same function as the deadline: knowledge of `cmd.exe` and its grandchild on
@@ -460,20 +460,20 @@ verdict.
 
 A hung run is now visible separately: the pid remains alive and `status.json` remains `running`, but the
 heartbeat modification time exceeds five minutes. Such a run cannot be closed through `unlock`: the
-worker still owns its `meta.json`. `codex-bridge stop <run>` kills the process tree first and then writes
+worker still owns its `meta.json`. `llm-bridge stop <run>` kills the process tree first and then writes
 the failure — the sole writer in the correct order.
 
-`codex-bridge unlock` is the manual intermediate step between a targeted `stop` and the automatic
+`llm-bridge unlock` is the manual intermediate step between a targeted `stop` and the automatic
 `markAbandoned()` check at the start of the next run (launcher step 6). With no argument, it checks only
 the current repository; with a name, one project; `--all` explicitly traverses all storage. Only
 `state=running` records with `dead` or `foreign` identity are closed; `alive` is never closed, and the
-output names `codex-bridge stop <run>`. `unverified` remains in place with an explanation. For every
+output names `llm-bridge stop <run>`. `unverified` remains in place with an explanation. For every
 record, the report prints its age, silence duration, and identity verdict of
 `alive` / `dead` / `foreign` / `unverified`. A second invocation changes nothing, and the command deletes
 neither directories nor transport files.
 
-The old name `codex-bridge sweep` is recognized as a rename and responds with a refusal suggesting
-`codex-bridge unlock`; it is not treated as an unknown command.
+The old name `llm-bridge sweep` is recognized as a rename and responds with a refusal suggesting
+`llm-bridge unlock`; it is not treated as an unknown command.
 
 Unlike `stop`, `unlock` does not snapshot the worktree, so the `abandoned_reason` of runs it closes has
 no file list. This is deliberate: `stop` closes one named run and knows its repository, while traversing
@@ -586,7 +586,7 @@ it appends the error to `stderr.log` — the file specifically for events outsid
 and, when no verdict is recorded, creates `meta.json`, closes `status.json` as `failed`, and forms the
 response. A crash after the verdict is recorded keeps `meta.json` and `status.json` byte-identical and
 re-renders the recorded reply, appending `Runner crashed after the verdict was recorded: <error>` and
-`Log: codex-bridge read <run>`. The recorded verdict also determines the exit code, preserving the stop
+`Log: llm-bridge read <run>`. The recorded verdict also determines the exit code, preserving the stop
 assessment and ready resume grant (Plan_80 E17, A14/A15). The worker writes the response to a file;
 the launcher writes it to stdout.
 

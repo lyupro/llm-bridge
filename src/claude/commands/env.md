@@ -4,7 +4,7 @@ allowed-tools: Bash
 argument-hint: "[hooks|plugins on|off] | [reset]"
 ---
 
-<!-- Part of the agents/codex-bridge/ package. The file lives here out of necessity: the slash
+<!-- Part of the agents/llm-bridge/ package. The file lives here out of necessity: the slash
      command name is set by its location under commands/<namespace>/, and Claude Code understands neither
      symlinks nor pointer files (verified 2026-08-02). Edit it here; it travels as a copy when the
      package is installed. -->
@@ -21,7 +21,7 @@ Run exactly this command, substituting the user's arguments (`$ARGUMENTS`), and 
 verbatim. Add nothing and recompute nothing:
 
 ```bash
-node "{{CODEX_BRIDGE_DIR}}/run-config.mjs" $ARGUMENTS
+node "{{LLM_BRIDGE_DIR}}/run-config.mjs" $ARGUMENTS
 ```
 
 Call forms:
@@ -31,7 +31,7 @@ Call forms:
 - `plugins on` / `plugins off` — the same for plugins;
 - `reset` — back to the default (both off).
 
-The state lives in `~/.lyupro/.codex-bridge/config.json` and lands in the `meta.json` of every run,
+The state lives in `~/.lyupro/.llm-bridge/config.json` and lands in the `meta.json` of every run,
 so the artifacts always show which environment a run went through.
 
 If the user turns `hooks` on, say in one line: while the failing `Stop` hook of `oh-my-codex` stays

@@ -223,7 +223,7 @@ test('launcher refuses an invalid scope before creating the run folder', (t) => 
   const runsRoot = path.join(root, 'runs');
   const pattern = '/absolute/src/existing.mjs';
   const output = mockedLauncher('', buildArgs(repo, 'invalid-order', 'invalid scope', pattern), {
-    CODEX_RUNS_ROOT: runsRoot,
+    LLM_BRIDGE_RUNS_ROOT: runsRoot,
   }, repo);
 
   assert.equal(output.status, 2, output.stderr);
@@ -241,7 +241,7 @@ test('--no-wait exits 4 without launching a missing order', (t) => {
     SUCCESS_SOURCE,
     // raw argv: --no-wait is allowed transport and is the attach-only behavior under test.
     buildArgs(repo, 'missing-order', 'inspect a run without starting one', 'src/existing.mjs', { extra: ['--no-wait'] }),
-    { CODEX_RUNS_ROOT: runsRoot },
+    { LLM_BRIDGE_RUNS_ROOT: runsRoot },
     repo,
   );
 
@@ -260,7 +260,7 @@ test('--continue is a closed flag even beside --no-wait', (t) => {
   const runsRoot = path.join(root, 'runs');
   // raw argv: legacy consent is refused as a closed flag, before loading a task or inspecting runs.
   const args = ['--agent', 'codex-build', '--no-wait', '--continue'];
-  const output = mockedLauncher(SUCCESS_SOURCE, args, { CODEX_RUNS_ROOT: runsRoot }, repo);
+  const output = mockedLauncher(SUCCESS_SOURCE, args, { LLM_BRIDGE_RUNS_ROOT: runsRoot }, repo);
   assert.equal(output.status, 2, output.stderr);
   assert.match(output.stderr, /unknown flag --continue:/);
   assert.equal(fs.existsSync(runsRoot), false);
@@ -274,7 +274,7 @@ test('an honest scope starts and scope-new is persisted in worker.json', (t) => 
     buildArgs(repo, 'new-order', 'start with one new file', 'src/existing.mjs', {
       order: { 'scope new': 'src/new-file.mjs,src/another-new-file.mjs' },
     }),
-    { CODEX_RUNS_ROOT: runsRoot },
+    { LLM_BRIDGE_RUNS_ROOT: runsRoot },
     repo,
   );
 
@@ -303,7 +303,7 @@ test('a missing scope header is still refused even with scope new', (t) => {
         'scope new': 'src/new-file.mjs', ...(scope === undefined ? {} : { scope }) },
       advice: 'mechanical', task: 'Declare a new file.', dir: root,
     });
-    const output = mockedLauncher('', argv, { CODEX_RUNS_ROOT: runsRoot }, repo);
+    const output = mockedLauncher('', argv, { LLM_BRIDGE_RUNS_ROOT: runsRoot }, repo);
     assert.equal(output.status, 2, output.stderr);
     assert.match(output.stderr, scope === undefined
       ? /missing required header label "scope:"/ : /`scope:` is required/);
@@ -332,7 +332,7 @@ test('scope new is refused for the agents that never create a file', (t) => {
         'scope new': 'src/new-file.mjs' },
       questions: ['Does this order reach an agent that cannot create files?'], dir: root,
     });
-    const output = mockedLauncher('', argv, { CODEX_RUNS_ROOT: runsRoot }, repo);
+    const output = mockedLauncher('', argv, { LLM_BRIDGE_RUNS_ROOT: runsRoot }, repo);
     assert.equal(output.status, 2, output.stderr);
     assert.match(output.stderr, new RegExp('label "scope new" is not accepted by ' + agent));
     assert.equal(fs.existsSync(runsRoot), false);
@@ -350,7 +350,7 @@ test('a scout scope is refused: the label binds only codex-build', (t) => {
   const taskFile = path.join(root, 'task.md');
   fs.writeFileSync(taskFile, text);
   // raw argv: the helper refuses a scout scope, and this case is about the runner refusing it.
-  const output = mockedLauncher('', ['--agent', 'codex-scout', '--task-file', taskFile], { CODEX_RUNS_ROOT: runsRoot }, repo);
+  const output = mockedLauncher('', ['--agent', 'codex-scout', '--task-file', taskFile], { LLM_BRIDGE_RUNS_ROOT: runsRoot }, repo);
 
   assert.equal(output.status, 2, output.stderr);
   assert.match(output.stderr, /label "scope" is not accepted by codex-scout/);

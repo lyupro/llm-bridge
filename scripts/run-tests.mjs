@@ -3,13 +3,13 @@
  *
  * The installer writes its execpolicy file under `$CODEX_HOME/rules`, so a test that builds a host
  * without naming a Codex home installs into the real one: on 2026-08-03 the suite dropped
- * `codex-bridge.rules` into the operator's `~/.codex/rules/` and the next run failed on the file it
+ * `llm-bridge.rules` into the operator's `~/.codex/rules/` and the next run failed on the file it
  * had left behind. Passing the isolation through the one command that starts the suite is what
  * makes it unforgettable — a fixture can omit it, this cannot.
  *
  * Plan_25 gave the package a second root outside the repository, and this file was not extended
  * with it: on 2026-08-11 the suite wrote config.json, conventions.md and a lib/obsolete.txt fixture
- * straight into the operator's real `~/.lyupro/.codex-bridge/`, where the stray config then stood
+ * straight into the operator's real `~/.lyupro/.llm-bridge/`, where the stray config then stood
  * in the way of the very migration the release was about. Roots live in one list here so a third
  * one cannot be added without this file being the place it is declared.
  *
@@ -85,15 +85,15 @@ if (violations.length) {
 
 const created = ISOLATED_ROOTS.map((name) => [
   name,
-  fs.mkdtempSync(path.join(os.tmpdir(), `codex-bridge-test-${name.toLowerCase()}-`)),
+  fs.mkdtempSync(path.join(os.tmpdir(), `llm-bridge-test-${name.toLowerCase()}-`)),
 ]);
 // Fixtures created temporary trees no one removed, so keep them under one disposable root.
-const testTmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'codex-bridge-test-tmp-'));
+const testTmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'llm-bridge-test-tmp-'));
 const pattern = process.argv[2] || 'tests/**/*.test.mjs';
 // Only a whole-suite run can judge the README's number; a single file legitimately reports two.
 const wholeSuite = !process.argv[2];
 const tapFile = wholeSuite
-  ? path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'codex-bridge-test-summary-')), 'summary.tap')
+  ? path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'llm-bridge-test-summary-')), 'summary.tap')
   : null;
 
 // The spec reporter is named explicitly because the second reporter would otherwise replace it,
@@ -107,7 +107,7 @@ try {
   const before = snapshotRoot(repositoryRoot);
   const result = spawnSync(process.execPath, ['--test', ...reporters, pattern], {
     stdio: 'inherit',
-    env: { ...process.env, ...Object.fromEntries(created), CODEX_BRIDGE_TEST_TMP: testTmpRoot },
+    env: { ...process.env, ...Object.fromEntries(created), LLM_BRIDGE_TEST_TMP: testTmpRoot },
   });
   const additions = addedEntries(before, snapshotRoot(repositoryRoot));
   process.exitCode = result.status ?? 1;

@@ -12,15 +12,15 @@ import { ORDER_TEXT_FAULT_EXIT, orderTextFaultDirectory } from '../src/home/lib/
 
 const recorder = new URL('../src/home/lib/order-text-record.mjs', import.meta.url).href;
 const args = new URL('../src/home/lib/runner/args.mjs', import.meta.url).href;
-const fixture = process.env.CODEX_BRIDGE_D5_FIXTURE;
+const fixture = process.env.LLM_BRIDGE_D5_FIXTURE;
 
 function runCase(body, { marker = true, blocked = false } = {}) {
   const tree = makeTempTree('order-text-record-');
   const root = path.join(tree, 'marker');
   if (blocked) fs.writeFileSync(root, 'not a directory');
   const env = { ...process.env, D5_ROOT: root };
-  if (marker) env.CODEX_BRIDGE_TEST_TMP = root;
-  else delete env.CODEX_BRIDGE_TEST_TMP;
+  if (marker) env.LLM_BRIDGE_TEST_TMP = root;
+  else delete env.LLM_BRIDGE_TEST_TMP;
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
     import assert from 'node:assert/strict';
     import fs from 'node:fs';
@@ -99,7 +99,7 @@ if (fixture) {
       assert.equal(recordOrderText('not recorded'), 'not recorded');
       assert.equal(checkOutgoingRefusal('not recorded', 'absent'), 'not recorded');
       assert.equal(fs.existsSync(process.env.D5_ROOT), false);
-      process.env.CODEX_BRIDGE_TEST_TMP = process.env.D5_ROOT;
+      process.env.LLM_BRIDGE_TEST_TMP = process.env.D5_ROOT;
       checkOutgoingRefusal('not recorded', 'enabled later');
     `, { marker: false });
     assert.equal(entries.length, 1, 'a call without the marker must not have registered its text');
@@ -119,7 +119,7 @@ if (fixture) {
     assert.equal(entry.transport, 'blocked');
     assert.equal(entry.message, 'handwritten');
     assert.match(entry.error, /EEXIST|ENOTDIR/);
-    assert.equal(fs.existsSync(orderTextFaultDirectory(process.env.CODEX_BRIDGE_TEST_TMP)), false);
+    assert.equal(fs.existsSync(orderTextFaultDirectory(process.env.LLM_BRIDGE_TEST_TMP)), false);
   });
 
   test('registry helpers record their unchanged output', () => {
@@ -340,7 +340,7 @@ if (fixture) {
   for (const [kind, status] of [['registered', 0], ['unregistered', 1]]) {
     test(`suite exit status reflects ${kind} refusal text even when its test passes`, () => {
       const tree = makeTempTree('order-text-suite-');
-      const env = { ...process.env, CODEX_BRIDGE_TEST_TMP: tree, CODEX_BRIDGE_D5_FIXTURE: kind };
+      const env = { ...process.env, LLM_BRIDGE_TEST_TMP: tree, LLM_BRIDGE_D5_FIXTURE: kind };
       // Plan_79 D5: a separate suite must not inherit Node's recursive-test suppression marker.
       delete env.NODE_TEST_CONTEXT;
       const result = spawnSync(process.execPath, [

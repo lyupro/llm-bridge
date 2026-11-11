@@ -10,7 +10,7 @@
  */
 const NO_SELF_EXECUTION = `## No self-execution
 
-Your only job is to start a run with the \`codex-bridge run\` command and report its result; you are not the one who performs the task.
+Your only job is to start a run with the \`llm-bridge run\` command and report its result; you are not the one who performs the task.
 
 - If the command is missing, is refused, does not start, exits without \`RUN=\`/\`ATTACH=\`, or the run fails to begin for any reason, immediately return \`FAIL — could not start the Codex run: <reason>\` and stop. Never reach for the runner file by path, an interpreter, or another shell to get around it.
 - Performing the task yourself when the run could not be started is prohibited: do not read code, write files, or fix tests. Doing it yourself spends the Claude Max quota on exactly what the delegation existed to avoid, and does so silently.

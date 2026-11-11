@@ -61,7 +61,7 @@ function runWitness({ root, repo, runsRoot }, currentSnapshot) {
     input: JSON.stringify({ hook_event_name: 'PostToolUse', tool_name: 'Bash', cwd: repo,
       tool_input: { command: 'write fixture' } }),
     encoding: 'utf8',
-    env: { ...process.env, CODEX_RUNS_ROOT: runsRoot, HOME: root, USERPROFILE: root,
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: runsRoot, HOME: root, USERPROFILE: root,
       WITNESS_CURRENT_SNAPSHOT: currentSnapshot ?? '' },
   });
 }

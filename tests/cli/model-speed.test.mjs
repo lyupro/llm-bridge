@@ -38,9 +38,9 @@ test('speed refuses missing and unknown roles with every allowed role before fet
   for (const args of [[], ['unknown-role'], ['unknown-role', 'unset'], ['nosuchrole', 'fast']]) {
     const result = await model(['speed', ...args], { ...data, fetchCatalogue: noFetch });
     assert.equal(result.exitCode, 2);
-    assert.match(result.output, /^codex-bridge model: (role is required|unknown role)/);
+    assert.match(result.output, /^llm-bridge model: (role is required|unknown role)/);
     assert.ok(result.output.includes(`Allowed roles: ${roles.join(', ')}.`));
-    assert.doesNotMatch(result.output, /Run codex-bridge .* -h for usage\./);
+    assert.doesNotMatch(result.output, /Run llm-bridge .* -h for usage\./);
     unchanged(data);
   }
 });
@@ -75,8 +75,8 @@ test('speed refuses the first dash argument before role checks, config access an
   for (const [args, unexpected] of cases) {
     const result = await model(['speed', ...args], options);
     assert.equal(result.exitCode, 2);
-    assert.equal(result.output, `codex-bridge model: unexpected argument "${unexpected}".\nRun codex-bridge model speed -h for usage.`);
-    assert.equal(result.output.split('\n').at(-1), 'Run codex-bridge model speed -h for usage.');
+    assert.equal(result.output, `llm-bridge model: unexpected argument "${unexpected}".\nRun llm-bridge model speed -h for usage.`);
+    assert.equal(result.output.split('\n').at(-1), 'Run llm-bridge model speed -h for usage.');
     assert.equal(fetchCalls, 0);
     unchanged(data);
   }
@@ -87,8 +87,8 @@ test('speed confirmation and extra argument refusals end with the speed help poi
   for (const args of [['unset', 'extra'], ['fast', 'nope'], ['fast', 'confirm', 'extra']]) {
     const result = await model(['speed', 'build', ...args], { ...data, fetchCatalogue: noFetch });
     assert.equal(result.exitCode, 2);
-    assert.equal(result.output, `codex-bridge model: unexpected argument "${args.at(-1)}".\nRun codex-bridge model speed -h for usage.`);
-    assert.equal(result.output.split('\n').at(-1), 'Run codex-bridge model speed -h for usage.');
+    assert.equal(result.output, `llm-bridge model: unexpected argument "${args.at(-1)}".\nRun llm-bridge model speed -h for usage.`);
+    assert.equal(result.output.split('\n').at(-1), 'Run llm-bridge model speed -h for usage.');
     unchanged(data);
   }
 });
@@ -121,7 +121,7 @@ test('every offered tier previews verbatim cost text and a separate credit link 
       assert.equal(result.exitCode, 0, result.output);
       assert.ok(result.output.includes(`Preview — ${role}: ${available.slug} at high effort -> ${available.slug} at high effort on ${offered.id} tier`));
       assert.ok(result.output.includes(`Catalogue description: "${offered.description}"\nCredit multipliers: ${credits}\n`));
-      assert.ok(result.output.includes(`second call ending in confirm to apply: codex-bridge model speed ${role} ${offered.id} confirm`));
+      assert.ok(result.output.includes(`second call ending in confirm to apply: llm-bridge model speed ${role} ${offered.id} confirm`));
       assert.match(result.output, /Nothing written\./);
       unchanged(data);
     }

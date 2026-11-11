@@ -73,8 +73,8 @@ async function killChild(child) {
 
 test('strategy and address declare the kernel namespace on each platform', () => {
   for (const [platform, strategy, address] of [
-    ['win32', 'named-pipe', '\\\\.\\pipe\\codex-bridge-order-abc'],
-    ['linux', 'abstract-socket', '\0codex-bridge-order-abc'],
+    ['win32', 'named-pipe', '\\\\.\\pipe\\llm-bridge-order-abc'],
+    ['linux', 'abstract-socket', '\0llm-bridge-order-abc'],
     ['darwin', null, null],
   ]) {
     assert.equal(kernelLockStrategy(platform), strategy);

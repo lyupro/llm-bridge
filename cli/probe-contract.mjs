@@ -16,7 +16,7 @@ import { parseJsonText } from '../src/home/lib/json-file.mjs';
 import { randomUUID } from 'node:crypto';
 import { transcriptHostVersion } from '../src/home/lib/host-version.mjs';
 
-export const PROBE_MARKER = 'codex-bridge-contract-probe';
+export const PROBE_MARKER = 'llm-bridge-contract-probe';
 
 const exists = async (target) => {
   try {

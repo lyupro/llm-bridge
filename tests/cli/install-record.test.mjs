@@ -27,20 +27,20 @@ async function fixture(t) {
 }
 
 const files = [
-  { root: 'claude', path: 'agents/codex-bridge/codex-build.md' },
+  { root: 'claude', path: 'agents/llm-bridge/codex-build.md' },
   { root: 'brand', path: 'hooks/reply-guard.mjs' },
   { root: 'brand', path: 'lib/runner.mjs' },
 ];
 
 function record(overrides = {}) {
   return {
-    name: '@lyupro/codex-bridge',
+    name: '@lyupro/llm-bridge',
     version: '0.1.0',
     installedAt: '2026-08-10T20:00:00.000Z',
     mode: 'copy',
     files,
     fingerprints: {
-      claude: { 'agents/codex-bridge/codex-build.md': 'a'.repeat(64) },
+      claude: { 'agents/llm-bridge/codex-build.md': 'a'.repeat(64) },
       brand: {
         'hooks/reply-guard.mjs': 'b'.repeat(64),
         'lib/runner.mjs': 'c'.repeat(64),
@@ -50,7 +50,7 @@ function record(overrides = {}) {
       event: 'SubagentStop',
       root: 'brand',
       path: 'hooks/reply-guard.mjs',
-      command: 'codex-bridge hook reply-guard',
+      command: 'llm-bridge hook reply-guard',
       form: 'short',
     }],
     ...overrides,
@@ -109,7 +109,7 @@ test('read migrates an old single-root record and singular hook to normalized en
   ];
   await fs.mkdir(path.dirname(installRecordPath(host)), { recursive: true });
   await fs.writeFile(installRecordPath(host), `${JSON.stringify({
-    name: '@lyupro/codex-bridge',
+    name: '@lyupro/llm-bridge',
     version: '0.0.9',
     installedAt: '2026-08-01T20:00:00.000Z',
     mode: 'copy',
@@ -154,7 +154,7 @@ function hostRecord(label) {
       event: 'SubagentStop',
       root: 'claude',
       path: ownerPath,
-      command: 'codex-bridge hook reply-guard',
+      command: 'llm-bridge hook reply-guard',
     }],
   });
 }
@@ -305,6 +305,6 @@ test('record validation refuses codex-runs entries before any migration can remo
 
 test('record validation refuses the runs folder of the brand home, where run records move (Plan_77 D1)', () => {
   assert.throws(() => normalizeInstallRecord(record({
-    files: [...files, { root: 'brand', path: 'runs/codex-bridge/run/meta.json' }],
+    files: [...files, { root: 'brand', path: 'runs/llm-bridge/run/meta.json' }],
   })), /must not name run artifacts under runs/);
 });

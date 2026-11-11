@@ -24,7 +24,7 @@ here. Nothing was reworded on the way out.
 - **`src/home/config.json` is seeded, never overwritten.** It is the host's file (models, effort,
   `environmentPaths`), like a `.env`. `SEEDED_SOURCES` in `cli/manifest.mjs`.
 - **A seeded file is read from the host home, never from the package.** `src/home/lib/brand-home.mjs`
-  is the only resolver of that home (`CODEX_BRIDGE_HOME`, else `~/.lyupro/.codex-bridge/`); no module
+  is the only resolver of that home (`LLM_BRIDGE_HOME`, else `~/.lyupro/.llm-bridge/`); no module
   derives the path from its own location. The runner did exactly that until 2026-08-26 and read the
   package copy for three releases while the operator edited the home one — a pinned model and effort
   reached no run at all, and `doctor` confirmed the setting because the CLI resolved the path
@@ -74,7 +74,7 @@ here. Nothing was reworded on the way out.
   behind which a real one could not be seen; and a single "newest host" hid the second live VS Code window on
   2026-10-07. Activity, not liveness: hooks are event-driven and the host process cannot be identified. The newest-host
   selector still owns contracts, `otherHost:*` and install.
-- **The package never declares its own inventory complete** (Plan_67 D11). Only `codex-bridge inventory confirm`, a
+- **The package never declares its own inventory complete** (Plan_67 D11). Only `llm-bridge inventory confirm`, a
   "yes" in a TTY, sets `inventory: complete` — the absence of an unrecorded host using the home is unprovable, and the
   Codex rules registry is a hint that held three deleted scratchpads. It writes through `publishInstallRecordOnly`,
   never `writeInstallRecord`/`withOwner`: those rebuild owners and fingerprints and would hide real lag behind the
@@ -90,7 +90,7 @@ here. Nothing was reworded on the way out.
   silence every guard. The order-repository resolver resolves the task file's own symlink with
   `fs.realpathSync` (the JS implementation, never `.native`): the question is which worktree owns
   the file; the roots it finds are then compared normalized.
-- **The shipped agents start a run through `codex-bridge run`, on ONE line, and never by path.** A
+- **The shipped agents start a run through `llm-bridge run`, on ONE line, and never by path.** A
   host matches permission rules against the beginning of the final command line, so an interpreter,
   an absolute path or a line continuation makes the call unmatchable and every delegation stops on a
   permission prompt. For the same reason the task statement travels as `--task-file` (absolute path,
@@ -108,7 +108,7 @@ here. Nothing was reworded on the way out.
   (labels, agents, required/conditional/optional, examples — no runner flags) by `src/home/lib/order-schema.mjs`; the
   grammar of one value by `src/home/lib/order-values.mjs`, a leaf that imports neither. Any former order label in the
   call (`order id:`, `continue: none`, any spelling) is a free refusal "moved to the task-file header" with the agent's
-  header template. The canonical command is `codex-bridge run --agent <type> --task-file "<path>"`, built without reading
+  header template. The canonical command is `llm-bridge run --agent <type> --task-file "<path>"`, built without reading
   the file. The path is refused, never escaped, when the dispatcher's shell would rewrite it inside the double quotes
   (`$`, `\\`, a final `\`): otherwise the gate validates the literal file and the runner opens another (review of
   `4ed0fd4`). The order gate refuses the header's problems and `orderFromHeader`'s problems before it looks at a grant;
@@ -143,18 +143,18 @@ here. Nothing was reworded on the way out.
   interpreter comes from `ComSpec`, never from the PATH handed in, because a caller's trimmed PATH
   would otherwise turn the version check into a silent null and send installs back to writing full
   paths into hooks.
-- **The installer is the package; the runtime is the home.** `codex-bridge hook <name>` is only a
+- **The installer is the package; the runtime is the home.** `llm-bridge hook <name>` is only a
   launcher: it resolves the home through `brand-home.mjs` and imports one home file,
   `lib/hook-entry.mjs`, which owns the name list and the guard import. It never falls back to the
   package's own `src/home/`. Every launcher-side failure (unknown name, no home, import error) exits 1
   with a stderr line and runs no guard; exit 2 belongs to a guard's own deliberate refusal. Why: on
   2026-09-24 a clone install registered three new names against a global 0.6.6 whose package copy did
   not know them, `hook` answered 2, and every Bash and PowerShell call on the machine was refused.
-  `tests/cli/hook-home-launcher.test.mjs` holds it. `codex-bridge run` follows the same rule through
+  `tests/cli/hook-home-launcher.test.mjs` holds it. `llm-bridge run` follows the same rule through
   `cli/run-launcher.mjs` (the home's `lib/run-codex.mjs`, no package fallback,
   `tests/cli/run-home-launcher.test.mjs`); a test that spawns `bin run` gives it a home image with
   `tests/home-image.mjs`, or it would execute the operator's installed runner. The installer writes
-  the short `codex-bridge hook <name>` only when `hook --home` on PATH proves a launcher of the current
+  the short `llm-bridge hook <name>` only when `hook --home` on PATH proves a launcher of the current
   protocol serving this very home (`cli/launcher-probe.mjs`); a version comparison proves nothing,
   since a clone carries the previous release's version.
 - **The host is named by the `version` in its own transcript, nothing else** (Plan_66 D4). Contracts,
@@ -171,8 +171,8 @@ here. Nothing was reworded on the way out.
 - **`install` grants the permission rules in the scope it installed into**, global or `--scope
   project`. `uninstall` removed them long before install granted them, and a host without the rule
   refuses the package command.
-- **Agent and command markdown is placeholder-processed** on install: `{{CODEX_BRIDGE_DIR}}` becomes
-  the installed runner directory, `~/.lyupro/.codex-bridge/lib/` — not the directory the markdown
+- **Agent and command markdown is placeholder-processed** on install: `{{LLM_BRIDGE_DIR}}` becomes
+  the installed runner directory, `~/.lyupro/.llm-bridge/lib/` — not the directory the markdown
   itself lands in. Keep the placeholder, never a real path.
 - **The dispatcher protocol is written once, in code** (Plan_63 D11). The four `src/claude/agents/*.md` carry
   `{{CODEX_DISPATCHER_PROTOCOL}}`, rendered by `src/home/lib/dispatcher-protocol.mjs`: the `task file` input, the one

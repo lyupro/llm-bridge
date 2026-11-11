@@ -159,7 +159,7 @@ phrase**, and is structurally separate from what the model said.
 - `raw.log` no longer exists. Under `--json` it was a byte-for-byte copy of `events.jsonl`, yet the
   “run abandoned” verdict depended on it even though `usage.md` itself declares it removable. An artifact
   that may be deleted cannot support a verdict. A person reads a run with
-  `codex-bridge read <run>`, which renders events on demand.
+  `llm-bridge read <run>`, which renders events on demand.
 
 **`item.completed` is never a source of a transport verdict.** This event contains model text — exactly
 where a line quoted from the repository appears. Restoring it as a basis would restore the defect to the
@@ -287,7 +287,7 @@ output budget on reasoning before answering. The generic `process-exit-no-result
 FAIL Action and ready `resume:` line sent the resumed pass into the same ceiling; it failed
 after a single agent message and spent another 14 minutes of quota (OW-078). A FAIL of kind
 `output-limit` therefore gets Action variant `fail-output-limit`: narrow the order (fewer files,
-fewer questions or a shorter answer), or lower the role's effort with `/codex-bridge:model`,
+fewer questions or a shorter answer), or lower the role's effort with `/llm-bridge:model`,
 then repeat once with `retry:` carrying the revised task, or use a new order id; never resume.
 One selector supplies both the reply and the post-run Action variant so their advice cannot
 drift. An unknown `turn.failed` reason keeps the generic FAIL Action but gets no ready resume
@@ -357,7 +357,7 @@ older records with no situation assessment.
 ```text
 CAPACITY — selected model is at capacity; work not completed
 Signal: <transport reason>
-Action: <wait or change this role's model (/codex-bridge:model), then repeat the same order once with a retry: grant; never resume: this run; a second CAPACITY for the same order goes to the next executor>
+Action: <wait or change this role's model (/llm-bridge:model), then repeat the same order once with a retry: grant; never resume: this run; a second CAPACITY for the same order goes to the next executor>
 Worktree: <unfinished changes or unknown; builds only>
 Model: <recorded model profile>
 Log: <run log link>

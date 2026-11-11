@@ -92,7 +92,7 @@ async function inspectSettings(host) {
   }
 }
 
-// Own permission strings are reported, not counted as an installation: `codex-bridge permissions
+// Own permission strings are reported, not counted as an installation: `llm-bridge permissions
 // add` sets them alone. An unparseable settings file is already named by settingsError.
 async function inspectOwnPermissions(host) {
   try {

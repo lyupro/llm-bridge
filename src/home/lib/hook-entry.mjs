@@ -14,7 +14,7 @@ export async function runHook(name, io = console) {
     await import(pathToFileURL(path.join(hooksDir, definition.file)).href);
     return typeof process.exitCode === 'number' ? process.exitCode : 0;
   } catch (error) {
-    io.error(`codex-bridge hook: guard "${name}" did not run: ${error?.message ?? String(error)}. Run codex-bridge doctor.`);
+    io.error(`llm-bridge hook: guard "${name}" did not run: ${error?.message ?? String(error)}. Run llm-bridge doctor.`);
     return 1;
   }
 }

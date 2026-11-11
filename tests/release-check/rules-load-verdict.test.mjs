@@ -8,7 +8,7 @@ import { withTempTree } from '../temp-tree.mjs';
 import { resolveTargets, preflightTarget, REQUIRED_FLAGS } from '../../scripts/release-check/rules-load-targets.mjs';
 import { DEFAULT_ATTEMPT_PATH, exitCodeFor, judgeCell, writeAttempt } from '../../scripts/release-check/rules-load-verdict.mjs';
 
-const expectedPath = path.resolve('fake-project', '.claude', 'rules', 'codex-bridge', 'core.md');
+const expectedPath = path.resolve('fake-project', '.claude', 'rules', 'llm-bridge', 'core.md');
 const frozenSha256 = 'a'.repeat(64);
 const version = '2.1.999';
 const sessionId = 'project-session';
@@ -55,7 +55,7 @@ test('missing witness, session or exact session_start load is inconclusive', () 
 });
 
 test('user core with the correct hash and ancestor CLAUDE.md cannot replace project core', () => {
-  for (const otherPath of [path.resolve('fake-user', '.claude', 'rules', 'codex-bridge', 'core.md'),
+  for (const otherPath of [path.resolve('fake-user', '.claude', 'rules', 'llm-bridge', 'core.md'),
     path.resolve('CLAUDE.md')]) {
     assert.equal(judgeCell(inputs({ witness: withLoads([{ ...load, path: otherPath }]) })).outcome, 'inconclusive');
   }

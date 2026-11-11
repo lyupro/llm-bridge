@@ -26,7 +26,7 @@ async function seed(host, entry) {
 
 test('a recorded brand file is unlinked through the adapter and its empty parents are removed', async () => {
   const { host } = fixture('bridge-record-removal-brand-');
-  const entry = { root: 'brand', path: 'agents/codex-bridge/agent.md' };
+  const entry = { root: 'brand', path: 'agents/llm-bridge/agent.md' };
   const target = await seed(host, entry);
   const writer = recordHomeWriter(host, [entry]);
 
@@ -49,7 +49,7 @@ test('a brand file absent from the record is refused and left in place', async (
 
 test('a recorded host file is removed and its owned parent is cleaned up', async () => {
   const { host } = fixture('bridge-record-removal-host-');
-  const entry = { root: 'host', path: 'agents/codex-bridge/agent.md' };
+  const entry = { root: 'host', path: 'agents/llm-bridge/agent.md' };
   const target = await seed(host, entry);
   const writer = recordHomeWriter(host, [entry]);
 
@@ -81,7 +81,7 @@ test('a missing recorded file is not an error', async () => {
 
 test('a recorded brand file already gone still has its emptied parents removed', async () => {
   const { host } = fixture('bridge-record-removal-gone-');
-  const entry = { root: 'brand', path: 'agents/codex-bridge/agent.md' };
+  const entry = { root: 'brand', path: 'agents/llm-bridge/agent.md' };
   const target = await seed(host, entry);
   await fs.unlink(target);
   const writer = recordHomeWriter(host, [entry]);

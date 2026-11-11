@@ -23,7 +23,7 @@ function fixture(t) {
     GIT_CONFIG_GLOBAL: path.join(runDir, 'absent-config'),
     GIT_CONFIG_SYSTEM: path.join(runDir, 'absent-config'),
     GIT_CONFIG_COUNT: undefined,
-    CODEX_RUNS_ROOT: path.join(runDir, 'runs'),
+    LLM_BRIDGE_RUNS_ROOT: path.join(runDir, 'runs'),
   };
   const saved = Object.fromEntries(Object.keys(environment).map((key) => [key, process.env[key]]));
   const setEnvironment = (values) => {
@@ -161,8 +161,8 @@ test('a newly added Cyrillic Markdown path is printed exactly', (t) => {
 
 test('a TODO added under an inside-repository runs root after the baseline is not a hit', (t) => {
   const { repoRoot, write, capture, scan } = fixture(t);
-  // Plan_60 R12b excludes runner artifacts; fixture restores CODEX_RUNS_ROOT after the test.
-  process.env.CODEX_RUNS_ROOT = path.join(repoRoot, 'прогоны');
+  // Plan_60 R12b excludes runner artifacts; fixture restores LLM_BRIDGE_RUNS_ROOT after the test.
+  process.env.LLM_BRIDGE_RUNS_ROOT = path.join(repoRoot, 'прогоны');
   capture();
   write('прогоны/задача.md', 'TODO: runner artifact\n');
   assert.deepEqual(scan(), { text: '', coverage: { complete: true, gaps: [] } });

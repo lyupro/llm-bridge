@@ -73,7 +73,7 @@ try {
 `;
   const child = spawn(process.execPath, ['--input-type=module', '-e', script], {
     cwd: tree.repo,
-    env: { ...process.env, CODEX_RUNS_ROOT: tree.runsRoot },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: tree.runsRoot },
     stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
     windowsHide: true,
   });
@@ -204,14 +204,14 @@ assert.equal(worker.pid, ${options.workerPid === 'parent' ? 'process.ppid' : '99
 await once(worker, 'spawn');
 const syncStart = performance.now();
 const syncProbe = childProcess.spawnSync('codex', ['sandbox']);
-assert.equal(syncProbe.stdout, 'codex-bridge-sandbox-ok');
+assert.equal(syncProbe.stdout, 'llm-bridge-sandbox-ok');
 assert.ok(performance.now() - syncStart >= delay - 20);
 const asyncStart = performance.now();
 const asyncProbe = childProcess.spawn('codex', ['sandbox']);
 let marker = '';
 asyncProbe.stdout.on('data', (chunk) => { marker += chunk; });
 await once(asyncProbe, 'close');
-assert.equal(marker, 'codex-bridge-sandbox-ok\\n');
+assert.equal(marker, 'llm-bridge-sandbox-ok\\n');
 assert.ok(performance.now() - asyncStart >= delay - 20);
 `;
     const output = spawnSync(process.execPath, ['--input-type=module', '-e', source], {

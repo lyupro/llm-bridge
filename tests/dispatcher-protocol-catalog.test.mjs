@@ -15,7 +15,7 @@ import { makeTempTree } from './temp-tree.mjs';
 
 const lib = new URL('../src/home/lib/', import.meta.url);
 const hook = new URL('../src/home/hooks/dispatcher-gate.mjs', import.meta.url);
-const prefix = 'codex-bridge dispatcher gate: ';
+const prefix = 'llm-bridge dispatcher gate: ';
 const keys = [
   'handback-delivered', 'order-unreadable', 'canonical-foreground', 'verdict-pending',
   'runner-verdict-required', 'canonical-before-handback', 'command-repeat',
@@ -115,7 +115,7 @@ function probe(body) {
     ${body}
   `], {
     encoding: 'utf8', windowsHide: true, timeout: 10_000,
-    env: { ...process.env, CODEX_BRIDGE_TEST_TMP: marker, CATALOG_TREE: root },
+    env: { ...process.env, LLM_BRIDGE_TEST_TMP: marker, CATALOG_TREE: root },
   });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -177,13 +177,13 @@ test('denial checks reason text while leaving command data and frame bytes uncha
   const { entries } = probe(`
     const reason = dispatcherProtocolMessage('canonical-foreground');
     for (const command of [undefined, '', null, 42, 'arbitrary command data']) {
-      const expected = 'codex-bridge dispatcher gate: ' + reason +
+      const expected = 'llm-bridge dispatcher gate: ' + reason +
         (typeof command === 'string' && command.length > 0
           ? '\\n' + command + '\\nRun it exactly, in the foreground; repeating it attaches to the same run.' : '');
       assert.equal(checkOutgoingRefusal(dispatcherDenial(reason, command), 'deny'), expected);
     }
     assert.equal(dispatcherDenial('handwritten reason', undefined),
-      'codex-bridge dispatcher gate: handwritten reason');
+      'llm-bridge dispatcher gate: handwritten reason');
   `);
   assert.equal(entries.length, 1);
   assert.equal(entries[0].kind, 'parameter');
@@ -196,13 +196,13 @@ test('denial checks reason text while leaving command data and frame bytes uncha
 test('a handwritten deny frame cannot borrow the catalog reason to escape the outgoing journal', () => {
   const { entries } = probe(`
     const reason = dispatcherProtocolMessage('canonical-foreground');
-    const output = \`codex-bridge dispatcher gate (hand text): \${reason}\`;
+    const output = \`llm-bridge dispatcher gate (hand text): \${reason}\`;
     assert.equal(checkOutgoingRefusal(output, 'deny'), output);
   `);
   assert.equal(entries.length, 1);
   assert.equal(entries[0].kind, 'outgoing');
   assert.equal(entries[0].transport, 'deny');
-  assert.equal(entries[0].message, 'codex-bridge dispatcher gate (hand text): ' +
+  assert.equal(entries[0].message, 'llm-bridge dispatcher gate (hand text): ' +
     dispatcherProtocolMessage('canonical-foreground'));
   assert.notEqual(entries[0].pid, process.pid);
 });
@@ -228,7 +228,7 @@ function hookProbe(decision, throws = false) {
       tool_name: decision.kind === 'allow' ? 'SubagentHandback' : 'Bash', tool_input: {},
     }),
     encoding: 'utf8', windowsHide: true, timeout: 10_000,
-    env: { ...process.env, CODEX_BRIDGE_HOME: path.join(root, 'home'), CODEX_BRIDGE_TEST_TMP: marker },
+    env: { ...process.env, LLM_BRIDGE_HOME: path.join(root, 'home'), LLM_BRIDGE_TEST_TMP: marker },
   });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -259,6 +259,6 @@ test('hook catch branch uses the checked internal diagnostic with unchanged byte
   assert.deepEqual(entries, []);
   assert.equal(result.stdout, JSON.stringify({ hookSpecificOutput: {
     hookEventName: 'PreToolUse', permissionDecision: 'deny',
-    permissionDecisionReason: 'codex-bridge dispatcher gate: internal error: injected failure',
+    permissionDecisionReason: 'llm-bridge dispatcher gate: internal error: injected failure',
   } }) + '\n');
 });

@@ -110,7 +110,7 @@ test('update without package marks recommends install', async (t) => {
   const result = await update({ host: third });
 
   assert.equal(result.exitCode, 1);
-  assert.equal(result.output, 'codex-bridge is not installed. Run codex-bridge install first.');
+  assert.equal(result.output, 'llm-bridge is not installed. Run llm-bridge install first.');
 });
 
 test('uninstall still removes a marked host after its owner row is removed', async (t) => {

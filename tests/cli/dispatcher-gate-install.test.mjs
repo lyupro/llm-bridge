@@ -27,7 +27,7 @@ test('dispatcher gate hooks install with exact matchers and uninstall preserves 
   assert.deepEqual(actual, expected);
   for (const [name, event, matcher] of expected) {
     assert.ok((installedSettings.hooks[event] || []).some((group) => group.matcher === matcher
-      && JSON.stringify(group).includes(`codex-bridge hook ${name}`)), `${event}: ${name}`);
+      && JSON.stringify(group).includes(`llm-bridge hook ${name}`)), `${event}: ${name}`);
   }
 
   await uninstall({ host });
@@ -45,6 +45,6 @@ test('dispatcher gate hooks install with exact matchers and uninstall preserves 
   assert.deepEqual(uninstalledSettings.hooks.SessionStart, [unrelatedHook]);
   for (const [name, event] of expected) {
     assert.ok(!(uninstalledSettings.hooks[event] || []).some((group) =>
-      JSON.stringify(group).includes(`codex-bridge hook ${name}`)), `${event}: ${name}`);
+      JSON.stringify(group).includes(`llm-bridge hook ${name}`)), `${event}: ${name}`);
   }
 });

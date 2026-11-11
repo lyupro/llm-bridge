@@ -7,20 +7,20 @@ import { fileURLToPath } from 'node:url';
 import { guidance } from '../../cli/guidance.mjs';
 import { GUIDANCE_TOPICS } from '../../cli/guidance-topics.mjs';
 import { COMMANDS } from '../../cli/command-registry.mjs';
-import { main } from '../../bin/codex-bridge.mjs';
+import { main } from '../../bin/llm-bridge.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
 function homeFixture(t) {
   const home = makeTempTree('guidance-');
   t.after(() => removeTempTree(home));
-  return { home, env: { CODEX_BRIDGE_HOME: home } };
+  return { home, env: { LLM_BRIDGE_HOME: home } };
 }
 
 function assertTopics(output) {
   for (const [topic, summary] of Object.entries(GUIDANCE_TOPICS)) {
     assert.ok(output.includes(`  ${topic} — ${summary}`), topic);
   }
-  assert.ok(output.includes('Usage: codex-bridge guidance [<topic>]'));
+  assert.ok(output.includes('Usage: llm-bridge guidance [<topic>]'));
 }
 
 test('guidance always returns a Promise for usage, read errors and rendering', async (t) => {
@@ -58,7 +58,7 @@ test('guidance prints each installed topic verbatim from the injected home', asy
 
 test('guidance also resolves the default brand home from an injected homedir', async (t) => {
   const { home } = homeFixture(t);
-  const dir = path.join(home, '.lyupro', '.codex-bridge', 'guidance');
+  const dir = path.join(home, '.lyupro', '.llm-bridge', 'guidance');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'order.md'), 'Default home rules');
   assert.deepEqual(await guidance(['order'], { env: {}, homedir: home }),
@@ -88,7 +88,7 @@ test('missing guidance names the absolute home path and the update command', asy
   const result = await guidance(['order'], { env });
   assert.equal(result.exitCode, 1);
   assert.ok(result.output.includes(path.join(home, 'guidance', 'order.md')));
-  assert.match(result.output, /run codex-bridge update/);
+  assert.match(result.output, /run llm-bridge update/);
 });
 
 test('unreadable guidance names the home path and asks for update', async (t) => {
@@ -104,7 +104,7 @@ test('unreadable guidance names the home path and asks for update', async (t) =>
   assert.equal(result.exitCode, 1);
   assert.ok(result.output.includes(file));
   assert.match(result.output, /permission denied/);
-  assert.match(result.output, /run codex-bridge update/);
+  assert.match(result.output, /run llm-bridge update/);
 });
 
 test('missing installed guidance never falls back to a readable clone seed', async (t) => {
@@ -129,7 +129,7 @@ test('guidance is public and reachable through main, with usage errors on io.err
   const entry = COMMANDS.find((command) => command.name === 'guidance');
   assert.equal(entry.section, 'public');
   assert.equal(entry.summary, "Print the package's detailed rules for one topic");
-  assert.deepEqual(entry.usage, ['codex-bridge guidance [<topic>]']);
+  assert.deepEqual(entry.usage, ['llm-bridge guidance [<topic>]']);
   const logs = [];
   const errors = [];
   const io = { log: (text) => logs.push(text), error: (text) => errors.push(text) };
@@ -151,11 +151,11 @@ test('main awaits installed rendering and preserves existing output routing', as
   fs.writeFileSync(path.join(home, 'lib', 'shell-unsafe.mjs'),
     'export const SHELL_UNSAFE_SEQUENCES = ["installed-only"];');
   fs.writeFileSync(path.join(home, 'guidance', 'order.md'), 'Forbidden: {{shell-unsafe-sequences}}');
-  const previous = process.env.CODEX_BRIDGE_HOME;
-  process.env.CODEX_BRIDGE_HOME = env.CODEX_BRIDGE_HOME;
+  const previous = process.env.LLM_BRIDGE_HOME;
+  process.env.LLM_BRIDGE_HOME = env.LLM_BRIDGE_HOME;
   t.after(() => {
-    if (previous === undefined) delete process.env.CODEX_BRIDGE_HOME;
-    else process.env.CODEX_BRIDGE_HOME = previous;
+    if (previous === undefined) delete process.env.LLM_BRIDGE_HOME;
+    else process.env.LLM_BRIDGE_HOME = previous;
   });
   const logs = [];
   const errors = [];
@@ -168,7 +168,7 @@ test('main awaits installed rendering and preserves existing output routing', as
   assert.deepEqual(errors, []);
   assert.match(logs[1], /topic "records"/);
   assert.ok(logs[1].includes('{{unknown-field}}'));
-  assert.ok(logs[1].endsWith('run codex-bridge update'));
+  assert.ok(logs[1].endsWith('run llm-bridge update'));
 });
 
 test('unknown installed placeholders return exit 1 naming the topic and placeholder', async (t) => {
@@ -179,7 +179,7 @@ test('unknown installed placeholders return exit 1 naming the topic and placehol
   assert.equal(result.exitCode, 1);
   assert.match(result.output, /topic "order"/);
   assert.ok(result.output.includes('{{unknown-field}}'));
-  assert.ok(result.output.endsWith('run codex-bridge update'));
+  assert.ok(result.output.endsWith('run llm-bridge update'));
 });
 
 test('unresolved installed templates return exit 1 with the update remedy', async (t) => {
@@ -190,7 +190,7 @@ test('unresolved installed templates return exit 1 with the update remedy', asyn
   assert.equal(result.exitCode, 1);
   assert.match(result.output, /topic "records"/);
   assert.ok(result.output.includes('{{unfinished'));
-  assert.ok(result.output.endsWith('run codex-bridge update'));
+  assert.ok(result.output.endsWith('run llm-bridge update'));
 });
 
 test('missing installed value modules return exit 1 for each placeholder', async (t) => {
@@ -206,7 +206,7 @@ test('missing installed value modules return exit 1 for each placeholder', async
     assert.ok(result.output.includes(`topic "${topic}"`));
     assert.ok(result.output.includes(placeholder));
     assert.match(result.output, /Cannot find module/);
-    assert.ok(result.output.endsWith('run codex-bridge update'));
+    assert.ok(result.output.endsWith('run llm-bridge update'));
   }
 });
 
@@ -247,13 +247,13 @@ test('invalid host config names the file without recommending update', async (t)
   assert.ok(result.output.includes(configPath));
   assert.match(result.output, /cannot be parsed as JSON/);
   assert.match(result.output, /Fix or delete the file/);
-  assert.doesNotMatch(result.output, /run codex-bridge update/);
+  assert.doesNotMatch(result.output, /run llm-bridge update/);
 });
 
 test('budget guidance passes the resolved config path for overridden and default homes', async (t) => {
   for (const overridden of [true, false]) {
     const { home } = homeFixture(t);
-    const root = overridden ? home : path.join(home, '.lyupro', '.codex-bridge');
+    const root = overridden ? home : path.join(home, '.lyupro', '.llm-bridge');
     const configPath = path.join(root, 'config.json');
     fs.mkdirSync(path.join(root, 'guidance'), { recursive: true });
     fs.mkdirSync(path.join(root, 'lib'));
@@ -274,7 +274,7 @@ test('budget guidance passes the resolved config path for overridden and default
       }
     `);
     const result = await guidance(['budget'],
-      { env: overridden ? { CODEX_BRIDGE_HOME: root } : {}, homedir: home });
+      { env: overridden ? { LLM_BRIDGE_HOME: root } : {}, homedir: home });
     assert.equal(result.exitCode, 0, result.output);
     assert.ok(result.output.includes(`values come from ${configPath}.`));
     assert.ok(result.output.includes('| installed-budget-agent | \u2014 | 6.25 | host config |'));

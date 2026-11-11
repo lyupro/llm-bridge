@@ -32,7 +32,7 @@ test('the operator home profile reaches the assembled Codex command', async () =
     `;
     const result = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
       encoding: 'utf8',
-      env: { ...process.env, CODEX_BRIDGE_HOME: brandHome },
+      env: { ...process.env, LLM_BRIDGE_HOME: brandHome },
     });
 
     assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -51,7 +51,7 @@ for (const [label, content, message] of [
       fs.writeFileSync(path.join(home, 'config.json'), content);
       const source = `import { loadRunEnv } from ${JSON.stringify(RUN_ENV)}; loadRunEnv();`;
       const result = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
-        encoding: 'utf8', env: { ...process.env, CODEX_BRIDGE_HOME: home },
+        encoding: 'utf8', env: { ...process.env, LLM_BRIDGE_HOME: home },
       });
       assert.equal(result.status, 1, result.stderr || result.stdout);
       assert.equal(result.stderr, '');

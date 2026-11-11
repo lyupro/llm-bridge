@@ -121,7 +121,7 @@ export async function launcher(argv = process.argv.slice(2)) {
       pattern: scopeRefusal.pattern, reason: scopeRefusal.reason, action: scopeRefusal.action,
     })), orderDiagnosticMessage('run-not-created')].join(' '), { action: 'usage' });
   }
-  // Plan_77 D6: project-dir.mjs:84 recursively recreated a retired CODEX_RUNS_ROOT.
+  // Plan_77 D6: project-dir.mjs:84 recursively recreated a retired LLM_BRIDGE_RUNS_ROOT.
   // Refuse before that mkdir, using the same resolution that checked the advice header.
   const stale = staleOverrideRefusal(resolution);
   if (stale) die([stale, orderDiagnosticMessage('run-not-created')].join('\n'), { action: 'runs-root-retired', exit: EXIT.FAIL });

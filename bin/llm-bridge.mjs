@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Dispatches codex-bridge CLI arguments through the command registry (Plan_71 D1). */
+/** Dispatches llm-bridge CLI arguments through the command registry (Plan_71 D1). */
 import { isInvokedDirectly } from '../cli/invoked-directly.mjs';
 import { packageInfo } from '../cli/manifest.mjs';
 import { COMMANDS } from '../cli/command-registry.mjs';

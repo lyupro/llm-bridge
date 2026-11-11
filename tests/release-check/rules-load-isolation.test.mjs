@@ -21,7 +21,7 @@ const makeTree = (role = 'cli') => createRoleTree({ role, tmpRoot, run: spawnSyn
 const fixtureTree = () => createRoleTree({ role: 'fixture', tmpRoot, run: () => ({ status: 0 }) });
 
 function writeFixtureInstall(tree) {
-  const core = path.join(tree.project, '.claude', 'rules', 'codex-bridge', 'core.md');
+  const core = path.join(tree.project, '.claude', 'rules', 'llm-bridge', 'core.md');
   const settings = path.join(tree.project, '.claude', 'settings.json');
   fs.mkdirSync(path.dirname(core), { recursive: true });
   fs.copyFileSync(path.join(repositoryRoot, 'src', 'claude', 'rules', 'core.md'), core);
@@ -36,7 +36,7 @@ test('isolatedEnv strips host and Git state, preserves login, and replaces all t
     ...Object.fromEntries(DELETED_ENV_NAMES.map((name) => [name, 'discard'])),
     CLAUDE_CODE_ENTRYPOINT: 'discard', CLAUDE_CODE_EXECPATH: 'discard',
     CLAUDE_CODE_FUTURE_SESSION_KEY: 'discard', CLAUDE_CODE_OAUTH_TOKEN: 'keep-token',
-    CODEX_BRIDGE_HOME: 'real-brand', CODEX_HOME: 'real-codex', CODEX_RUNS_ROOT: 'real-runs',
+    LLM_BRIDGE_HOME: 'real-brand', CODEX_HOME: 'real-codex', LLM_BRIDGE_RUNS_ROOT: 'real-runs',
     PATH: 'keep-path', HOME: 'keep-home', USERPROFILE: 'keep-profile', OTHER: 'keep-other',
   };
   const original = { ...baseEnv };
@@ -48,9 +48,9 @@ test('isolatedEnv strips host and Git state, preserves login, and replaces all t
     assert.equal(Object.hasOwn(env, name), false, name);
   }
   assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, 'keep-token');
-  assert.equal(env.CODEX_BRIDGE_HOME, tree.brand);
+  assert.equal(env.LLM_BRIDGE_HOME, tree.brand);
   assert.equal(env.CODEX_HOME, tree.codex);
-  assert.equal(env.CODEX_RUNS_ROOT, tree.runs);
+  assert.equal(env.LLM_BRIDGE_RUNS_ROOT, tree.runs);
   for (const name of ['PATH', 'HOME', 'USERPROFILE', 'OTHER']) assert.equal(env[name], baseEnv[name]);
   assert.throws(() => isolatedEnv({ tree }), /base environment is required/);
 });
@@ -59,7 +59,7 @@ test('environment name comparison follows Windows case-insensitive semantics', (
   const tree = fixtureTree();
   const baseEnv = {
     claude_code_entrypoint: 'host', ClaudeCode: 'host', git_dir: 'host', node_options: 'host',
-    codex_bridge_home: 'real-brand', Codex_Home: 'real-codex', codex_runs_root: 'real-runs',
+    llm_bridge_home: 'real-brand', Codex_Home: 'real-codex', llm_bridge_runs_root: 'real-runs',
     claude_code_oauth_token: 'keep-token',
   };
   const env = isolatedEnv({ baseEnv, tree });
@@ -73,7 +73,7 @@ test('environment name comparison follows Windows case-insensitive semantics', (
 test('real git init creates a repository boundary inside a role tree', () => {
   const tree = makeTree();
   assert.equal(path.dirname(tree.root), tmpRoot);
-  assert.match(path.basename(tree.root), /^codex-bridge-release-check-cli-/);
+  assert.match(path.basename(tree.root), /^llm-bridge-release-check-cli-/);
   for (const name of ['project', 'brand', 'codex', 'runs']) assert.ok(fs.statSync(tree[name]).isDirectory());
   assert.ok(fs.statSync(path.join(tree.project, '.git')).isDirectory());
   const nested = path.join(tree.project, 'nested', 'child');
@@ -93,11 +93,11 @@ test('git init is injected, hidden, shell-free, timed, and protected from inheri
     assert.equal(options.encoding, 'utf8');
     assert.equal(options.env.GIT_DIR, undefined);
     assert.equal(options.env.GIT_WORK_TREE, undefined);
-    assert.equal(options.cwd, options.env.CODEX_BRIDGE_HOME.replace(/brand$/, 'project'));
+    assert.equal(options.cwd, options.env.LLM_BRIDGE_HOME.replace(/brand$/, 'project'));
     return { status: 0 };
   } });
   assert.ok(called);
-  assert.match(path.basename(tree.root), /^codex-bridge-release-check-vscode-/);
+  assert.match(path.basename(tree.root), /^llm-bridge-release-check-vscode-/);
 });
 
 test('git init failures throw with stderr, and required inputs stay loud', () => {
@@ -152,7 +152,7 @@ test('construction cleanup synchronously retries all transient Windows lock code
   let attempts = 0;
   t.mock.method(fs, 'rmSync', (root, options) => {
     assert.equal(path.dirname(root), failureRoot);
-    assert.match(path.basename(root), /^codex-bridge-release-check-/);
+    assert.match(path.basename(root), /^llm-bridge-release-check-/);
     assert.deepEqual(options, { recursive: true, force: true });
     const code = ['EPERM', 'EBUSY', 'ENOTEMPTY'][attempts++];
     if (code) throw Object.assign(new Error(code), { code });
@@ -208,7 +208,7 @@ test('installer uses only Node and the project install with the isolated environ
   const env = isolatedEnv({ baseEnv: process.env, tree });
   const result = installCandidate({ repositoryRoot, tree, env, run(command, args, options) {
     assert.equal(command, process.execPath);
-    assert.deepEqual(args, [path.join(repositoryRoot, 'bin', 'codex-bridge.mjs'), 'install', '--scope', 'project']);
+    assert.deepEqual(args, [path.join(repositoryRoot, 'bin', 'llm-bridge.mjs'), 'install', '--scope', 'project']);
     assert.deepEqual(options, {
       cwd: tree.project, env, shell: false, windowsHide: true, encoding: 'utf8', timeout: 120_000,
     });
@@ -244,7 +244,7 @@ test('real candidate install freezes the exact project core and detects subseque
   assert.equal(installed.ok, true, installed.reason);
   const frozen = freezeInstall({ repositoryRoot, tree });
   assert.equal(frozen.invariant, undefined, frozen.invariant);
-  assert.equal(frozen.expectedPath, path.join(tree.project, '.claude', 'rules', 'codex-bridge', 'core.md'));
+  assert.equal(frozen.expectedPath, path.join(tree.project, '.claude', 'rules', 'llm-bridge', 'core.md'));
   const bytes = fs.readFileSync(frozen.expectedPath);
   assert.equal(frozen.sha256, digest(bytes));
   assert.deepEqual(bytes, fs.readFileSync(path.join(repositoryRoot, 'src', 'claude', 'rules', 'core.md')));
@@ -278,7 +278,7 @@ test('frozen install snapshot detects changed installation record and project se
 
 test('sentinel uses original home overrides and covers only the record and direct Codex rule files', () => {
   const tree = fixtureTree();
-  const env = { CODEX_BRIDGE_HOME: tree.brand, CODEX_HOME: tree.codex };
+  const env = { LLM_BRIDGE_HOME: tree.brand, CODEX_HOME: tree.codex };
   const record = path.join(tree.brand, '.installed.json');
   const rules = path.join(tree.codex, 'rules');
   const rule = path.join(rules, 'operator.md');
@@ -302,7 +302,7 @@ test('sentinel comparisons report added, removed, and changed files', () => {
   }), ['added', 'changed', 'removed']);
   const tree = fixtureTree();
   const record = path.join(tree.brand, '.installed.json');
-  assert.deepEqual(realStateSentinel({ env: { CODEX_BRIDGE_HOME: tree.brand, CODEX_HOME: tree.codex } }), { [record]: 'absent' });
+  assert.deepEqual(realStateSentinel({ env: { LLM_BRIDGE_HOME: tree.brand, CODEX_HOME: tree.codex } }), { [record]: 'absent' });
 });
 
 test('escapedWitness finds only normalized role-tree cwd boundaries, not sibling prefixes or outside sessions', () => {
@@ -327,7 +327,7 @@ test('escapedWitness finds only normalized role-tree cwd boundaries, not sibling
 
 test('cleanup refuses outside, unprefixed, and nested paths and removes a valid role tree', async () => {
   const tree = fixtureTree();
-  const nested = path.join(tree.root, 'codex-bridge-release-check-nested');
+  const nested = path.join(tree.root, 'llm-bridge-release-check-nested');
   fs.mkdirSync(nested);
   for (const root of [repositoryRoot, tmpRoot, tree.project, nested]) {
     assert.equal((await removeRoleTree({ tree: { root }, tmpRoot })).ok, false);

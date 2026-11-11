@@ -30,7 +30,7 @@ function assertSafeAgentDefinition(source, name) {
   const blocks = commandBlocks(source);
   assert.ok(blocks.length, `${name} has no canonical shell command block.`);
   for (const block of blocks) {
-    assert.match(block, /^codex-bridge run /, `${name} must invoke the public run command on one line.`);
+    assert.match(block, /^llm-bridge run /, `${name} must invoke the public run command on one line.`);
     assert.equal(block.trim().split(/\r?\n/).length, 1, `${name} command must stay on one line.`);
   }
 
@@ -58,7 +58,7 @@ function assertSafeAgentDefinition(source, name) {
   }
 }
 
-test('every shipped agent command crosses the codex-bridge run boundary without internal paths', async () => {
+test('every shipped agent command crosses the llm-bridge run boundary without internal paths', async () => {
   const names = (await fs.readdir(AGENTS_DIR)).filter((name) => name.endsWith('.md')).sort();
   assert.equal(names.length, 4, 'All four shipped agent definitions must be checked.');
   for (const name of names) {
@@ -97,7 +97,7 @@ test('whole-definition guard rejects a retired flag added to a rendered prompt',
 });
 
 test('whole-definition guard rejects command regressions outside tagged shell fences', () => {
-  const safe = '```bash\ncodex-bridge run --agent codex-review\n```\n';
+  const safe = '```bash\nllm-bridge run --agent codex-review\n```\n';
   const mutations = [
     ['prose drive path', 'Run C:/host/lib/run-codex.mjs --agent codex-review.', /drive-letter path/],
     ['untagged fence', '```\nnode ./run-codex.mjs --agent codex-review\n```', /interpreter command/],
@@ -107,9 +107,9 @@ test('whole-definition guard rejects command regressions outside tagged shell fe
       /drive-letter path/,
     ],
     ['absolute home path', 'Execute /home/operator/run-codex.mjs --agent codex-review.', /absolute home path/],
-    ['.lyupro path', 'Invoke codex-bridge run ~/.lyupro/run-codex.mjs.', /\.lyupro path/],
+    ['.lyupro path', 'Invoke llm-bridge run ~/.lyupro/run-codex.mjs.', /\.lyupro path/],
     ['JavaScript command', 'Start ./run-codex.js --agent codex-review.', /JavaScript file command/],
-    ['line continuation', '```text\ncodex-bridge run \\\n  --agent codex-review\n```', /line continuation/],
+    ['line continuation', '```text\nllm-bridge run \\\n  --agent codex-review\n```', /line continuation/],
   ];
   for (const [label, mutation, expected] of mutations) {
     assert.throws(

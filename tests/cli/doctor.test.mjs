@@ -96,7 +96,7 @@ test('doctor warns with the recorded and expected matcher when registration is o
   assert.equal(hook.status, 'warn');
   assert.match(hook.value, new RegExp(`matcher ${outdatedMatcher.replaceAll('|', '\\|')} ->`));
   assert.match(hook.value, new RegExp(`recorded matcher ${outdatedMatcher.replaceAll('|', '\\|')} differs from expected ${definition.matcher.replaceAll('|', '\\|')}`));
-  assert.match(hook.value, /run codex-bridge update --force/);
+  assert.match(hook.value, /run llm-bridge update --force/);
 });
 
 test('absent hook registration keeps the existing warning', async (t) => {
@@ -120,14 +120,14 @@ test('doctor reports the recorded hook form and launcher safety', async (t) => {
   const settings = JSON.parse(await fs.readFile(host.settingsPath, 'utf8'));
   for (const group of settings.hooks.SubagentStop) {
     for (const hook of group.hooks) {
-      if (hook.command === shortHookRecord.command) hook.command = 'codex-bridge hook reply-guard';
+      if (hook.command === shortHookRecord.command) hook.command = 'llm-bridge hook reply-guard';
     }
   }
   await fs.writeFile(host.settingsPath, `${JSON.stringify(settings)}\n`);
   const result = await diagnose({
     host,
     codexProbe,
-    bridgeProbe: () => ({ available: true, value: 'codex-bridge 8.8.8' }),
+    bridgeProbe: () => ({ available: true, value: 'llm-bridge 8.8.8' }),
     launcherProbe: () => ({ ok: true }),
     currentPackage: ownPackage,
   });
@@ -135,8 +135,8 @@ test('doctor reports the recorded hook form and launcher safety', async (t) => {
   const pathHook = result.checks.find((item) => item.key === 'hook:PreToolUse'
     && item.value.includes('order-gate.mjs'));
   assert.equal(shortHook.status, 'ok');
-  assert.match(shortHook.value, /codex-bridge on PATH launches guards from this home/);
-  assert.match(pathHook.value, /path command;.*installed copy @lyupro\/codex-bridge@0\.1\.0/);
+  assert.match(shortHook.value, /llm-bridge on PATH launches guards from this home/);
+  assert.match(pathHook.value, /path command;.*installed copy @lyupro\/llm-bridge@0\.1\.0/);
 });
 
 test('doctor warns when an installed hook cannot resolve an import', async (t) => {

@@ -170,7 +170,7 @@ test('a valid dispatcher call passes and keeps the last payload', async (t) => {
   assert.equal(result.stdout, '');
   assert.deepEqual(
     JSON.parse(await fs.readFile(path.join(
-      root, '.lyupro', '.codex-bridge', 'state', 'diagnostics', 'order-gate.last.json',
+      root, '.lyupro', '.llm-bridge', 'state', 'diagnostics', 'order-gate.last.json',
     ), 'utf8')),
     JSON.parse(input),
   );

@@ -70,6 +70,6 @@ export async function loadWitnessChecks({ host, record, stateDir, activeHosts, r
     }
     const stale = latest && !latest.matches ? '; witnessed core differs from this package (stale)' : '';
     return check(`claudeRulesLoad:${version}`, 'warn',
-      `no session on host ${version} has witnessed the rules core loading yet${stale}; open a new Claude Code session, then rerun codex-bridge doctor${pendingNote}`);
+      `no session on host ${version} has witnessed the rules core loading yet${stale}; open a new Claude Code session, then rerun llm-bridge doctor${pendingNote}`);
   });
 }

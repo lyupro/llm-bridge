@@ -49,7 +49,7 @@ export const DIAGNOSTICS = Object.freeze({
   'stale-runs-root-override': Object.freeze({
     data: Object.freeze([]),
     category: 'host-state',
-    message: () => 'CODEX_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.',
+    message: () => 'LLM_BRIDGE_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.',
   }),
   'runs-move-record-invalid': Object.freeze({
     data: Object.freeze(['file', 'violation', 'detail', 'index']),
@@ -154,7 +154,7 @@ export const DIAGNOSTICS = Object.freeze({
         return 'A file under the Codex runtimes folder is held open by another process, so sandbox setup cannot update its access rights (openai/codex #51634).';
       }
       if (part === 'repair') {
-        return 'Find and close the process holding the file named in the line (on 2026-10-10, the Codex desktop app\'s computer-use helper), then rerun codex-bridge doctor; on Codex CLI 0.162.x the proven workaround is npm install -g @openai/codex@0.160.1.';
+        return 'Find and close the process holding the file named in the line (on 2026-10-10, the Codex desktop app\'s computer-use helper), then rerun llm-bridge doctor; on Codex CLI 0.162.x the proven workaround is npm install -g @openai/codex@0.160.1.';
       }
       throw new Error(`unknown sandbox-known-failure-runtime-file-locked part: ${part}`);
     },
@@ -165,7 +165,7 @@ export const DIAGNOSTICS = Object.freeze({
     message: ({ part, file }) => {
       if (part === 'summary') return 'The sandbox state file is empty or corrupt.';
       if (part === 'repair') {
-        return `Back up and rename ${file}, then rerun codex-bridge doctor; the helper recreates it.`;
+        return `Back up and rename ${file}, then rerun llm-bridge doctor; the helper recreates it.`;
       }
       throw new Error(`unknown sandbox-known-failure-deny-read-state-corrupt part: ${part}`);
     },
@@ -236,7 +236,7 @@ export const DIAGNOSTICS = Object.freeze({
     data: Object.freeze(['agentType', 'models', 'pinFamily']),
     category: 'host-state',
     message: ({ agentType, models, pinFamily }) =>
-      `codex-bridge: dispatcher ${agentType} ran on ${models} while the installed contract pins ${pinFamily} — Claude quota was spent on it; run codex-bridge doctor.`,
+      `llm-bridge: dispatcher ${agentType} ran on ${models} while the installed contract pins ${pinFamily} — Claude quota was spent on it; run llm-bridge doctor.`,
   }),
   'install-record-owners-readable': Object.freeze({
     data: Object.freeze(['file', 'problem', 'cli']),
@@ -260,8 +260,8 @@ export const DIAGNOSTICS = Object.freeze({
     data: Object.freeze(['agentType', 'models', 'pinFamily', 'hostVersion', 'at']),
     category: 'host-state',
     message: ({ agentType, models, pinFamily, hostVersion, at }) =>
-      `codex-bridge: the last ${agentType} ran on ${models} `
+      `llm-bridge: the last ${agentType} ran on ${models} `
       + `while the installed contract pins ${pinFamily} (${hostVersion ?? 'unknown'}, ${at}); `
-      + 'the cause is outside this call — another hook or the host; run codex-bridge doctor.',
+      + 'the cause is outside this call — another hook or the host; run llm-bridge doctor.',
   }),
 });

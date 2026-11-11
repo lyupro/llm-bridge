@@ -74,7 +74,7 @@ test('stale runs root refusal keeps its three lines without new launcher prose',
   }), orderDiagnosticMessage('run-not-created')].join('\n');
   const expected = `Run records moved from ${root} to ${destination}. Equivalent path: ${destination}. ` +
     'Update advice: or pass this new path explicitly. No path was remapped.\n' +
-    'CODEX_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.\n' +
+    'LLM_BRIDGE_RUNS_ROOT points under a retired runs root; remove it or set it to the new location.\n' +
     'The run folder was not created; quota was not spent.';
   assert.equal(text, expected);
   assert.equal(checkOutgoingRefusal(text, 'launcher-test'), expected);
@@ -189,7 +189,7 @@ test('D6 launcher probe journals handwritten reason text in a separate child mar
     assert.equal(text, 'pattern "/a.mjs" refused: hand-written launcher refusal. ' +
       'Fix: use a path relative to the repository root with forward slashes.');
     checkOutgoingRefusal(text, 'launcher-probe');
-  `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+  `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const directory = path.join(root, 'order-text-violations');

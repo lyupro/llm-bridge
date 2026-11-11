@@ -75,7 +75,7 @@ catch (error) {
 `;
   const output = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
     cwd: tree.repo, input: '', encoding: 'utf8', timeout: 10_000, windowsHide: true,
-    env: { ...process.env, CODEX_BRIDGE_HOME: tree.home, CODEX_RUNS_ROOT: tree.runs, CODEX_HOME: tree.codexHome },
+    env: { ...process.env, LLM_BRIDGE_HOME: tree.home, LLM_BRIDGE_RUNS_ROOT: tree.runs, CODEX_HOME: tree.codexHome },
   });
   assert.equal(output.status, 0, output.stderr || output.stdout || output.error?.message);
   const line = output.stdout.split(/\r?\n/).find((part) => part.startsWith('RUN='));

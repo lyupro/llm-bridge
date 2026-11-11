@@ -71,7 +71,7 @@ test('an inconclusive read-only probe warns without starting workspace-write', a
       { key: 'sandbox:workspace-write', status: 'warn' },
     ]);
     assert.equal(rows[0].value, `readiness not established: timed out; probed folder: ${cwd} (current folder)`);
-    assert.equal(rows[1].value, `not probed: the read-only probe was inconclusive; rerun codex-bridge doctor; probed folder: ${cwd} (current folder)`);
+    assert.equal(rows[1].value, `not probed: the read-only probe was inconclusive; rerun llm-bridge doctor; probed folder: ${cwd} (current folder)`);
   });
 });
 
@@ -83,7 +83,7 @@ test('dead prints each shared diagnosis row indented and tells the operator to r
     const expected = [
       'cannot start',
       ...formatSandboxDiagnosis(diagnosis).map((line) => `    ${line}`),
-      '    Repair the host sandbox and rerun codex-bridge doctor.',
+      '    Repair the host sandbox and rerun llm-bridge doctor.',
       `    Probed folder: ${cwd} (current folder)`,
     ].join('\n');
     assert.deepEqual(rows.map(({ value }) => value), [expected, expected]);
@@ -100,7 +100,7 @@ for (const result of [
       for (const row of rows) {
         assert.equal(row.status, 'fail');
         assert.ok(row.value.includes('\n    No sandbox log diagnosis is available.\n'));
-        assert.ok(row.value.includes('\n    Repair the host sandbox and rerun codex-bridge doctor.'));
+        assert.ok(row.value.includes('\n    Repair the host sandbox and rerun llm-bridge doctor.'));
       }
     });
   });
@@ -207,8 +207,8 @@ test('cwd and platform defaults reach the probe', async () => {
 test('diagnose injects sandbox rows immediately after Codex; fail exits 1 and warn preserves the baseline', async (t) => {
   const { host } = await honestInstalledFixture(t);
   await withTempTree('doctor-sandbox-runs-', async (runsRoot) => {
-    const previous = process.env.CODEX_RUNS_ROOT;
-    process.env.CODEX_RUNS_ROOT = runsRoot;
+    const previous = process.env.LLM_BRIDGE_RUNS_ROOT;
+    process.env.LLM_BRIDGE_RUNS_ROOT = runsRoot;
     try {
       const options = {
         host, codexProbe, currentPackage: ownPackage,
@@ -240,8 +240,8 @@ test('diagnose injects sandbox rows immediately after Codex; fail exits 1 and wa
       });
       assert.equal(unavailable.exitCode, baseline.exitCode);
     } finally {
-      if (previous === undefined) delete process.env.CODEX_RUNS_ROOT;
-      else process.env.CODEX_RUNS_ROOT = previous;
+      if (previous === undefined) delete process.env.LLM_BRIDGE_RUNS_ROOT;
+      else process.env.LLM_BRIDGE_RUNS_ROOT = previous;
     }
   });
 });

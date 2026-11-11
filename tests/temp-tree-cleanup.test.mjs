@@ -7,7 +7,7 @@ import test from 'node:test';
 import { makeTempTree, removeTempTree } from './temp-tree.mjs';
 
 test('makeTempTree creates trees inside the suite temp root', () => {
-  const root = process.env.CODEX_BRIDGE_TEST_TMP;
+  const root = process.env.LLM_BRIDGE_TEST_TMP;
   assert.ok(root);
   const dir = makeTempTree('cleanup-root-');
   const relative = path.relative(root, dir);
@@ -19,8 +19,8 @@ test('makeTempTree creates trees inside the suite temp root', () => {
 });
 
 test('makeTempTree refuses to run outside npm test', () => {
-  const previousRoot = process.env.CODEX_BRIDGE_TEST_TMP;
-  delete process.env.CODEX_BRIDGE_TEST_TMP;
+  const previousRoot = process.env.LLM_BRIDGE_TEST_TMP;
+  delete process.env.LLM_BRIDGE_TEST_TMP;
 
   try {
     assert.throws(
@@ -28,8 +28,8 @@ test('makeTempTree refuses to run outside npm test', () => {
       /suite was started outside npm test.*throwaway root/i,
     );
   } finally {
-    if (previousRoot === undefined) delete process.env.CODEX_BRIDGE_TEST_TMP;
-    else process.env.CODEX_BRIDGE_TEST_TMP = previousRoot;
+    if (previousRoot === undefined) delete process.env.LLM_BRIDGE_TEST_TMP;
+    else process.env.LLM_BRIDGE_TEST_TMP = previousRoot;
   }
 });
 

@@ -23,8 +23,8 @@ function runCase(body, { marker = true, blocked = false } = {}) {
   const root = path.join(tree, 'marker');
   if (blocked) fs.writeFileSync(root, 'not a directory');
   const env = { ...process.env, D6_ROOT: root, D6_TREE: tree };
-  if (marker) env.CODEX_BRIDGE_TEST_TMP = root;
-  else delete env.CODEX_BRIDGE_TEST_TMP;
+  if (marker) env.LLM_BRIDGE_TEST_TMP = root;
+  else delete env.LLM_BRIDGE_TEST_TMP;
   const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
     import assert from 'node:assert/strict';
     import fs from 'node:fs';
@@ -46,7 +46,7 @@ function runCase(body, { marker = true, blocked = false } = {}) {
 const laundering = [
   ['orderDiagnosticMessage', 'unknown-flag', 'help',
     "orderDiagnosticMessage('unknown-flag', { name: 'bad', help: 'any text' })",
-    'unknown flag --bad: codex-bridge run takes only --agent, --task-file and --no-wait; ' +
+    'unknown flag --bad: llm-bridge run takes only --agent, --task-file and --no-wait; ' +
       'the order belongs in the task-file header\nany text'],
   ['orderRefusalAt', null, 'message', "orderRefusalAt('task.md', 'any text')", 'task.md: any text'],
   ['orderRuleMessage', 'question-context-marker', 'refusal',
@@ -204,7 +204,7 @@ test('without test mode builders preserve text and neither check nor record or w
     ]) assert.doesNotThrow(expression);
     recordOrderText('not recorded');
     assert.equal(fs.existsSync(process.env.D6_ROOT), false);
-    process.env.CODEX_BRIDGE_TEST_TMP = process.env.D6_ROOT;
+    process.env.LLM_BRIDGE_TEST_TMP = process.env.D6_ROOT;
     orderRefusalAt('location', 'not recorded');
   `, { marker: false });
   assert.equal(entries.length, 1, 'recording outside test mode must have been a no-op');
@@ -225,7 +225,7 @@ test('an unwritable journal stops the builder with a fault marker', () => {
   assert.equal(entry.parameter, 'message');
   assert.equal(entry.message, 'unrecorded');
   assert.match(entry.error, /EEXIST|ENOTDIR/);
-  assert.equal(fs.existsSync(orderTextFaultDirectory(process.env.CODEX_BRIDGE_TEST_TMP)), false);
+  assert.equal(fs.existsSync(orderTextFaultDirectory(process.env.LLM_BRIDGE_TEST_TMP)), false);
 });
 
 test('parameter and outgoing violations from a formerly pending caller are both fatal', () => {

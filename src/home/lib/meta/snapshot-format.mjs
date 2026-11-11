@@ -7,7 +7,7 @@
  */
 import { parseJsonText } from '../json-file.mjs';
 
-export const SNAPSHOT_V2_HEADER = '# codex-bridge-state-v2';
+export const SNAPSHOT_V2_HEADER = '# llm-bridge-state-v2';
 
 // `unreadable`: listed but not readable (a Windows file held by another process gives EBUSY/EPERM).
 const STATE_RE = /^(?:\d+\t\d+|-\t-|U\t(?:\d+:[0-9a-fA-F]{64}|missing|unreadable))$/;

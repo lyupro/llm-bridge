@@ -116,7 +116,7 @@ function projectRuns(root, project) {
 
 function broadProjectPlan(root, project, args, age, now) {
   const all = projectRuns(root, project);
-  if (all === null) return { error: `codex-bridge prune: unknown project "${project}"` };
+  if (all === null) return { error: `llm-bridge prune: unknown project "${project}"` };
   const live = all.filter((run) => run.live === true);
   if (args.purge && live.length) {
     return {
@@ -145,12 +145,12 @@ function broadProjectPlan(root, project, args, age, now) {
 
 function namedRunPlan(root, project, runName, args, age, now) {
   const runs = projectRuns(root, project);
-  if (runs === null) return { error: `codex-bridge prune: unknown project "${project}"` };
+  if (runs === null) return { error: `llm-bridge prune: unknown project "${project}"` };
   const run = runs.find((entry) => entry.run === runName);
-  if (!run) return { error: `codex-bridge prune: unknown run "${runName}" in project "${project}"` };
+  if (!run) return { error: `llm-bridge prune: unknown run "${runName}" in project "${project}"` };
   if (run.live === true) {
     return {
-      error: `codex-bridge prune: run "${runName}" is still going; its events.jsonl is the verdict being written`,
+      error: `llm-bridge prune: run "${runName}" is still going; its events.jsonl is the verdict being written`,
     };
   }
   if (age && !runIsOlderThan(run.run, age, now)) return { actions: [] };
@@ -176,10 +176,10 @@ export function prunePlan(args = {}, options = {}) {
       actions.push(...result.actions);
     }
   } else if (!safeFolderName(args.projectName)) {
-    return { error: 'codex-bridge prune: a bare project folder name is required' };
+    return { error: 'llm-bridge prune: a bare project folder name is required' };
   } else if (args.runName) {
     if (!safeFolderName(args.runName)) {
-      return { error: 'codex-bridge prune: a bare run folder name is required' };
+      return { error: 'llm-bridge prune: a bare run folder name is required' };
     }
     const result = namedRunPlan(root, args.projectName, args.runName, args, age, now);
     if (result.error) return result;

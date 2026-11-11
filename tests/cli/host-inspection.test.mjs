@@ -95,7 +95,7 @@ test('legacy folders and the old record are ignored', async (t) => {
     fs.mkdirSync(legacy, { recursive: true });
     fs.writeFileSync(path.join(legacy, path.basename(item.target)), await plannedContent(item, host.brandRoot));
   }
-  fs.writeFileSync(path.join(host.root, 'agents', 'codex', '.codex-bridge-install.json'), '{}');
+  fs.writeFileSync(path.join(host.root, 'agents', 'codex', '.llm-bridge-install.json'), '{}');
   const inspection = await inspectHost(host);
   assert.deepEqual(inspection.files, []);
   assert.equal(hasPackageMarks(inspection), false);
@@ -161,7 +161,7 @@ test('host rules with package bytes are removable and edits need this host finge
 
   const inspection = await inspectHost(host, { packageRoot });
   const matching = inspection.files.find((file) => file.target === target);
-  assert.equal(matching.relativeToHost, 'rules/codex-bridge/core.md');
+  assert.equal(matching.relativeToHost, 'rules/llm-bridge/core.md');
   assert.equal(matching.disposition, 'remove');
   assert.equal(matching.reason, 'matches the package');
   assert.equal(hasPackageMarks(inspection), true);

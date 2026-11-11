@@ -96,7 +96,7 @@ test('call refusal preserves all lines including the missing-path help and heade
     'continue: 2026-08-05_092913_plan14-build — LIMIT at step 3, tests unwritten',
     'retry: 2026-10-03_172017_cc-d66-advisor — model at capacity, same pass again',
     'resume: 2026-10-16_140740_ow066-b2-resume-grant — advise stalled after reading, continue its thread',
-    'repository: C:/work/codex-bridge',
+    'repository: C:/work/llm-bridge',
     'slug: plan-76-parser',
     'effort: high',
     'Free text belongs in the task file.',
@@ -123,7 +123,7 @@ test('command refusals keep their frame, reason order, quoting and success objec
       'line 1: not a `label: value` line; free text belongs in the task file; missing required label `task file`.',
   });
   assert.deepEqual(canonicalRunCommand('codex-scout', 'task file: C:/scratch/task.md'), {
-    command: 'codex-bridge run --agent codex-scout --task-file "C:/scratch/task.md"',
+    command: 'llm-bridge run --agent codex-scout --task-file "C:/scratch/task.md"',
   });
   assert.throws(() => renderRunCommandTemplate(null), { message: 'unknown dispatcher agent null' });
 });
@@ -195,7 +195,7 @@ function runProbe(body) {
     import { orderRuleMessage } from ${JSON.stringify(new URL('order-rules.mjs', lib).href)};
     import { checkOutgoingRefusal } from ${JSON.stringify(new URL('order-text-record.mjs', lib).href)};
     ${body}
-  `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+  `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const directory = path.join(root, 'order-text-violations');
@@ -359,7 +359,7 @@ test('model diagnostic variants preserve detail bytes and all non-text observati
     fs.writeFileSync(transcript, JSON.stringify({ type: 'assistant', message: { model } }));
     const warning = await observeDispatcherModelStop({ brandRoot, stateDir: path.join(brandRoot, 'state'), input, hostVersion: 'host-a' });
     assert.equal(warning, model === 'sonnet'
-      ? 'codex-bridge: dispatcher codex-build ran on sonnet while the installed contract pins haiku — Claude quota was spent on it; run codex-bridge doctor.'
+      ? 'llm-bridge: dispatcher codex-build ran on sonnet while the installed contract pins haiku — Claude quota was spent on it; run llm-bridge doctor.'
       : null);
     if (warning) assert.equal(checkOutgoingRefusal(warning, 'case'), warning);
   }

@@ -40,7 +40,7 @@ test('a pre-scheme owner is denied honestly when the same body has a different o
   const decision = decodeDenial(runGate(root, payload('codex-review', validPrompt(taskFile), 'Agent', repo)).stdout);
   assert.equal(decision.permissionDecision, 'deny');
   assert.match(decision.permissionDecisionReason, /recorded before the task header \(hash scheme 2\), so its task cannot be compared/);
-  assert.ok(decision.permissionDecisionReason.includes(`codex-bridge read "${run}"`));
+  assert.ok(decision.permissionDecisionReason.includes(`llm-bridge read "${run}"`));
   assert.doesNotMatch(decision.permissionDecisionReason, /different task/);
 });
 

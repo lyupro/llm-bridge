@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an improvement to codex-bridge
+about: Suggest an improvement to llm-bridge
 title: "[Feature] "
 labels: enhancement
 assignees: ""

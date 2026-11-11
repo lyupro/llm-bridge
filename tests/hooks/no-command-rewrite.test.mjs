@@ -76,7 +76,7 @@ const MINIMUM_ANSWERS = 2;
  * for them the source-reading check below is the line that holds.
  */
 const REFUSING_PAYLOADS = {
-  'prune-guard': { tool_name: 'Bash', tool_input: { command: 'codex-bridge prune codex-bridge -f' } },
+  'prune-guard': { tool_name: 'Bash', tool_input: { command: 'llm-bridge prune llm-bridge -f' } },
   'order-gate': { tool_name: 'Agent', tool_input: { subagent_type: 'codex-scout', prompt: 'do the thing' } },
 };
 
@@ -111,7 +111,7 @@ function runHook(definition, runsRoot, payload) {
   const output = execFileSync(process.execPath, [path.join(HOOKS_DIR, definition.file)], {
     input: JSON.stringify(payload ?? payloadFor(definition)),
     encoding: 'utf8',
-    env: { ...process.env, CODEX_RUNS_ROOT: runsRoot },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: runsRoot },
   });
   return output.trim() ? JSON.parse(output) : null;
 }
@@ -125,7 +125,7 @@ function answersOf(definition, runsRoot) {
 }
 
 function withEmptyRunsRoot(body) {
-  const dir = makeTempTree('codex-bridge-rewrite-gate-');
+  const dir = makeTempTree('llm-bridge-rewrite-gate-');
   try {
     return body(dir);
   } finally {

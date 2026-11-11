@@ -120,7 +120,7 @@ for (const text of [
   'check `codex --version` for up to ~2 minutes',
   'The 2026-08-09 build run consumed 18 minutes of quota before its scope limit was checked.',
   'A build run took 25 minutes before its deadline.',
-  'The build deadline is shown by `codex-bridge guidance budget`.',
+  'The build deadline is shown by `llm-bridge guidance budget`.',
 ]) {
   test(`prose guard permits: ${text}`, () => {
     assert.deepEqual(budgetDeclarations(text), []);

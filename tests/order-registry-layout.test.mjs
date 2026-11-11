@@ -140,20 +140,20 @@ test('the real diagnostic entry point refuses a synthetic duplicate across categ
   });
 });
 
-test('codex-bridge guidance order prints every registered key from a copied real registry and its place modules', (t) => {
+test('llm-bridge guidance order prints every registered key from a copied real registry and its place modules', (t) => {
   const { home, installedLib } = copyRegistry(t, 'order-rules');
   fs.copyFileSync(path.join(lib, 'shell-unsafe.mjs'), path.join(installedLib, 'shell-unsafe.mjs'));
   fs.mkdirSync(path.join(home, 'guidance'));
   fs.copyFileSync(new URL('../src/home/guidance/order.md', import.meta.url),
     path.join(home, 'guidance', 'order.md'));
   const result = spawnSync(process.execPath, [
-    fileURLToPath(new URL('../bin/codex-bridge.mjs', import.meta.url)), 'guidance', 'order',
+    fileURLToPath(new URL('../bin/llm-bridge.mjs', import.meta.url)), 'guidance', 'order',
   ], {
     cwd: home,
     encoding: 'utf8',
     windowsHide: true,
     timeout: 10_000,
-    env: { ...process.env, CODEX_BRIDGE_HOME: home },
+    env: { ...process.env, LLM_BRIDGE_HOME: home },
   });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);

@@ -1,4 +1,4 @@
-export const STOP_COMMAND = 'codex-bridge stop';
+export const STOP_COMMAND = 'llm-bridge stop';
 export const STOP_COMMAND_TEMPLATE = `${STOP_COMMAND} <run>`;
 export const STOP_REASON =
   'TaskStop removes the wrapper while the run keeps writing to the worktree.';

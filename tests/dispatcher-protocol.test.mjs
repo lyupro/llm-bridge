@@ -30,7 +30,7 @@ for (const agent of ORDER_AGENTS) {
     // K2/K3 remove the old prompt sections; this guard must survive that migration.
     const hostRefusal = protocol.split(`${headings[1]}\n`)[1].split(`\n${headings[2]}`)[0];
     assert.match(hostRefusal, /that refusal is your final answer/);
-    assert.match(hostRefusal, /operator runs `codex-bridge install`/);
+    assert.match(hostRefusal, /operator runs `llm-bridge install`/);
     assert.match(hostRefusal, /never call `run-codex.mjs`/);
     assert.match(hostRefusal, /never start the runner through `node`, `npx`, `sh`, `bash`/);
     assert.match(hostRefusal, /never retry the same call in PowerShell/);

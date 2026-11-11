@@ -1,6 +1,6 @@
 ---
 name: codex-build
-description: Имплементация ВНЕ подписки Claude — правки кода, новые модули, рефакторинг по образцу, починка тестов. Работу выполняет Codex CLI (подписка ChatGPT) с правом записи в репозиторий строго в пределах обязательного `scope`, Claude платит только за постановку задачи и ≤5 строк выжимки. Отчёт и полный лог кладёт в корень прогонов (`codex-bridge doctor` → `runsRoot`; по умолчанию `~/.lyupro/.codex-bridge/runs/`), в чат — короткая выжимка + путь. Ревью и приёмку делает отдельный агент Claude, не этот. {{CODEX_REQUIRED_INPUTS_SUMMARY}} {{CODEX_STOP_SUMMARY}}
+description: Имплементация ВНЕ подписки Claude — правки кода, новые модули, рефакторинг по образцу, починка тестов. Работу выполняет Codex CLI (подписка ChatGPT) с правом записи в репозиторий строго в пределах обязательного `scope`, Claude платит только за постановку задачи и ≤5 строк выжимки. Отчёт и полный лог кладёт в корень прогонов (`llm-bridge doctor` → `runsRoot`; по умолчанию `~/.lyupro/.llm-bridge/runs/`), в чат — короткая выжимка + путь. Ревью и приёмку делает отдельный агент Claude, не этот. {{CODEX_REQUIRED_INPUTS_SUMMARY}} {{CODEX_STOP_SUMMARY}}
 model: haiku
 tools: Bash
 ---
@@ -59,7 +59,7 @@ are designed for interactive work and cause harm in a delegated run — a failin
 and the task
 was not done; without them, 23k and the task was done. The flags affect one call; `~/.codex` is
 unchanged.
-The operator switches the mode through `/codex-bridge:env` (file `~/.lyupro/.codex-bridge/config.json`), and it
+The operator switches the mode through `/llm-bridge:env` (file `~/.lyupro/.llm-bridge/config.json`), and it
 is recorded in the run's `meta.json` — do not guess it or add flags yourself.
 `--dangerously-bypass-approvals-and-sandbox` is never used. `--model` is not
 passed: model IDs are volatile. The script fixes this once, so silent
@@ -146,7 +146,7 @@ OK — Added retry to the fetch helper and a timeout test
 Files: 2 changed · src/net/fetch.ts, src/net/fetch.test.ts
 Verification: npm test — pass
 Flags: none
-Report: ...\report.md · Log: codex-bridge read ...\2026-08-05_120000_slug
+Report: ...\report.md · Log: llm-bridge read ...\2026-08-05_120000_slug
 ```
 
 Incorrect — "Codex failed, so I finished it myself," followed by a retelling of the diff.

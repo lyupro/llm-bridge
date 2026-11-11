@@ -152,7 +152,7 @@ test('a handwritten problem reason journals a D6 parameter violation in its own 
     const output = orderProblemLine({ lineNo: 3, line: 'arbitrary source data', reason: 'hand-written header refusal' });
     assert.equal(output, 'line 3: hand-written header refusal: arbitrary source data');
     checkOutgoingRefusal(output, 'header-probe');
-  `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+  `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const directory = path.join(root, 'order-text-violations');

@@ -23,7 +23,7 @@ const event = (filePath, overrides = {}) => ({
 
 async function fixture(root) {
   const stateDir = path.join(root, 'state');
-  const core = path.join(root, '.claude', 'rules', 'codex-bridge', 'core.md');
+  const core = path.join(root, '.claude', 'rules', 'llm-bridge', 'core.md');
   const bytes = Buffer.from('Rules core\r\n\u00e9\n');
   await fs.mkdir(path.dirname(core), { recursive: true });
   await fs.writeFile(core, bytes);
@@ -68,9 +68,9 @@ test('D11 registers an observing InstructionsLoaded hook', () => {
 });
 
 test('core candidates accept Windows and forward slashes case-insensitively', () => {
-  assert.equal(isCoreLoadCandidate('C:\\host\\.claude\\RULES\\CODEX-BRIDGE\\CORE.MD'), true);
-  assert.equal(isCoreLoadCandidate('/host/.claude/rules/codex-bridge/core.md'), true);
-  for (const candidate of [null, 4, '', '/rules/codex-bridge/core.md.bak', '/rules/other/core.md']) {
+  assert.equal(isCoreLoadCandidate('C:\\host\\.claude\\RULES\\LLM-BRIDGE\\CORE.MD'), true);
+  assert.equal(isCoreLoadCandidate('/host/.claude/rules/llm-bridge/core.md'), true);
+  for (const candidate of [null, 4, '', '/rules/llm-bridge/core.md.bak', '/rules/other/core.md']) {
     assert.equal(isCoreLoadCandidate(candidate), false);
   }
 });
@@ -93,7 +93,7 @@ test('records exact bytes and paths before the transcript exists, once per sessi
     assert.deepEqual(readLoadWitness({ stateDir }).sessions['session-1'], expected);
     await recordCoreLoad({ stateDir, now, input: event(core, { session_id: 'session-2', memory_type: undefined }) });
     assert.equal(readLoadWitness({ stateDir }).sessions['session-2'].loads[0].memoryType, null);
-    const otherCore = path.join(root, 'another-host', 'rules', 'codex-bridge', 'core.md');
+    const otherCore = path.join(root, 'another-host', 'rules', 'llm-bridge', 'core.md');
     await recordCoreLoad({ stateDir, now, input: event(otherCore) });
     assert.equal(readLoadWitness({ stateDir }).sessions['session-1'].loads.length, 2);
   });
@@ -171,7 +171,7 @@ test('D15 closes after a partial read failure and preserves the read error code'
 test('ignores other load reasons, events, files and missing identifiers without touching state', async () => {
   await withTempTree('load-witness-ignore-', async (root) => {
     const stateDir = path.join(root, 'state');
-    const core = '/host/rules/codex-bridge/core.md';
+    const core = '/host/rules/llm-bridge/core.md';
     for (const input of [
       null, [], 'string', event(core, { load_reason: 'compact' }),
       event(core, { load_reason: 'nested_traversal' }), event(core, { hook_event_name: 'SessionStart' }),
@@ -190,7 +190,7 @@ test('ignores other load reasons, events, files and missing identifiers without 
 test('unreadable core records a null hash and the read error code', async () => {
   await withTempTree('load-witness-read-error-', async (root) => {
     const stateDir = path.join(root, 'state');
-    const core = path.join(root, 'rules', 'codex-bridge', 'core.md');
+    const core = path.join(root, 'rules', 'llm-bridge', 'core.md');
     await recordCoreLoad({ stateDir, now, input: event(core) });
     let load = readLoadWitness({ stateDir }).sessions['session-1'].loads[0];
     assert.equal(load.sha256, null);
@@ -272,7 +272,7 @@ test('hook child is quiet for dry runs, malformed inputs, valid events and write
     const run = (input) => {
       const result = spawnSync(process.execPath, [hook], {
         input, encoding: 'utf8', timeout: 5_000,
-        env: { ...process.env, CODEX_BRIDGE_HOME: home },
+        env: { ...process.env, LLM_BRIDGE_HOME: home },
       });
       assert.equal(result.error, undefined);
       assert.equal(result.status, 0, result.stderr);

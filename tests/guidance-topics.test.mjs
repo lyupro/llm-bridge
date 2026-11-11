@@ -55,11 +55,11 @@ for (const topic of topics) {
   });
 
   test(`${topic} never names a run-store root`, () => {
-    assert.doesNotMatch(readTopic(topic), /codex-runs|\.lyupro|\.codex-bridge[\\/]|runs[\\/]/);
+    assert.doesNotMatch(readTopic(topic), /codex-runs|\.lyupro|\.llm-bridge[\\/]|runs[\\/]/);
   });
 
   test(`${topic} names only registered commands`, () => {
-    for (const match of readTopic(topic).matchAll(/`codex-bridge\s+(\w+)/g)) {
+    for (const match of readTopic(topic).matchAll(/`llm-bridge\s+(\w+)/g)) {
       assert.ok(registered.has(match[1]), `${topic}.md names unregistered command: ${match[1]}`);
     }
   });

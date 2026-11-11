@@ -210,7 +210,7 @@ test('the CLI changes only its switch and reset keeps the existing printed state
   const cli = fileURLToPath(new URL('../src/home/lib/run-config.mjs', import.meta.url));
   const run = (...args) => {
     const result = spawnSync(process.execPath, [cli, ...args], {
-      encoding: 'utf8', env: { ...process.env, CODEX_BRIDGE_HOME: directory },
+      encoding: 'utf8', env: { ...process.env, LLM_BRIDGE_HOME: directory },
     });
     assert.equal(result.status, 0, result.stderr || result.error?.message);
     return result.stdout;

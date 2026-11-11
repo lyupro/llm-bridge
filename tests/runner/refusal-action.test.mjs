@@ -201,7 +201,7 @@ catch (error) { if (typeof error?.exitCode !== 'number') throw error; process.ex
 `;
     const output = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
       cwd: repo, input: '', encoding: 'utf8', timeout: 10_000, windowsHide: true,
-      env: { ...process.env, CODEX_BRIDGE_HOME: home, CODEX_RUNS_ROOT: runs },
+      env: { ...process.env, LLM_BRIDGE_HOME: home, LLM_BRIDGE_RUNS_ROOT: runs },
     });
     assert.ifError(output.error);
     assert.equal(output.status, exit, output.stderr);
@@ -261,7 +261,7 @@ process.exitCode = await launcher(${JSON.stringify(argv)});
 `;
     const output = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
       cwd: repo, input: '', encoding: 'utf8', timeout: 10_000, windowsHide: true,
-      env: { ...process.env, CODEX_BRIDGE_HOME: home, CODEX_RUNS_ROOT: runs },
+      env: { ...process.env, LLM_BRIDGE_HOME: home, LLM_BRIDGE_RUNS_ROOT: runs },
     });
     assert.ifError(output.error);
     assert.equal(output.status, EXIT.FAIL, output.stderr);

@@ -41,8 +41,8 @@ export { renderDoctor };
 
 function bridgeCommandCheck(result) {
   return result.available
-    ? check('command', 'ok', `codex-bridge resolves on PATH (${result.value})`)
-    : check('command', 'warn', `codex-bridge does not resolve on PATH (${result.value}); run npm i -g @lyupro/codex-bridge`);
+    ? check('command', 'ok', `llm-bridge resolves on PATH (${result.value})`)
+    : check('command', 'warn', `llm-bridge does not resolve on PATH (${result.value}); run npm i -g @lyupro/llm-bridge`);
 }
 
 function sourceCheck() {
@@ -63,9 +63,9 @@ export function probeCodex() {
   return { available: true, value: (result.stdout || result.stderr).trim() };
 }
 
-export function probeCodexBridge() {
-  const command = process.platform === 'win32' ? process.env.ComSpec || 'cmd.exe' : 'codex-bridge';
-  const args = process.platform === 'win32' ? ['/d', '/s', '/c', 'codex-bridge --version'] : ['--version'];
+export function probeLlmBridge() {
+  const command = process.platform === 'win32' ? process.env.ComSpec || 'cmd.exe' : 'llm-bridge';
+  const args = process.platform === 'win32' ? ['/d', '/s', '/c', 'llm-bridge --version'] : ['--version'];
   const result = spawnSync(command, args, { encoding: 'utf8', windowsHide: true });
   if (result.error || result.status !== 0) {
     return { available: false, value: (result.stderr || result.error?.message || 'not found').trim() };
@@ -96,7 +96,7 @@ export async function diagnose({
   recoveryBudgetDrift,
   recoveryEnablingGates,
   adviseDeadline,
-  bridgeProbe = probeCodexBridge,
+  bridgeProbe = probeLlmBridge,
   launcherProbe,
   currentPackage,
   contractRecord,
@@ -223,7 +223,7 @@ export async function diagnose({
   let resolution;
   const runsRoot = runsRootCheck({ get resolution() { return (resolution = runsRootResolution()); } });
   checks.push(runsRoot);
-  const unavailable = 'unavailable: CODEX_RUNS_ROOT points under a retired runs root';
+  const unavailable = 'unavailable: LLM_BRIDGE_RUNS_ROOT points under a retired runs root';
   const projectRuns = resolution?.staleOverride ? check('projectRuns', 'fail', unavailable)
     : resolution ? projectRunsCheck(resolution) : check('projectRuns', 'fail', runsRoot.value);
   checks.push(resolution?.staleOverride ? check('liveRuns', 'fail', unavailable)

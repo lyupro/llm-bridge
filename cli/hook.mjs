@@ -8,13 +8,13 @@ import { resolveBrandHome } from '../src/home/lib/brand-home.mjs';
 export const HOOK_LAUNCHER_PROTOCOL = 1;
 
 function reportFailure(io, name, reason) {
-  io.error(`codex-bridge hook: guard "${name}" did not run: ${reason}. Run codex-bridge doctor.`);
+  io.error(`llm-bridge hook: guard "${name}" did not run: ${reason}. Run llm-bridge doctor.`);
   return 1;
 }
 
 export async function hook(args = [], io = console) {
   if (!Array.isArray(args) || args.length !== 1) {
-    io.error('Usage: codex-bridge hook <name> | codex-bridge hook --home');
+    io.error('Usage: llm-bridge hook <name> | llm-bridge hook --home');
     return 1;
   }
 
@@ -24,14 +24,14 @@ export async function hook(args = [], io = console) {
     return 0;
   }
   if (!args[0] || args[0].startsWith('-')) {
-    io.error('Usage: codex-bridge hook <name> | codex-bridge hook --home');
+    io.error('Usage: llm-bridge hook <name> | llm-bridge hook --home');
     return 1;
   }
 
   const name = args[0];
   const entry = path.join(home.root, 'lib', 'hook-entry.mjs');
   if (!fs.existsSync(entry)) {
-    io.error(`codex-bridge hook: guard "${name}" did not run: codex-bridge is not installed in ${home.root}. Run codex-bridge install.`);
+    io.error(`llm-bridge hook: guard "${name}" did not run: llm-bridge is not installed in ${home.root}. Run llm-bridge install.`);
     return 1;
   }
   try {

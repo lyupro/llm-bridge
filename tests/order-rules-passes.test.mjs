@@ -287,7 +287,7 @@ test('issued text composes cleanly while handwritten text and unknown parameters
     orderRuleMessage('repeat-task-grant-required', { ...${JSON.stringify(repeat)}, violation: 'existing', hints: 'handwritten refusal' });
     orderRuleMessage('advise-scope-run-required', { violation: 'meta', failed: 'handwritten metadata' });
     orderRuleMessage('retry-pass-identity', { agent: 'codex-build', phase: 'default', unknown: 'handwritten parameter' });
-  `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+  `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const directory = path.join(root, 'order-text-violations');

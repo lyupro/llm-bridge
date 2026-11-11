@@ -56,7 +56,7 @@ for (const agent of ['codex-build', 'codex-scout', 'codex-review', 'codex-adviso
       }
       assert.match(rows[1], variant.startsWith('fail-') ? /^Artifacts: / : /^Signal: /);
       assert.equal(rows.some((row) => row.startsWith('Worktree: ')), agent === 'codex-build');
-      assert.equal(rows.at(-1), `Log: codex-bridge read ${dir}`);
+      assert.equal(rows.at(-1), `Log: llm-bridge read ${dir}`);
     });
   }
 }
@@ -77,7 +77,7 @@ for (const result_ok of [undefined, null, 0, '', 1, 'filled']) {
     const rows = failReply({ agent: 'codex-build', runDir: dir, resultPath: path.join(dir, 'result.json') }, meta);
     assertAction(rows, result_ok ? 'fail-result' : 'fail-no-result');
     assert.equal(rows[3], 'Worktree: no new changes');
-    assert.equal(rows.at(-1), `Log: codex-bridge read ${dir}`);
+    assert.equal(rows.at(-1), `Log: llm-bridge read ${dir}`);
     assert.equal(rows.length, 5);
   });
 }

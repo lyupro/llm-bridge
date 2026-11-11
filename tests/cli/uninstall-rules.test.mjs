@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import { fileFingerprint } from '../../cli/manifest.mjs';
 import { rulesDryRunLines } from '../../cli/uninstall-rules.mjs';
 
-const rulesPath = 'codex-home/rules/codex-bridge.rules';
+const rulesPath = 'codex-home/rules/llm-bridge.rules';
 const host = { root: 'C:/Repos/Current' };
 
 function inputs(fingerprint) {

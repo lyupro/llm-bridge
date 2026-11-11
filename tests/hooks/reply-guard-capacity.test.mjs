@@ -38,17 +38,17 @@ async function fixture(t, status) {
   const meta = { status, reason: 'measured runner verdict' };
   await fs.writeFile(path.join(runDir, 'meta.json'), `${JSON.stringify(meta)}\n`);
 
-  const bridgeHome = path.join(root, '.lyupro', '.codex-bridge');
-  const previousHome = process.env.CODEX_BRIDGE_HOME;
-  process.env.CODEX_BRIDGE_HOME = bridgeHome;
+  const bridgeHome = path.join(root, '.lyupro', '.llm-bridge');
+  const previousHome = process.env.LLM_BRIDGE_HOME;
+  process.env.LLM_BRIDGE_HOME = bridgeHome;
   const moduleUrl = new URL('../../src/home/lib/brand-home.mjs', import.meta.url);
   moduleUrl.searchParams.set('test-home', bridgeHome);
   let stateDir;
   try {
     ({ BRAND_STATE_DIR: stateDir } = await import(moduleUrl.href));
   } finally {
-    if (previousHome === undefined) delete process.env.CODEX_BRIDGE_HOME;
-    else process.env.CODEX_BRIDGE_HOME = previousHome;
+    if (previousHome === undefined) delete process.env.LLM_BRIDGE_HOME;
+    else process.env.LLM_BRIDGE_HOME = previousHome;
   }
   const agentId = 'test-reply-guard-capacity';
   const sessionId = 'capacity-session';
@@ -72,10 +72,10 @@ function runGuard(fixture, reply) {
     encoding: 'utf8',
     env: {
       ...process.env,
-      CODEX_RUNS_ROOT: path.join(root, 'runs'),
+      LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'),
       HOME: root,
       USERPROFILE: root,
-      CODEX_BRIDGE_HOME: bridgeHome,
+      LLM_BRIDGE_HOME: bridgeHome,
     },
   });
 }

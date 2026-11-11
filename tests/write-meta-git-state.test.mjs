@@ -145,12 +145,12 @@ test('one branch snapshot without the other is not a branch violation', () => {
 // Plan_73 D4: exercise the real writer with quoting enabled, not a simulated snapshot.
 function repository(t) {
   const repo = makeTempTree('bridge-git-state-snapshot-');
-  const keys = ['GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM', 'GIT_CONFIG_COUNT', 'CODEX_RUNS_ROOT'];
+  const keys = ['GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM', 'GIT_CONFIG_COUNT', 'LLM_BRIDGE_RUNS_ROOT'];
   const saved = keys.map((key) => [key, process.env[key]]);
   process.env.GIT_CONFIG_GLOBAL = path.join(repo, 'absent-config');
   process.env.GIT_CONFIG_SYSTEM = path.join(repo, 'absent-config');
   delete process.env.GIT_CONFIG_COUNT;
-  process.env.CODEX_RUNS_ROOT = path.join(repo, 'runs');
+  process.env.LLM_BRIDGE_RUNS_ROOT = path.join(repo, 'runs');
   t.after(() => {
     for (const [key, value] of saved) {
       if (value === undefined) delete process.env[key];
@@ -277,14 +277,14 @@ test('reviewScope keeps commit and base labels while decoding exact names', (t) 
 
 test('decoded Cyrillic run-folder names are excluded from snapshots and untracked scans', (t) => {
   const { repo, run, commit } = repository(t);
-  process.env.CODEX_RUNS_ROOT = path.join(repo, 'прогоны');
-  fs.mkdirSync(process.env.CODEX_RUNS_ROOT);
-  const artifact = path.join(process.env.CODEX_RUNS_ROOT, 'задача.md');
+  process.env.LLM_BRIDGE_RUNS_ROOT = path.join(repo, 'прогоны');
+  fs.mkdirSync(process.env.LLM_BRIDGE_RUNS_ROOT);
+  const artifact = path.join(process.env.LLM_BRIDGE_RUNS_ROOT, 'задача.md');
   fs.writeFileSync(artifact, 'before\n');
   run('add', '--', 'прогоны/задача.md');
   commit();
   fs.appendFileSync(artifact, 'TODO: runner artifact\n');
-  fs.writeFileSync(path.join(process.env.CODEX_RUNS_ROOT, 'новый.md'), 'TODO: runner artifact\n');
+  fs.writeFileSync(path.join(process.env.LLM_BRIDGE_RUNS_ROOT, 'новый.md'), 'TODO: runner artifact\n');
   fs.mkdirSync(path.join(repo, 'прогоны-other'));
   fs.writeFileSync(path.join(repo, 'прогоны-other', 'реальный.md'), 'real work\n');
   assert.deepEqual([...decodeSnapshot(worktreeSnapshot(repo)).rows.keys()], ['прогоны-other/реальный.md']);

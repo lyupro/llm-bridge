@@ -1,4 +1,4 @@
-# Architecture — codex-bridge
+# Architecture — llm-bridge
 
 Вырезано из `CLAUDE.md` 2026-08-10 дословно (Plan_30): раздел нужен при работе в `src/` и `cli/`,
 а грузился каждую сессию. Роутер, который сюда ведёт, стоит в `CLAUDE.md`.
@@ -7,9 +7,9 @@
 
 Two independent halves share the repository:
 
-**Package/installer** — `bin/codex-bridge.mjs` (argument dispatch only), reachable as both
-`codex-bridge` and the short `codexb`, over `cli/`:
-`manifest.mjs` owns the install table, the seeded-file list and the `.codex-bridge-install.json`
+**Package/installer** — `bin/llm-bridge.mjs` (argument dispatch only), reachable as both
+`llm-bridge` and the short `codexb`, over `cli/`:
+`manifest.mjs` owns the install table, the seeded-file list and the `.llm-bridge-install.json`
 record schema; `install/update/uninstall/doctor.mjs` are one command each, as are the run-store
 commands `read` (renders one run), `projects` (inventory over `runs-inventory`/`table`), `prune`
 (`prune-args` refuses, `prune-plan` decides, `prune.mjs` deletes) and `unlock` (closes running
@@ -19,9 +19,9 @@ ones, and finds its own by command rather than by matcher — the matcher is gen
 list and changes whenever a host spelling is added. `update` compares sha256 fingerprints from the record: outdated files refresh silently,
 hand-edited files stop the run unless `--force`.
 
-**Runtime runner** — `src/`, installed into `~/.lyupro/.codex-bridge/lib/` (the guards into
+**Runtime runner** — `src/`, installed into `~/.lyupro/.llm-bridge/lib/` (the guards into
 `hooks/` beside it); only the agent and command markdown goes to the host's
-`agents/codex-bridge/` and `commands/codex-bridge/`, because Claude Code reads those nowhere else.
+`agents/llm-bridge/` and `commands/llm-bridge/`, because Claude Code reads those nowhere else.
 Sources for a host's native folders sit under that host's name and repeat the target folder
 (`src/claude/agents/`, `src/claude/commands/`, `src/codex/rules/`; Plan_64 B1/D7), so one source
 folder never feeds two hosts:
@@ -31,7 +31,7 @@ folder never feeds two hosts:
   detached **worker** (`runner/worker.mjs`) is spawned. The split exists because the calling shell
   dies long before a 20-minute run does; the worker closes the run with artifacts either way.
 - `brand-home.mjs` answers one question for both halves of the repository: where the host-side files
-  live (`CODEX_BRIDGE_HOME`, else `~/.lyupro/.codex-bridge/`) and whether that answer came from the
+  live (`LLM_BRIDGE_HOME`, else `~/.lyupro/.llm-bridge/`) and whether that answer came from the
   override or the default. `run-config.mjs` and `cli/hosts.mjs` ask it; nothing derives that path
   from its own module location any more.
 - `task-header.mjs` reads the orchestrator's metadata header of a task (`advice:`, `continue:`, `retry:`) for the
@@ -47,12 +47,12 @@ folder never feeds two hosts:
   each judged agent's producers and `resolveStatus` entries; a new `if (agent === …)` branch without a catalog row,
   or one that takes a FAIL reason from an unregistered function, turns `tests/answer-rules-branches.test.mjs` red.
 - `order-rules.mjs` and `order-diagnostics.mjs` own every refusal text of the order path (Plan_79 D3):
-  a rule the orchestrator controls is defined once, with the sentence `codex-bridge guidance order`
+  a rule the orchestrator controls is defined once, with the sentence `llm-bridge guidance order`
   prints and the message the refusal site builds; a refusal outside order authoring is a diagnostic in
   a closed category. Definitions live by the place the orchestrator writes them (`order-rules/call.mjs`,
   `header.mjs`, `task-document.mjs`) and diagnostics by category (`order-diagnostics/<category>.mjs`);
   the two entry points are the only importers (D4). `order-text-record.mjs` is test-only provenance
-  (D5): under `CODEX_BRIDGE_TEST_TMP` the builders record what they hand out and every transport (`die`,
+  (D5): under `LLM_BRIDGE_TEST_TMP` the builders record what they hand out and every transport (`die`,
   the hooks' `deny`, the dispatcher handback, `{ refusal }`) journals a message not made of that output;
   `scripts/run-tests.mjs` fails the suite on any journal line. The journal is written only on a
   violation, so a failed write ends the process (D9): the module's one `catch` hands it to
@@ -100,11 +100,11 @@ folder never feeds two hosts:
   (PreToolUse) refuses a dispatcher call whose task text names no order id, or that carries `model`
   or meets a foreign-family subagent-model env (`lib/subagent-model-env.mjs`, Plan_67 D6); `worktree-lock.mjs`
   (PreToolUse) refuses a file edit inside a repository a live `codex-build` run holds;
-  `prune-guard.mjs` (PreToolUse) refuses an agent-issued `codex-bridge prune`, matching the command
+  `prune-guard.mjs` (PreToolUse) refuses an agent-issued `llm-bridge prune`, matching the command
   line by spelling — so a new CLI name has to be added here too, or the alias walks past it.
   `dispatcher-gate.mjs` (PreToolUse on the shell tools and `SubagentHandback`, PostToolUse/Failure on
   the shell tools; decisions in `lib/dispatcher-gate.mjs`) lets a dispatcher run only the one
-  `codex-bridge run` command its order yields and replaces its handback with the runner's stdout
+  `llm-bridge run` command its order yields and replaces its handback with the runner's stdout
   (Plan_62 D3/D8); the order comes from the first line of the dispatcher's own transcript
   (`lib/dispatcher-order.mjs`, D7). `reply-guard` yields after a handback and audits that every tool call
   passed the gate (`lib/dispatcher-stop.mjs`, D13/D15). The tool list the gate is registered on is
@@ -121,7 +121,7 @@ folder never feeds two hosts:
   which moved out of `cli/` so hooks can read the installed contract — the home has no `cli/`. `cli/handback-witness-check.mjs`
   and `cli/dispatcher-model-check.mjs` turn the two records into `doctor` rows for every host `cli/active-hosts.mjs`
   finds active — dispatcher activity in the last 24 hours, from records already written (D12). The pin needs a complete
-  inventory, which only the operator declares: `cli/inventory-confirm.mjs` (`codex-bridge inventory confirm`, D11).
+  inventory, which only the operator declares: `cli/inventory-confirm.mjs` (`llm-bridge inventory confirm`, D11).
 - **Installer is the package, execution is the home** (Plan_62 D17). `cli/hook.mjs` and
   `cli/run-launcher.mjs` are launchers: they resolve the brand home and import `lib/hook-entry.mjs` or the
   installed runner, never the package copy beside them — on 2026-09-24 a clone registered hook names the

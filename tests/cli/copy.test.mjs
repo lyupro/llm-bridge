@@ -14,7 +14,7 @@ test('an install-image member is written through the home adapter without a temp
   await withTempTree('copy-image-', async (root) => {
     const home = path.join(root, 'home');
     const source = path.join(root, 'source.mjs');
-    const relativePath = 'agents/codex-bridge/agent.mjs';
+    const relativePath = 'agents/llm-bridge/agent.mjs';
     const target = path.join(home, relativePath);
     await fs.writeFile(source, 'image member');
     const writer = createHomeWriter({ root: home, imageMembers: [relativePath] });
@@ -46,7 +46,7 @@ test('the raw route writes a target beyond the package home', async () => {
   await withTempTree('copy-outside-', async (root) => {
     const home = path.join(root, 'home');
     const source = path.join(root, 'source.md');
-    const target = path.join(root, 'host', 'agents', 'codex-bridge', 'agent.md');
+    const target = path.join(root, 'host', 'agents', 'llm-bridge', 'agent.md');
     await fs.writeFile(source, 'host file');
     const writer = createHomeWriter({ root: home, imageMembers: [] });
 

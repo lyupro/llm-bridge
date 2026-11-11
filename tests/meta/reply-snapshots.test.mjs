@@ -35,7 +35,7 @@ test('OK scout reply snapshot', () => {
     'OK — The reply points the operator at the structured read command so the run can be inspected without guessing artifact paths. The command reads the retained...\n'
     + 'Key finding: no findings listed\n'
     + 'Unresolved: none\n'
-    + 'Report: <run>/report.md · Log: codex-bridge read <run>');
+    + 'Report: <run>/report.md · Log: llm-bridge read <run>');
 });
 
 test('OK build reply snapshot', () => {
@@ -44,7 +44,7 @@ test('OK build reply snapshot', () => {
     + 'Files: 0 changed · worktree untouched\n'
     + 'Verification: npm test — pass\n'
     + 'Flags: none\n'
-    + 'Report: <run>/report.md · Log: codex-bridge read <run>');
+    + 'Report: <run>/report.md · Log: llm-bridge read <run>');
 });
 
 test('a delivered letter appears on the Environment line, not among the run changed files', () => {
@@ -85,7 +85,7 @@ test('OK review reply snapshot', () => {
     'OK — verdict approve\n'
     + 'Findings: critical 0 · high 0 · medium 0 · low 0\n'
     + 'Top: no critical or high findings\n'
-    + 'Report: <run>/review.json · Log: codex-bridge read <run>');
+    + 'Report: <run>/review.json · Log: llm-bridge read <run>');
 });
 
 test('OK advisor scope reply snapshot', () => {
@@ -94,7 +94,7 @@ test('OK advisor scope reply snapshot', () => {
   } }, 0, 'OK',
     'OK — scope: sufficient; continue this run with `phase:` advise\n'
     + 'Predicted risks: 0\n'
-    + 'Report: <run>/result.json · Log: codex-bridge read <run>');
+    + 'Report: <run>/result.json · Log: llm-bridge read <run>');
 });
 
 test('OK advisor advise reply snapshot', () => {
@@ -108,7 +108,7 @@ test('OK advisor advise reply snapshot', () => {
     + 'Rejected: B (Recomputing evidence can change its meaning.)\n'
     + 'Counter: Stored evidence may be incomplete.\n'
     + 'Risks: 0 confirmed · 0 refuted · open questions 0 · confidence high\n'
-    + 'Report: <run>/result.json · Log: codex-bridge read <run>');
+    + 'Report: <run>/result.json · Log: llm-bridge read <run>');
 });
 
 test('LIMIT reply snapshot', () => {
@@ -117,7 +117,7 @@ test('LIMIT reply snapshot', () => {
     + 'Signal: quota exhausted\n'
     + 'Action: the ChatGPT quota window is spent; do not retry or resume through this bridge, hand the order to the next executor; for a build, check the Worktree row first\n'
     + 'Worktree: no new changes\n'
-    + 'Log: codex-bridge read <run>');
+    + 'Log: llm-bridge read <run>');
 });
 
 test('UNAVAILABLE reply snapshot', () => {
@@ -128,7 +128,7 @@ test('UNAVAILABLE reply snapshot', () => {
     + 'Action: Codex is signed out on this host; do not retry this bridge, hand the order to the next executor and ask the operator to run codex login\n'
     + 'Operator check: codex --version; codex login status (sign in with codex login)\n'
     + 'Worktree: no new changes\n'
-    + 'Log: codex-bridge read <run>');
+    + 'Log: llm-bridge read <run>');
 });
 
 test('FAIL with a usable result reply snapshot', () => {
@@ -137,7 +137,7 @@ test('FAIL with a usable result reply snapshot', () => {
     + 'Artifacts: events.jsonl 252 B · stderr.log 0 B · result.json filled · exit=0\n'
     + 'Action: the run returned a result that did not pass; read the report and git status before deciding; a repeat of this pass needs your retry: grant, the next pass your continue: grant\n'
     + 'Worktree: no new changes\n'
-    + 'Log: codex-bridge read <run>');
+    + 'Log: llm-bridge read <run>');
 });
 
 test('FAIL without a result reply snapshot', () => {
@@ -149,5 +149,5 @@ test('FAIL without a result reply snapshot', () => {
     + 'Situation: evidence-unknown · silence=unknown · threshold=unconfigured · command=unknown\n'
     + 'Continuation: automatic blocked (recovery-policy-missing, writer-role-not-approved, session-evidence-not-observed, command-evidence-unknown, threshold-unconfigured, process-tree-stop-unverified) · grant blocked (writer-role-not-approved, stop-record-missing, session-evidence-not-observed, process-tree-stop-unverified)\n'
     + 'Treatment: inspect-evidence · diagnostic only, nothing runs it\n'
-    + 'Log: codex-bridge read <run>');
+    + 'Log: llm-bridge read <run>');
 });

@@ -29,7 +29,7 @@ function runGuard(root, input) {
     encoding: 'utf8',
     env: {
       ...process.env,
-      CODEX_RUNS_ROOT: path.join(root, 'runs'),
+      LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'),
       HOME: root,
       USERPROFILE: root,
     },

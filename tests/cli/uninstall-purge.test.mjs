@@ -164,7 +164,7 @@ test('both consents remove permissions, hooks, package agents, rules and the who
     return clear();
   } });
   assert.equal(result.exitCode, 0);
-  assert.match(result.output, /^Purged codex-bridge\./);
+  assert.match(result.output, /^Purged llm-bridge\./);
   assert.doesNotMatch(result.output, /Appeared during purge/);
   assert.equal(questions.length, 2);
   assert.equal(checks, 1, 'D14 permits exactly one preflight live-run check');
@@ -185,10 +185,10 @@ test('failed host detachment leaves the whole home untouched despite both consen
   const result = await purge({ host, packageRoot, ...options, liveRunCheck: clear });
   assert.equal(result.exitCode, 1);
   assert.equal(questions.length, 2);
-  assert.match(result.output, /^Did not finish uninstalling codex-bridge:/);
+  assert.match(result.output, /^Did not finish uninstalling llm-bridge:/);
   assert.ok(result.output.includes(
     `Left ${host.brandRoot} untouched: purge removes the home only after this host's hooks are gone.`));
-  assert.doesNotMatch(result.output, /Purged codex-bridge\./);
+  assert.doesNotMatch(result.output, /Purged llm-bridge\./);
   await verifyUnchanged();
 });
 
@@ -198,7 +198,7 @@ test('missing home follows ordinary uninstall and appends the nothing-to-purge l
   const { options, questions } = consent();
   const result = await purge({ host, ...options, liveRunCheck: () => assert.fail('No home means no preflight') });
   assert.equal(result.exitCode, 0);
-  assert.match(result.output, /^Uninstalled codex-bridge\./);
+  assert.match(result.output, /^Uninstalled llm-bridge\./);
   assert.ok(result.output.endsWith(`Nothing to purge: ${host.brandRoot} does not exist.`));
   assert.equal(questions.length, 0);
   assert.equal(findOwnHooks(JSON.parse(await fs.readFile(host.settingsPath, 'utf8')), host).length, 0);
@@ -258,7 +258,7 @@ test('uninstall parses purge and dry-run as booleans and advertises both flags',
   assert.deepEqual(commandOptions('uninstall', ['--purge', '--dry-run']), { purge: true, dryRun: true });
   assert.deepEqual(commandOptions('uninstall', ['--dry-run']), { dryRun: true });
   assert.deepEqual(COMMANDS.find((command) => command.name === 'uninstall').usage, [
-    'codex-bridge uninstall [--scope user|project] [--host <path>] [--dry-run] [--purge]',
+    'llm-bridge uninstall [--scope user|project] [--host <path>] [--dry-run] [--purge]',
   ]);
   assert.throws(() => commandOptions('install', ['--purge']), /unknown install option/);
 });

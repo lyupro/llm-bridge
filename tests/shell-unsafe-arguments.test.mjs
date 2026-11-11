@@ -44,7 +44,7 @@ function runGate(root, prompt) {
   return spawnSync(process.execPath, [GATE], {
     input: payload(prompt),
     encoding: 'utf8',
-    env: { ...process.env, HOME: root, USERPROFILE: root, CODEX_BRIDGE_HOME: path.join(root, 'home') },
+    env: { ...process.env, HOME: root, USERPROFILE: root, LLM_BRIDGE_HOME: path.join(root, 'home') },
   });
 }
 
@@ -62,7 +62,7 @@ test('dispatcher command arguments contain no new shell-unsafe sequences', async
 
 test('the dispatcher guard catches mutations using every shared forbidden sequence', () => {
   for (const sequence of SHELL_UNSAFE_SEQUENCES) {
-    const mutated = '```bash\ncodex-bridge run --task-file "C:/safe' + sequence + 'mutation.md"\n```';
+    const mutated = '```bash\nllm-bridge run --task-file "C:/safe' + sequence + 'mutation.md"\n```';
     assert.deepEqual(
       unsafeArguments(mutated, 'mutated.md'),
       [{ name: 'mutated.md', flag: '--task-file', sequence }],
@@ -115,9 +115,9 @@ const RUN_FLAGS = new Set(['--agent', '--task-file', '--no-wait']);
 function docFindings(source, name) {
   const findings = [...unsafeArguments(source, name)];
   for (const block of commandBlocks(source)) {
-    if (!block.includes('codex-bridge run')) continue;
+    if (!block.includes('llm-bridge run')) continue;
     if (/\\\r?\n/.test(block)) findings.push({ name, flag: '<line continuation>', sequence: '\\' });
-    for (const line of block.split(/\r?\n/).filter((text) => text.includes('codex-bridge run'))) {
+    for (const line of block.split(/\r?\n/).filter((text) => text.includes('llm-bridge run'))) {
       for (const [flag] of line.matchAll(/(?<![\w-])--[a-z][a-z-]*/g)) {
         if (!RUN_FLAGS.has(flag)) findings.push({ name, flag, sequence: '<retired run flag>' });
       }
@@ -141,12 +141,12 @@ test('documented command examples stay runnable as written', async () => {
 });
 
 test('the documentation guard catches a relative task file and a continued line', () => {
-  const relative = '```bash\ncodex-bridge run --task-file task.md\n```';
+  const relative = '```bash\nllm-bridge run --task-file task.md\n```';
   assert.deepEqual(docFindings(relative, 'doc.md'), [{ name: 'doc.md', flag: '--task-file', sequence: 'task.md' }]);
-  const continued = '```bash\ncodex-bridge run \\\\\n  --task-file /abs/task.md\n```';
+  const continued = '```bash\nllm-bridge run \\\\\n  --task-file /abs/task.md\n```';
   assert.deepEqual(docFindings(continued, 'doc.md'), [{ name: 'doc.md', flag: '<line continuation>', sequence: '\\' }]);
   for (const flag of orderSpellings()) {
-    const retired = '```bash\ncodex-bridge run --agent codex-build ' + flag + ' x --task-file "/abs/task.md"\n```';
+    const retired = '```bash\nllm-bridge run --agent codex-build ' + flag + ' x --task-file "/abs/task.md"\n```';
     assert.deepEqual(docFindings(retired, 'doc.md'), [{ name: 'doc.md', flag, sequence: '<retired run flag>' }], flag);
   }
 });
@@ -158,7 +158,7 @@ test('the shared no-self-execution block names the command, never the runner fil
   const { renderNoSelfExecution } = await import('../src/home/lib/no-self-execution.mjs');
   const block = renderNoSelfExecution();
   assert.doesNotMatch(block, /run-codex\.mjs/);
-  assert.match(block, /codex-bridge run/);
+  assert.match(block, /llm-bridge run/);
 });
 
 // The reply guard repeats recovery instructions at each failure branch. Inspect only expressions

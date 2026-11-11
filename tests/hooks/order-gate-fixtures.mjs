@@ -29,10 +29,10 @@ export function runGate(root, input, env = {}) {
       ...process.env,
       CLAUDE_CODE_SUBAGENT_MODEL: '',
       CLAUDE_CODE_SUBAGENT_MODEL_FORCE: '',
-      CODEX_RUNS_ROOT: path.join(root, 'runs'),
+      LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'),
       HOME: root,
       USERPROFILE: root,
-      CODEX_BRIDGE_HOME: path.join(root, '.lyupro', '.codex-bridge'),
+      LLM_BRIDGE_HOME: path.join(root, '.lyupro', '.llm-bridge'),
       ...env,
     },
   });

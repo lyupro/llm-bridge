@@ -18,22 +18,22 @@ import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 const GUARD = path.resolve(fileURLToPath(new URL('../../src/home/hooks/reply-guard.mjs', import.meta.url)));
 const SESSION_ID = 'receipt-session';
 const AGENT_ID = 'receipt-dispatcher';
-const MISSING_IDS_MESSAGE = 'codex-bridge: the host did not report session_id and agent_id for dispatcher codex-scout — whose run this answer quotes cannot be checked; run codex-bridge doctor.';
+const MISSING_IDS_MESSAGE = 'llm-bridge: the host did not report session_id and agent_id for dispatcher codex-scout — whose run this answer quotes cannot be checked; run llm-bridge doctor.';
 
 async function fixture(t, agentType = 'codex-scout', agentId = AGENT_ID) {
   const root = makeTempTree('bridge-reply-receipt-');
   t.after(() => removeTempTree(root));
   const bridgeHome = path.join(root, 'bridge-home');
-  const previousHome = process.env.CODEX_BRIDGE_HOME;
-  process.env.CODEX_BRIDGE_HOME = bridgeHome;
+  const previousHome = process.env.LLM_BRIDGE_HOME;
+  process.env.LLM_BRIDGE_HOME = bridgeHome;
   const moduleUrl = new URL('../../src/home/lib/brand-home.mjs', import.meta.url);
   moduleUrl.searchParams.set('test-home', bridgeHome);
   let stateDir;
   try {
     ({ BRAND_STATE_DIR: stateDir } = await import(moduleUrl.href));
   } finally {
-    if (previousHome === undefined) delete process.env.CODEX_BRIDGE_HOME;
-    else process.env.CODEX_BRIDGE_HOME = previousHome;
+    if (previousHome === undefined) delete process.env.LLM_BRIDGE_HOME;
+    else process.env.LLM_BRIDGE_HOME = previousHome;
   }
   const runs = path.join(root, 'runs', 'project');
   await fs.mkdir(runs, { recursive: true });
@@ -61,7 +61,7 @@ async function fixture(t, agentType = 'codex-scout', agentId = AGENT_ID) {
         cwd: path.join(root, 'project'), last_assistant_message: reply, ...ids,
       }),
       encoding: 'utf8',
-      env: { ...process.env, CODEX_BRIDGE_HOME: bridgeHome, CODEX_RUNS_ROOT: path.join(root, 'runs'),
+      env: { ...process.env, LLM_BRIDGE_HOME: bridgeHome, LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'),
         HOME: root, USERPROFILE: root },
     });
     assert.ifError(result.error);
@@ -348,7 +348,7 @@ test('a reply naming a different folder from its receipt is blocked as external 
   assert.equal(decision.decision, 'block');
   assert.ok(decision.reason.includes(receipt));
   assert.match(decision.reason, new RegExp(run.replaceAll('\\', '\\\\')));
-  assert.match(decision.reason, /Run the canonical codex-bridge run command/);
+  assert.match(decision.reason, /Run the canonical llm-bridge run command/);
   assert.match(decision.reason, /return that run's stdout verbatim/);
 });
 
@@ -370,7 +370,7 @@ test('without host ids, named folders keep the old disk checks even with unusabl
     ...ownStatus('diagnostic-only'),
     order_id: 'stored-order',
   }, { status: 'OK' });
-  const missingIdsMessage = 'codex-bridge: the host did not report session_id and agent_id for dispatcher codex-build — whose run this answer quotes cannot be checked; run codex-bridge doctor.';
+  const missingIdsMessage = 'llm-bridge: the host did not report session_id and agent_id for dispatcher codex-build — whose run this answer quotes cannot be checked; run llm-bridge doctor.';
   assert.equal(missingIdsAlarm('codex-build'), missingIdsMessage);
   assert.deepEqual(decideReplyIdentity({ runDir: run, hasIds: false, receipt: 'other', receiptConflict: 'conflict', agentType: 'codex-build' }),
     { runDir: run, discoveredRun: false, discoveredStatus: null });

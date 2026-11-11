@@ -13,7 +13,7 @@ export function orderTextFaultDirectory(root) {
 const recorded = new Set();
 
 export function recordOrderText(text) {
-  if (process.env.CODEX_BRIDGE_TEST_TMP && typeof text === 'string' && text.length) {
+  if (process.env.LLM_BRIDGE_TEST_TMP && typeof text === 'string' && text.length) {
     recorded.add(text);
   }
   return text;
@@ -75,7 +75,7 @@ function journalFault(root, journal, error) {
 
 // Plan_79 D6: check text inputs before a builder can launder them into recorded output.
 export function checkOrderTextParameters(builder, key, values, data) {
-  const root = process.env.CODEX_BRIDGE_TEST_TMP;
+  const root = process.env.LLM_BRIDGE_TEST_TMP;
   if (!root) return values;
   const entries = [];
   for (const [parameter, value] of Object.entries(values)) {
@@ -92,7 +92,7 @@ export function checkOrderTextParameters(builder, key, values, data) {
 }
 
 export function checkOutgoingRefusal(message, transport) {
-  const root = process.env.CODEX_BRIDGE_TEST_TMP;
+  const root = process.env.LLM_BRIDGE_TEST_TMP;
   if (!root) return message;
   // Plan_79 D9: non-string text is a violation, without serializing arbitrary objects.
   if (typeof message !== 'string') {

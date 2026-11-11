@@ -9,7 +9,7 @@ export async function runCodex(args = [], io = console) {
   const home = resolveBrandHome({ homedir: os.homedir(), env: process.env });
   const entry = path.join(home.root, 'lib', 'run-codex.mjs');
   if (!fs.existsSync(entry)) {
-    io.error(`codex-bridge run: codex-bridge is not installed in ${home.root}. Run codex-bridge install.`);
+    io.error(`llm-bridge run: llm-bridge is not installed in ${home.root}. Run llm-bridge install.`);
     return 1;
   }
   const { runCodexCommand } = await import(pathToFileURL(entry).href);

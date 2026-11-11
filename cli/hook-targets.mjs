@@ -21,7 +21,7 @@ export function hookTargets(host, env = process.env) {
     const registration = hookRegistration(definition.name, target, probe);
     const fallback = commandFor(target);
     const alternate = registration.command === fallback
-      ? `codex-bridge hook ${definition.name}`
+      ? `llm-bridge hook ${definition.name}`
       : fallback;
     return {
       definition,

@@ -7,7 +7,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { CLI_NAMES } from '../../src/home/lib/cli-names.mjs';
-import { commandOptions, HELP, main } from '../../bin/codex-bridge.mjs';
+import { commandOptions, HELP, main } from '../../bin/llm-bridge.mjs';
 import { COMMANDS } from '../../cli/command-registry.mjs';
 import { renderCommandHelp } from '../../cli/command-help.mjs';
 import { withOwner } from '../../cli/install-owners.mjs';
@@ -21,7 +21,7 @@ test('doctor accepts a probe executable and other commands reject it', () => {
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
-const BIN = path.join(ROOT, 'bin', 'codex-bridge.mjs');
+const BIN = path.join(ROOT, 'bin', 'llm-bridge.mjs');
 
 function unique(commands) {
   return [...new Set(commands)];
@@ -86,7 +86,7 @@ test('package.json, --help, and README expose the same binary names', async () =
   assert.deepEqual(sorted(packageNames), sorted(CLI_NAMES), 'package.json#bin names are stale.');
   // No leading "./": npm 11 publish rewrites it and logs the entry as "invalid and removed" (0.6.6).
   assert.ok(
-    packageNames.every((name) => packageJson.bin[name] === 'bin/codex-bridge.mjs'),
+    packageNames.every((name) => packageJson.bin[name] === 'bin/llm-bridge.mjs'),
     'Every binary name must point to the dispatcher entry point, spelled the way npm publishes it.',
   );
 
@@ -110,14 +110,14 @@ function captureIO() {
 test('inventory confirm --dry-run reaches the confirmation handler', async (t) => {
   const hostRoot = path.join(ROOT, 'inventory-test-host');
   const record = withOwner(null, { root: hostRoot, scope: 'project' }, {
-    name: '@lyupro/codex-bridge', version: '0.1.0', installedAt: '2026-10-07T00:00:00.000Z',
+    name: '@lyupro/llm-bridge', version: '0.1.0', installedAt: '2026-10-07T00:00:00.000Z',
     mode: 'copy',
-    files: [{ root: 'claude', path: 'agents/codex-bridge/dispatcher.md' }, { root: 'brand', path: 'hooks/reply-guard.mjs' }],
+    files: [{ root: 'claude', path: 'agents/llm-bridge/dispatcher.md' }, { root: 'brand', path: 'hooks/reply-guard.mjs' }],
     fingerprints: {
-      claude: { 'agents/codex-bridge/dispatcher.md': 'a'.repeat(64) },
+      claude: { 'agents/llm-bridge/dispatcher.md': 'a'.repeat(64) },
       brand: { 'hooks/reply-guard.mjs': 'b'.repeat(64) },
     },
-    hooks: [{ event: 'SubagentStop', root: 'brand', path: 'hooks/reply-guard.mjs', command: 'codex-bridge hook reply-guard' }],
+    hooks: [{ event: 'SubagentStop', root: 'brand', path: 'hooks/reply-guard.mjs', command: 'llm-bridge hook reply-guard' }],
   });
   t.mock.method(fs, 'readFile', async (file) => {
     if (path.basename(file) === '.installed.json') return JSON.stringify(record);
@@ -144,7 +144,7 @@ test('help lists the public inventory confirmation command', async () => {
   const io = captureIO();
   assert.equal(await main(['--help'], io), 0);
   assert.ok(helpCommands(io.output[0]).includes('inventory'));
-  assert.ok(io.output[0].includes('codex-bridge inventory confirm [--scope user|project] [--host <path>] [--dry-run]'));
+  assert.ok(io.output[0].includes('llm-bridge inventory confirm [--scope user|project] [--host <path>] [--dry-run]'));
 });
 
 test('runs move --dry-run reaches the copy preflight and leaves the store unchanged', async (t) => {
@@ -154,7 +154,7 @@ test('runs move --dry-run reaches the copy preflight and leaves the store unchan
     await fs.writeFile(path.join(legacyRoot, 'reply.txt'), 'reply');
     t.mock.method(os, 'homedir', () => homedir);
     // Plan_77 D7: an isolated legacy root must remain active until a later move record.
-    for (const key of ['CODEX_RUNS_ROOT', 'CODEX_BRIDGE_HOME']) {
+    for (const key of ['LLM_BRIDGE_RUNS_ROOT', 'LLM_BRIDGE_HOME']) {
       const old = process.env[key];
       delete process.env[key];
       t.after(() => { if (old === undefined) delete process.env[key]; else process.env[key] = old; });
@@ -181,16 +181,16 @@ test('runs move with non-interactive stdin reports the old folder after the move
     await fs.mkdir(path.join(legacyRoot, 'project', 'empty'), { recursive: true });
     await fs.writeFile(path.join(legacyRoot, 'reply.txt'), 'reply');
     t.mock.method(os, 'homedir', () => homedir);
-    for (const key of ['CODEX_RUNS_ROOT', 'CODEX_BRIDGE_HOME']) {
+    for (const key of ['LLM_BRIDGE_RUNS_ROOT', 'LLM_BRIDGE_HOME']) {
       const old = process.env[key];
       delete process.env[key];
       t.after(() => { if (old === undefined) delete process.env[key]; else process.env[key] = old; });
     }
-    process.env.CODEX_BRIDGE_HOME = home;
+    process.env.LLM_BRIDGE_HOME = home;
     const tty = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
     Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: false });
     t.after(() => { if (tty) Object.defineProperty(process.stdin, 'isTTY', tty); else delete process.stdin.isTTY; });
-    const hint = `The old folder ${legacyRoot} is still there; run codex-bridge runs move in a terminal to remove it.`;
+    const hint = `The old folder ${legacyRoot} is still there; run llm-bridge runs move in a terminal to remove it.`;
     for (const repeated of [false, true]) {
       const io = captureIO();
       assert.equal(await main(['runs', 'move'], io), 0);
@@ -223,11 +223,11 @@ test('help lists the public runs move command and its usage', async () => {
   const io = captureIO();
   assert.equal(await main(['--help'], io), 0);
   assert.ok(helpCommands(io.output[0]).includes('runs'));
-  assert.ok(io.output[0].includes('codex-bridge runs move [--dry-run]'));
+  assert.ok(io.output[0].includes('llm-bridge runs move [--dry-run]'));
   for (const flag of ['-h', '--help']) {
     const actionIO = captureIO();
     assert.equal(await main(['runs', 'move', flag], actionIO), 0);
-    assert.ok(actionIO.output[0].includes('codex-bridge runs move [--dry-run]'));
+    assert.ok(actionIO.output[0].includes('llm-bridge runs move [--dry-run]'));
     assert.deepEqual(actionIO.errors, []);
   }
 });
@@ -255,7 +255,7 @@ test('model set -h prints only the set usage lines', async () => {
   const entry = COMMANDS.find((candidate) => candidate.name === 'model');
   assert.equal(exitCode, 0);
   assert.match(io.output[0], /^Usage:/);
-  const usage = io.output[0].split('\n').filter((line) => line.startsWith('  codex-bridge '));
+  const usage = io.output[0].split('\n').filter((line) => line.startsWith('  llm-bridge '));
   assert.deepEqual(usage, entry.actions.set.usage.map((line) => '  ' + line));
   assert.doesNotMatch(io.output[0], /Actions:/);
   assert.deepEqual(io.errors, []);
@@ -274,8 +274,8 @@ test('permissions add --help answers action help', async () => {
   const io = captureIO();
   assert.equal(await main(['permissions', 'add', '--help'], io), 0);
   assert.match(io.output[0], /^Usage:/);
-  assert.ok(io.output[0].includes('codex-bridge permissions add [--scope user|project] [--host <path>]'));
-  assert.doesNotMatch(io.output[0], /codex-bridge permissions remove/);
+  assert.ok(io.output[0].includes('llm-bridge permissions add [--scope user|project] [--host <path>]'));
+  assert.doesNotMatch(io.output[0], /llm-bridge permissions remove/);
   assert.deepEqual(io.errors, []);
 });
 
@@ -283,7 +283,7 @@ test('sweep -h exits 2 as an unknown command', async () => {
   const io = captureIO();
   assert.equal(await main(['sweep', '-h'], io), 2);
   assert.deepEqual(io.output, []);
-  assert.deepEqual(io.errors, ['codex-bridge: unknown command "sweep"\nRun codex-bridge --help for usage.']);
+  assert.deepEqual(io.errors, ['llm-bridge: unknown command "sweep"\nRun llm-bridge --help for usage.']);
 });
 
 test('install --host --help remains a missing-value parser error', async () => {
@@ -310,7 +310,7 @@ test('global help includes every public usage and action and the per-command hin
       for (const line of section.usage) assert.ok(io.output[0].includes('  ' + line + '\n'), line);
     }
   }
-  assert.ok(io.output[0].includes('Run codex-bridge <command> -h for one command.'));
+  assert.ok(io.output[0].includes('Run llm-bridge <command> -h for one command.'));
 });
 
 test('every registry entry and action has well-formed help usage', () => {
@@ -331,7 +331,7 @@ test('registry usage and global help use only the configured CLI names', () => {
   const aliasLines = HELP.split('\n').filter((line) => line.includes('<same command forms as '));
   assert.deepEqual(aliasLines,
     CLI_NAMES.slice(1).map((alias) => `  ${alias} <same command forms as ${CLI_NAMES[0]}>`));
-  for (const spelling of HELP.match(/\b(?:codex-bridge|codexb)\b/g) ?? []) {
+  for (const spelling of HELP.match(/\b(?:llm-bridge|codexb)\b/g) ?? []) {
     assert.ok(CLI_NAMES.includes(spelling), `Unexpected command spelling in help: ${spelling}`);
   }
 });
@@ -351,7 +351,7 @@ test('non-help arguments and exit codes pass unchanged through the registry', as
 });
 
 test('the registry and thin entry stay below 400 lines', async () => {
-  for (const file of ['cli/command-registry.mjs', 'bin/codex-bridge.mjs']) {
+  for (const file of ['cli/command-registry.mjs', 'bin/llm-bridge.mjs']) {
     const source = await fs.readFile(path.join(ROOT, file), 'utf8');
     assert.ok(source.trimEnd().split('\n').length < 400, file);
   }

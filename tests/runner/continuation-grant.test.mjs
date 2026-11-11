@@ -29,7 +29,7 @@ function fixture(t) {
 function runner(args, input, runsRoot, repo) {
   return spawnSync(process.execPath, [RUN_CODEX, ...args], {
     cwd: repo,
-    env: { ...process.env, CODEX_RUNS_ROOT: runsRoot },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: runsRoot },
     input,
     encoding: 'utf8',
   });
@@ -48,7 +48,7 @@ function mockedRunner(args, input, runsRoot, repo, refuse = false) {
   // raw argv: isolate the mocked launcher; -- separates Node flags from transport arguments.
   return spawnSync(process.execPath, ['--input-type=module', '-e', script, '--', ...args], {
     cwd: repo,
-    env: { ...process.env, CODEX_RUNS_ROOT: runsRoot },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: runsRoot },
     input,
     encoding: 'utf8',
   });

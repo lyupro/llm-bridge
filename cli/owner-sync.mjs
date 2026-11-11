@@ -106,9 +106,9 @@ export function ownerSyncLines(plan) {
     } else if (owner.status === 'conflict') {
       const conflicts = owner.files.filter(({ state }) => state === 'conflict')
         .map(({ item, reason }) => `${item.relativeToRoot} (${reason})`).join(', ');
-      lines.push(`Left ${owner.root} behind: ${conflicts}; run codex-bridge update --host "${owner.root}" after resolving it.`);
+      lines.push(`Left ${owner.root} behind: ${conflicts}; run llm-bridge update --host "${owner.root}" after resolving it.`);
     } else if (owner.status === 'unreachable') {
-      lines.push(`Left ${owner.root} behind: ${owner.reason}; run codex-bridge update --host "${owner.root}" when it is available.`);
+      lines.push(`Left ${owner.root} behind: ${owner.reason}; run llm-bridge update --host "${owner.root}" when it is available.`);
     }
   }
   return lines;

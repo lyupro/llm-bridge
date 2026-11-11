@@ -11,7 +11,7 @@ function projectRoot(cwd) {
 }
 
 function refusal(command, message) {
-  return { runDir: null, error: `codex-bridge ${command}: ${message}` };
+  return { runDir: null, error: `llm-bridge ${command}: ${message}` };
 }
 
 /**

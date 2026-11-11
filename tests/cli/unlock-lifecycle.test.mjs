@@ -68,7 +68,7 @@ test('a dead file holder is reported with a future clear pointer and unchanged b
     `held by ${record.command} for ${record.hostRoot}, pid ${record.pid}, since ${record.acquiredAt}.`);
   assert.equal(result.output.split('\n')[2], 'Holder process: dead.');
   assert.match(result.output, /file was left by a crash/);
-  assert.match(result.output, /Clear it with codex-bridge unlock --lifecycle --clear$/m);
+  assert.match(result.output, /Clear it with llm-bridge unlock --lifecycle --clear$/m);
   assert.deepEqual(fs.readFileSync(lockPath), content);
 });
 
@@ -111,7 +111,7 @@ test('a missing home is reported without creating it', async (t) => {
   assert.equal(result.exitCode, 1);
   assertHeader(result.output, homeRoot, 'file');
   assert.equal(result.output.split('\n')[1],
-    `codex-bridge unlock --lifecycle: no package home at ${homeRoot}; nothing to inspect.`);
+    `llm-bridge unlock --lifecycle: no package home at ${homeRoot}; nothing to inspect.`);
   assert.equal(fs.existsSync(homeRoot), false);
 });
 
@@ -176,7 +176,7 @@ for (const argument of ['alpha', '--all', '--lifecycle', '--unknown', '-h']) {
     });
     assert.equal(result.exitCode, 2);
     assert.equal(result.output,
-      `codex-bridge unlock --lifecycle: unexpected argument "${argument}".\nRun codex-bridge unlock -h for usage.`);
+      `llm-bridge unlock --lifecycle: unexpected argument "${argument}".\nRun llm-bridge unlock -h for usage.`);
     assert.equal(fs.existsSync(homeRoot), false);
   });
 }
@@ -186,19 +186,19 @@ test('lifecycle in a later position keeps the existing synchronous parser refusa
   assert.equal(result instanceof Promise, false);
   assert.equal(result.exitCode, 2);
   assert.equal(result.output,
-    'codex-bridge unlock: unknown option "--lifecycle".\nRun codex-bridge unlock -h for usage.');
+    'llm-bridge unlock: unknown option "--lifecycle".\nRun llm-bridge unlock -h for usage.');
 });
 
 test('the registry awaits lifecycle inspection and uses the shared brand home resolver', async (t) => {
   const homeRoot = path.join(home(t), 'missing-brand-home');
-  const previous = process.env.CODEX_BRIDGE_HOME;
+  const previous = process.env.LLM_BRIDGE_HOME;
   t.after(() => {
-    if (previous === undefined) delete process.env.CODEX_BRIDGE_HOME;
-    else process.env.CODEX_BRIDGE_HOME = previous;
+    if (previous === undefined) delete process.env.LLM_BRIDGE_HOME;
+    else process.env.LLM_BRIDGE_HOME = previous;
   });
-  process.env.CODEX_BRIDGE_HOME = homeRoot;
+  process.env.LLM_BRIDGE_HOME = homeRoot;
   const entry = COMMANDS.find((candidate) => candidate.name === 'unlock');
-  assert.deepEqual(entry.usage, ['codex-bridge unlock [<project>|--all]', 'codex-bridge unlock --lifecycle [--clear]']);
+  assert.deepEqual(entry.usage, ['llm-bridge unlock [<project>|--all]', 'llm-bridge unlock --lifecycle [--clear]']);
   assert.equal(entry.summary, 'Close running records whose runner is gone, or show the lifecycle lock');
   const output = [];
   const exitCode = await entry.handler(['--lifecycle'], { log: (message) => output.push(message) });
@@ -252,7 +252,7 @@ test('clear reports a kernel-managed Windows lock without creating anything', as
   assert.equal(result.exitCode, 0);
   assert.equal(result.output,
     `Lifecycle lock of ${homeRoot} (named-pipe), clearing:\nKernel-managed lock; nothing to clear.
-Run codex-bridge unlock --lifecycle to see its holder.`);
+Run llm-bridge unlock --lifecycle to see its holder.`);
   assert.deepEqual(fs.readdirSync(homeRoot), []);
 });
 
@@ -269,7 +269,7 @@ test('clear reports a missing home without creating it', async (t) => {
   const result = await unlock(['--lifecycle', '--clear'], { homeRoot, clear: { platform: 'darwin' } });
   assert.equal(result.exitCode, 1);
   assert.equal(result.output,
-    `Lifecycle lock of ${homeRoot} (file), clearing:\ncodex-bridge unlock --lifecycle: no package home at ${homeRoot}; nothing to inspect.`);
+    `Lifecycle lock of ${homeRoot} (file), clearing:\nllm-bridge unlock --lifecycle: no package home at ${homeRoot}; nothing to inspect.`);
   assert.equal(fs.existsSync(homeRoot), false);
 });
 
@@ -328,7 +328,7 @@ test('duplicate clear is rejected with help before touching the home', async (t)
   const result = await unlock(['--lifecycle', '--clear', '--clear'], { homeRoot });
   assert.equal(result.exitCode, 2);
   assert.equal(result.output,
-    'codex-bridge unlock --lifecycle: unexpected argument "--clear".\nRun codex-bridge unlock -h for usage.');
+    'llm-bridge unlock --lifecycle: unexpected argument "--clear".\nRun llm-bridge unlock -h for usage.');
   assert.equal(fs.existsSync(homeRoot), false);
 });
 
@@ -336,5 +336,5 @@ test('a refusal names the first argument past --lifecycle --clear', async (t) =>
   const homeRoot = path.join(home(t), 'missing');
   const result = await unlock(['--lifecycle', '--clear', 'extra'], { homeRoot });
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output.split('\n')[0], 'codex-bridge unlock --lifecycle: unexpected argument "extra".');
+  assert.equal(result.output.split('\n')[0], 'llm-bridge unlock --lifecycle: unexpected argument "extra".');
 });

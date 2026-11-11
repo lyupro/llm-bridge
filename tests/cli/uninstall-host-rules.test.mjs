@@ -72,5 +72,5 @@ test('uninstall preserves and names an operator-edited host core rule', async (t
   assert.equal(await fs.readFile(target, 'utf8'), edited);
   assert.equal((await fs.stat(host.rulesDir)).isDirectory(), true);
   assert.equal((await fs.stat(rulesParent)).isDirectory(), true);
-  assert.match(result.output, /^Left rules\/codex-bridge\/core\.md \((?:changed|unknown)\)$/m);
+  assert.match(result.output, /^Left rules\/llm-bridge\/core\.md \((?:changed|unknown)\)$/m);
 });

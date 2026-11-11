@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this package is
 
-`@lyupro/codex-bridge` installs four Claude Code dispatcher agents (`codex-scout`, `codex-build`,
+`@lyupro/llm-bridge` installs four Claude Code dispatcher agents (`codex-scout`, `codex-build`,
 `codex-review`, `codex-advisor`), a delegating runner and eight guard hooks into a Claude Code host, so
 implementation work runs on a Codex CLI subscription instead of the Claude one.
 
@@ -20,22 +20,22 @@ npm test -- "tests/cli/*.test.mjs"         # one directory
 npm run check:size                         # 400-line source-file gate, .file-size-limit.json
 npm run check:open-work                    # open-work register + live-step thresholds (strict)
 npm run release-check:rules-load-claude -- --model haiku   # before a release: both Claude binaries load a project install's rules core (paid, ~10 s)
-node bin/codex-bridge.mjs doctor           # what is installed on this host, is codex alive
+node bin/llm-bridge.mjs doctor           # what is installed on this host, is codex alive
 npm run dev:install                        # update --force into ~/.claude from this clone
 git config core.hooksPath .githooks        # enable the pre-commit size gate (once per clone)
 ```
 
 **Never run `node --test` directly.** `scripts/run-tests.mjs` gives the suite a throwaway
-`CODEX_HOME`; without it the installer tests drop `codex-bridge.rules` into the operator's real
+`CODEX_HOME`; without it the installer tests drop `llm-bridge.rules` into the operator's real
 `~/.codex/rules/`. `tests/home-isolation.test.mjs` fails loudly if that isolation is missing. The
-same command hands out `CODEX_BRIDGE_TEST_TMP`, the one root every temporary tree is created under
+same command hands out `LLM_BRIDGE_TEST_TMP`, the one root every temporary tree is created under
 and swept from — `tests/temp-tree.mjs` refuses to create a tree without it rather than quietly
 falling back to the shared temp directory.
 
 ## Architecture
 
 Two halves share the repository: the **package/installer** (`bin/`, `cli/`) and the literal
-**installed home image** (`src/home/`, copied one-to-one into `~/.lyupro/.codex-bridge/`; runner
+**installed home image** (`src/home/`, copied one-to-one into `~/.lyupro/.llm-bridge/`; runner
 modules are under `lib/`). Which module owns what, why the
 launcher/worker split exists and which incident shaped each boundary is in
 [`.claude/context/architecture.md`](.claude/context/architecture.md).
@@ -55,7 +55,7 @@ memory:**
 | `runner/`, `launcher.mjs`, `worker.mjs`, `worker.json` | write order and the worker's single source of orders |
 | `src/home/config.json`, any model id, any env or config key | seeded, never overwritten; no model literal belongs in `.mjs` |
 | `cli/install.mjs`, `cli/uninstall.mjs`, `cli/manifest.mjs`, permission rules | install grants the rules in the scope it installed into |
-| `agents/**`, dispatcher prompts, `hooks/order-gate.mjs`, `dispatcher-call.mjs`, anything that builds a command line | one line, `codex-bridge run`, never by path, no free text; the call itself is registry labels only |
+| `agents/**`, dispatcher prompts, `hooks/order-gate.mjs`, `dispatcher-call.mjs`, anything that builds a command line | one line, `llm-bridge run`, never by path, no free text; the call itself is registry labels only |
 | Any `spawn`/`spawnSync`/`execFile` call, the `shell` option, anything executing a command on PATH | the shell is never enabled; a `.cmd` shim goes through `cmd.exe` in one proven spelling |
 | Path comparison, `cli/invoked-directly.mjs` | Windows paths are compared normalized, symlinks deliberately unresolved |
 | Adding, moving or retiring a `cli/` module | every `cli/*.mjs` is reached from `bin`; an unwired module needs a plan decision |

@@ -13,7 +13,7 @@ import { readInstallRecordFile } from '../../cli/install-record.mjs';
 import { imageFingerprint } from '../../cli/install-owners.mjs';
 import { plannedContent } from '../../cli/copy.mjs';
 
-const env = { PATH: '', CODEX_BRIDGE_CWD: PACKAGE_ROOT };
+const env = { PATH: '', LLM_BRIDGE_CWD: PACKAGE_ROOT };
 const key = (host) => normalizeRepoPath(host.root);
 
 async function fixture(t) {
@@ -42,7 +42,7 @@ async function oldAgent(f, host) {
 async function snapshot(f) {
   const paths = [path.join(f.a.root, f.agent.relativeToRoot), f.agent.target,
     f.a.brandInstallRecordPath, f.a.settingsPath, f.b.settingsPath,
-    path.join(f.a.codexRulesDir, 'codex-bridge.rules'), f.a.brandConfigPath, f.a.brandConventionsPath];
+    path.join(f.a.codexRulesDir, 'llm-bridge.rules'), f.a.brandConfigPath, f.a.brandConventionsPath];
   return Promise.all(paths.map(async (target) => [await fs.readFile(target), (await fs.stat(target)).mtimeMs]));
 }
 
@@ -84,7 +84,7 @@ test('updated A removes a recorded orphan and prints its summary when B is edite
   await fs.writeFile(f.a.brandInstallRecordPath, JSON.stringify(f.record, null, 2) + '\n');
   const result = await update({ host: f.a, env });
   assert.equal(result.exitCode, 1);
-  assert.ok(result.output.startsWith('Updated codex-bridge: 1 updated, 1 removed.\nSource: '));
+  assert.ok(result.output.startsWith('Updated llm-bridge: 1 updated, 1 removed.\nSource: '));
   assert.equal(result.output.split(`Left ${f.b.root} behind:`).length - 1, 1);
   assert.deepEqual(await fs.readFile(path.join(f.a.root, f.agent.relativeToRoot)), await plannedContent(f.agent, f.a.brandRoot));
   await assert.rejects(fs.access(retired), { code: 'ENOENT' });
@@ -100,7 +100,7 @@ for (const current of [true, false]) {
     const before = await snapshot(f);
     const result = await update({ host: f.a, env, dryRun: true });
     assert.equal(result.exitCode, 0);
-    assert.ok(result.output.startsWith(current ? f.baseline.output + '\n' : 'Would update codex-bridge with '));
+    assert.ok(result.output.startsWith(current ? f.baseline.output + '\n' : 'Would update llm-bridge with '));
     assert.ok(result.output.includes(`Would update 1 file(s) and 0 hook(s) of ${f.b.root}.`));
     assert.doesNotMatch(result.output, /Updated 1 file/);
     assert.deepEqual(await snapshot(f), before);
@@ -113,7 +113,7 @@ test('current A and B preserve the existing up-to-date output byte-for-byte', as
   const result = await update({ host: f.a, env });
   assert.equal(result.exitCode, 0);
   assert.equal(result.output, f.baseline.output);
-  assert.ok(result.output.startsWith('codex-bridge is up to date with '));
+  assert.ok(result.output.startsWith('llm-bridge is up to date with '));
   assert.equal(result.output.split('\n').length, 1);
   assert.deepEqual(await snapshot(f), before);
 });
@@ -124,7 +124,7 @@ test('--force updates edited A without overwriting or advancing edited B', async
   await fs.writeFile(f.agent.target, 'Operator-edited B\n');
   const result = await update({ host: f.a, env, force: true });
   assert.equal(result.exitCode, 1);
-  assert.ok(result.output.startsWith('Updated codex-bridge: 1 overwritten.\n'));
+  assert.ok(result.output.startsWith('Updated llm-bridge: 1 overwritten.\n'));
   assert.equal(result.output.split(`Left ${f.b.root} behind:`).length - 1, 1);
   assert.deepEqual(await fs.readFile(path.join(f.a.root, f.agent.relativeToRoot)), await plannedContent(f.agent, f.a.brandRoot));
   assert.equal(await fs.readFile(f.agent.target, 'utf8'), 'Operator-edited B\n');
@@ -185,14 +185,14 @@ for (const stamp of ['aged', 'missing']) {
     const result = await update({ host: f.a, env });
     const record = await readInstallRecordFile(f.a);
     assert.equal(result.exitCode, 0);
-    assert.ok(result.output.startsWith('Updated codex-bridge.'));
+    assert.ok(result.output.startsWith('Updated llm-bridge.'));
     assert.equal(record.owners[key(f.a)].imageFingerprint, imageFingerprint(record.image));
     assert.notEqual(record.owners[key(f.a)].imageFingerprint, null);
     assert.deepEqual(await Promise.all(agents.map((item) => fs.readFile(item.target))), before);
     const refreshed = await fs.readFile(f.a.brandInstallRecordPath);
     const second = await update({ host: f.a, env });
     assert.equal(second.exitCode, 0);
-    assert.ok(second.output.startsWith('codex-bridge is up to date with '));
+    assert.ok(second.output.startsWith('llm-bridge is up to date with '));
     assert.deepEqual(await fs.readFile(f.a.brandInstallRecordPath), refreshed);
   });
 }

@@ -11,7 +11,7 @@ import { withTempTree } from '../temp-tree.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const GUARD = path.join(ROOT, 'src', 'home', 'hooks', 'reply-guard.mjs');
-const MESSAGE = 'codex-bridge: the host did not report agent_type for a subagent — the dispatcher gate cannot recognise dispatchers, so their answers are unchecked; run codex-bridge doctor.';
+const MESSAGE = 'llm-bridge: the host did not report agent_type for a subagent — the dispatcher gate cannot recognise dispatchers, so their answers are unchecked; run llm-bridge doctor.';
 
 function runGuard(root, payload) {
   const bridgeHome = path.join(root, 'bridge-home');
@@ -20,7 +20,7 @@ function runGuard(root, payload) {
     encoding: 'utf8',
     env: {
       ...process.env,
-      CODEX_BRIDGE_HOME: bridgeHome,
+      LLM_BRIDGE_HOME: bridgeHome,
       HOME: root,
       USERPROFILE: root,
     },

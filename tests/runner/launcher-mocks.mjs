@@ -67,14 +67,14 @@ const launcherMocksIsProbe = (args = []) => /(?:^|[\\s"])sandbox(?:[\\s"]|$)/.te
 childProcess.spawnSync = (command, args = [], options) => {
   if (command === 'git' || launcherMocksProbe === 'real') return launcherMocksRealSpawnSync(command, args, options);
   if (!launcherMocksIsProbe(args)) {
-    return { status: 0, signal: null, error: null, stderr: '', stdout: launcherMocksProbe === 'marker' ? 'codex-bridge-sandbox-ok' : '' };
+    return { status: 0, signal: null, error: null, stderr: '', stdout: launcherMocksProbe === 'marker' ? 'llm-bridge-sandbox-ok' : '' };
   }
   if (launcherMocksProbe === 'forbidden') throw new Error('A skipped probe must not spawn Codex');
   // Plan_60 D4: the 2026-09-24 double billing happened while the winner was still probing.
   if (launcherMocksProbeDelayMs) {
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, launcherMocksProbeDelayMs);
   }
-  return { status: 0, signal: null, error: null, stderr: '', stdout: 'codex-bridge-sandbox-ok' };
+  return { status: 0, signal: null, error: null, stderr: '', stdout: 'llm-bridge-sandbox-ok' };
 };
 
 childProcess.spawn = (command, args = [], options) => {
@@ -105,7 +105,7 @@ childProcess.spawn = (command, args = [], options) => {
     ? (finish) => setTimeout(finish, launcherMocksProbeDelayMs) : setImmediate;
   finishProbe(() => {
     child.emit('spawn');
-    child.stdout.end(launcherMocksIsProbe(args) ? 'codex-bridge-sandbox-ok\\n' : '');
+    child.stdout.end(launcherMocksIsProbe(args) ? 'llm-bridge-sandbox-ok\\n' : '');
     child.stderr.end();
     // Node's order: 'close' only after stdio has drained. Emitting it in the same tick as end()
     // would hand a close-driven reader an empty stdout, and the probe would miss its marker.

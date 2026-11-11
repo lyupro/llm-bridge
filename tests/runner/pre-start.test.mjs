@@ -139,14 +139,14 @@ test('the busy refusal reports on stderr without creating a run folder', (t) => 
   // Review 2026-09-17: even a busy writer now probes, so PATH must never reach the real Codex CLI.
   const bin = installFakeCodex(root, `
 const command = process.argv[2];
-if (command === 'sandbox') console.log('codex-bridge-sandbox-ok');
+if (command === 'sandbox') console.log('llm-bridge-sandbox-ok');
 else if (command === '--version') console.log('codex-cli fixture');
 else if (command === 'login' && process.argv[3] === 'status') console.log('Logged in using ChatGPT');
 else process.exitCode = 90;
 `);
   const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === 'PATH') || 'PATH';
   const output = runner(baseArgs('codex-build', repo, 'busy-order', 'busy refusal'), {
-    CODEX_RUNS_ROOT: runsRoot,
+    LLM_BRIDGE_RUNS_ROOT: runsRoot,
     [pathKey]: [bin, process.env[pathKey]].filter(Boolean).join(path.delimiter),
   }, repo);
 
@@ -171,7 +171,7 @@ test('the unsafe-for-cmd refusal records aborted_pre_start', (t) => {
   const source = launcherProcessMocks({ worker: 'forbidden', probe: 'marker' });
 
   const output = mockedLauncher(source, baseArgs('codex-review', repo, 'unsafe-order', 'unsafe refusal'), {
-    CODEX_RUNS_ROOT: runsRoot,
+    LLM_BRIDGE_RUNS_ROOT: runsRoot,
   }, repo);
 
   assert.equal(output.status, 1, output.stderr);
@@ -189,7 +189,7 @@ const realExit = process.exit;
 process.exit = (code = 0) => { process.exitCode = code; };
 `;
   const output = mockedLauncher(source, baseArgs('codex-review', repo, 'spawn-order', 'worker refusal'), {
-    CODEX_RUNS_ROOT: runsRoot,
+    LLM_BRIDGE_RUNS_ROOT: runsRoot,
   }, repo);
 
   assert.equal(output.status, 1, output.stderr);
@@ -237,7 +237,7 @@ process.exit = (code = 0) => { process.exitCode = code; };
 `;
 
   const output = mockedLauncher(source, baseArgs('codex-review', repo, 'gate-order', 'gate task'), {
-    CODEX_RUNS_ROOT: runsRoot,
+    LLM_BRIDGE_RUNS_ROOT: runsRoot,
   }, repo);
 
   assert.doesNotMatch(output.stderr, /`continue:` is required/);
@@ -266,7 +266,7 @@ test('a folder with a Codex session still sends the same order to the continuati
     tokens_reported: true,
   });
 
-  const output = runner(baseArgs('codex-review', repo, 'gate-order', 'gate task'), { CODEX_RUNS_ROOT: runsRoot }, repo);
+  const output = runner(baseArgs('codex-review', repo, 'gate-order', 'gate task'), { LLM_BRIDGE_RUNS_ROOT: runsRoot }, repo);
 
   assert.equal(output.status, 2, output.stderr);
   assert.match(output.stderr, /`continue:` is required/);
@@ -298,7 +298,7 @@ childProcess.spawn = (command, args = [], options) => {
 };
 `;
   const output = mockedLauncher(source, baseArgs('codex-review', repo, 'signed-out-order', 'codex refusal'), {
-    CODEX_RUNS_ROOT: runsRoot,
+    LLM_BRIDGE_RUNS_ROOT: runsRoot,
   }, repo);
 
   assert.equal(output.status, 5, output.stderr);
@@ -339,7 +339,7 @@ childProcess.spawn = (command, args = [], options) => {
 };
 `;
   const output = mockedLauncher(source, baseArgs('codex-review', repo, 'codex-order', 'codex refusal'), {
-    CODEX_RUNS_ROOT: runsRoot,
+    LLM_BRIDGE_RUNS_ROOT: runsRoot,
   }, repo);
 
   assert.equal(output.status, 1, output.stderr);

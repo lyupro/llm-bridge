@@ -2,7 +2,7 @@
 /**
  * Guards environment.mjs: which touched paths belong to the run and which to the tooling
  * writing alongside it.
- *   node --test agents/codex-bridge/meta/environment.test.mjs
+ *   node --test agents/llm-bridge/meta/environment.test.mjs
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -108,7 +108,7 @@ const newFileCases = [
   { name: 'null after text', after: null },
   { name: 'missing before text', before: undefined },
   { name: 'missing after text', after: undefined },
-  { name: 'short hash', after: `# codex-bridge-state-v2\nU\t12:abc\t"${letter}"\n` },
+  { name: 'short hash', after: `# llm-bridge-state-v2\nU\t12:abc\t"${letter}"\n` },
   { name: 'legacy untracked state without hash', before: '', after: `U\t12\t${letter}\n` },
   { name: 'third argument absent', noSnapshots: true },
   { name: 'new-file key absent', envNewFilePaths: undefined },

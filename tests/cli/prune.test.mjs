@@ -220,7 +220,7 @@ test('usage refusal keeps prune help inside a single JSON error document', async
 
   assert.equal(result.exitCode, 2);
   assert.equal(payload.status, 'error');
-  assert.equal(payload.error, 'codex-bridge prune: unknown option "--bogus"\nRun codex-bridge prune -h for usage.');
+  assert.equal(payload.error, 'llm-bridge prune: unknown option "--bogus"\nRun llm-bridge prune -h for usage.');
 });
 
 test('plain usage refusal ends with prune help', async (t) => {
@@ -229,5 +229,5 @@ test('plain usage refusal ends with prune help', async (t) => {
   const result = await prune(['alpha', '--bogus'], options(root));
 
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output.endsWith('Run codex-bridge prune -h for usage.'), true);
+  assert.equal(result.output.endsWith('Run llm-bridge prune -h for usage.'), true);
 });

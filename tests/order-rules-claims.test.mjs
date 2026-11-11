@@ -53,7 +53,7 @@ const ownerMessages = [
     'Order id collision: "order-1" already belongs to run folder C:/runs/2026-08-15_090000_plan42-run2 ' +
       '(slug plan42-run2, started_at 2026-08-15T09:00:00.000Z), recorded before the task header (hash scheme 2), ' +
       'so its task cannot be compared. Its answer is already on disk in that folder ' +
-      '(codex-bridge read "C:/runs/2026-08-15_090000_plan42-run2"). ' +
+      '(llm-bridge read "C:/runs/2026-08-15_090000_plan42-run2"). ' +
       'Another pass of that order needs a continue:/retry: header line; a new task needs a new order id.'],
 ];
 const diagnosticMessages = [
@@ -76,13 +76,13 @@ const diagnosticMessages = [
   ['next-action', { variant: 'pending-no-run' }, 'next-action',
     'Action: no run exists for this order and --no-wait never starts one; call again without --no-wait to start it'],
   ['next-action', { variant: 'capacity' }, 'next-action',
-    "Action: wait or change this role's model (/codex-bridge:model), then repeat the same order once with a retry: grant; never resume: this run; a second CAPACITY for the same order goes to the next executor"],
+    "Action: wait or change this role's model (/llm-bridge:model), then repeat the same order once with a retry: grant; never resume: this run; a second CAPACITY for the same order goes to the next executor"],
   ['next-action', { variant: 'grant-decision' }, 'next-action',
     "Action: nothing was started and no quota was spent; the grant does not fit the run it names: read that run's outcome, then call again with the grant or new order id the refusal names; never change the task to get past it"],
   ['next-action', { variant: 'run-in-progress' }, 'next-action',
     'Action: nothing was started and no quota was spent; another run holds this order or writes in this tree: wait for it (repeating the same order attaches to a run of that order), then call again; never stop it without the operator'],
   ['next-action', { variant: 'runs-root-retired' }, 'next-action',
-    'Action: nothing was started and no quota was spent; the runs root setting points at a retired location: show this to the operator to fix CODEX_RUNS_ROOT, then repeat the same order'],
+    'Action: nothing was started and no quota was spent; the runs root setting points at a retired location: show this to the operator to fix LLM_BRIDGE_RUNS_ROOT, then repeat the same order'],
   ['next-action', { variant: 'repository-detached' }, 'next-action',
     'Action: nothing was started and no quota was spent; the repository is not on the branch an abandoned run expects: show this to the operator and repair the branch only with their approval, then repeat the same order'],
   ['next-action', { variant: 'sandbox-dead' }, 'next-action',
@@ -247,7 +247,7 @@ test('issued holder text composes cleanly while handwritten or unknown parameter
     });
     checkOutgoingRefusal([text, orderDiagnosticMessage('run-not-created')].join(' '), 'claims-probe');
     orderDiagnosticMessage('codex-availability-detail', { variant: 'failed', unknown: 'handwritten parameter' });
-  `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+  `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const entries = fs.readdirSync(path.join(root, 'order-text-violations')).flatMap((file) =>

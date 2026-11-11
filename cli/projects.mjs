@@ -71,12 +71,12 @@ function parseArgs(args) {
       continue;
     }
     if (arg.startsWith('-')) {
-      return { error: withCommandHelp('projects', `codex-bridge projects: unknown option "${arg}"`) };
+      return { error: withCommandHelp('projects', `llm-bridge projects: unknown option "${arg}"`) };
     }
     positional.push(arg);
   }
   if (positional.length > 1) {
-    return { error: withCommandHelp('projects', 'codex-bridge projects accepts at most one project name.') };
+    return { error: withCommandHelp('projects', 'llm-bridge projects accepts at most one project name.') };
   }
   return { json, projectName: positional[0] || null };
 }
@@ -112,7 +112,7 @@ export function projects(argv = [], options = {}) {
     if (rows === null) {
       return {
         exitCode: 1,
-        output: `codex-bridge projects: unknown project "${projectName}"`,
+        output: `llm-bridge projects: unknown project "${projectName}"`,
       };
     }
     return { exitCode: 0, output: output(rows, RUN_COLUMNS, renderOptions, root) };

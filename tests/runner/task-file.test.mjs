@@ -39,7 +39,7 @@ function run(t, text, extra = [], questions) {
   return spawnSync(process.execPath, ['--input-type=module', '-e', script], {
     cwd: root,
     encoding: 'utf8',
-    env: { ...process.env, CODEX_RUNS_ROOT: path.join(root, 'runs') },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs') },
   });
 }
 

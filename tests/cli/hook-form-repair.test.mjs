@@ -47,7 +47,7 @@ test('update switches path registrations to the short form when a proven launche
   const settings = JSON.parse(await fs.readFile(host.settingsPath, 'utf8'));
   const targets = hookTargets(host, env);
   for (const target of targets) {
-    const expected = `codex-bridge hook ${target.definition.name}`;
+    const expected = `llm-bridge hook ${target.definition.name}`;
     assert.equal(settings.hooks[target.definition.event].flatMap((group) => group.hooks)
       .filter((entry) => entry.command === expected).length, 1);
   }
@@ -58,7 +58,7 @@ test('duplicate forms under two matchers converge to one entry that keeps the de
   await install({ host, env: { PATH: '' } });
   const [target] = hookTargets(host, { PATH: '' }).filter(({ definition }) => definition.name === 'order-gate');
   const { event, matcher, name } = target.definition;
-  const short = `codex-bridge hook ${name}`;
+  const short = `llm-bridge hook ${name}`;
   const foreign = { type: 'command', command: 'operator-own-hook' };
   const settings = JSON.parse(await fs.readFile(host.settingsPath, 'utf8'));
   settings.hooks[event] = settings.hooks[event]

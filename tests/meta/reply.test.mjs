@@ -57,7 +57,7 @@ test('successful replies use the read command instead of a raw file path', () =>
   const { meta, reply } = collect(dir, 'codex-scout', 0);
 
   assert.equal(meta.status, 'OK');
-  assert.ok(reply.includes(`Log: codex-bridge read ${dir}`));
+  assert.ok(reply.includes(`Log: llm-bridge read ${dir}`));
   assert.doesNotMatch(reply, /raw\.log/);
 });
 
@@ -140,7 +140,7 @@ test('failed replies report events and stderr sizes plus the read command', () =
   const { reply } = collect(dir, 'codex-build', 1);
 
   assert.match(reply, /Artifacts: events\.jsonl \d+ B · stderr\.log \d+ B/);
-  assert.ok(reply.includes(`Log: codex-bridge read ${dir}`));
+  assert.ok(reply.includes(`Log: llm-bridge read ${dir}`));
   assert.doesNotMatch(reply, /raw\.log|log_bytes/);
   assert.equal(reply, [
     'FAIL — panic: failed before result',
@@ -150,7 +150,7 @@ test('failed replies report events and stderr sizes plus the read command', () =
     'Situation: evidence-unknown · silence=unknown · threshold=unconfigured · command=unknown',
     'Continuation: automatic blocked (recovery-policy-missing, writer-role-not-approved, thread-unavailable, session-evidence-not-observed, command-evidence-unknown, threshold-unconfigured, process-tree-stop-unverified) · grant blocked (writer-role-not-approved, stop-record-missing, thread-unavailable, session-evidence-not-observed, process-tree-stop-unverified)',
     'Treatment: inspect-evidence · diagnostic only, nothing runs it',
-    `Log: codex-bridge read ${dir}`,
+    `Log: llm-bridge read ${dir}`,
   ].join('\n'));
 });
 

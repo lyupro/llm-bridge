@@ -33,19 +33,19 @@ async function fixture(t, { writeRecord = true } = {}) {
     brandRoot: host.brandRoot,
   });
   const legacy = {
-    name: '@lyupro/codex-bridge', version: '0.1.0',
+    name: '@lyupro/llm-bridge', version: '0.1.0',
     installedAt: '2026-08-10T20:00:00.000Z', mode: 'copy',
     files: [
-      { root: 'claude', path: 'agents/codex-bridge/dispatcher.md' },
+      { root: 'claude', path: 'agents/llm-bridge/dispatcher.md' },
       { root: 'brand', path: 'hooks/reply-guard.mjs' },
     ],
     fingerprints: {
-      claude: { 'agents/codex-bridge/dispatcher.md': 'a'.repeat(64) },
+      claude: { 'agents/llm-bridge/dispatcher.md': 'a'.repeat(64) },
       brand: { 'hooks/reply-guard.mjs': 'b'.repeat(64) },
     },
     hooks: [{ event: 'SubagentStop', root: 'brand', path: 'hooks/reply-guard.mjs',
-      command: 'codex-bridge hook reply-guard' }],
-    rules: { path: path.join(host.codexRulesDir, 'codex-bridge.rules'), fingerprint: 'c'.repeat(64) },
+      command: 'llm-bridge hook reply-guard' }],
+    rules: { path: path.join(host.codexRulesDir, 'llm-bridge.rules'), fingerprint: 'c'.repeat(64) },
   };
   let record = withOwner(null, host, legacy);
   record = withOwner(record, otherHost, { ...legacy, version: '0.2.0' });
@@ -62,7 +62,7 @@ async function fixture(t, { writeRecord = true } = {}) {
 test('the hook-side incomplete inventory repair matches the CLI command constant', async (t) => {
   const { host } = await fixture(t);
   const reason = readOwnerRoots({ brandRoot: host.brandRoot });
-  assert.equal(INVENTORY_CONFIRM_COMMAND, 'codex-bridge inventory confirm');
+  assert.equal(INVENTORY_CONFIRM_COMMAND, 'llm-bridge inventory confirm');
   assert.equal(reason.problem, 'inventory-incomplete');
   const command = reason.detail.match(/, run (.+)\.$/);
   assert.ok(command);
@@ -114,7 +114,7 @@ test('yes completes inventory, drops legacy, and preserves every other raw field
   assert.ok(question.includes(`  ${missing} (folder does not exist)`));
   assert.ok(question.includes("Confirming lets the last recorded host's uninstall remove the shared image."));
   assert.ok(question.includes('A host that uses this home but is not listed must be enrolled first: '
-    + 'codex-bridge install --host "<path>".'));
+    + 'llm-bridge install --host "<path>".'));
   const { legacy: _legacy, ...expected } = record;
   expected.inventory = 'complete';
   const actual = await readInstallRecordFile(host);
@@ -211,7 +211,7 @@ test('no record names update and does not create a missing home', async (t) => {
   const { host } = await fixture(t, { writeRecord: false });
   const result = await inventoryConfirm({ host, isTTY: true, prompt: noPrompt });
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /codex-bridge update/);
+  assert.match(result.output, /llm-bridge update/);
   await assert.rejects(fs.access(host.brandRoot), { code: 'ENOENT' });
 });
 
@@ -227,7 +227,7 @@ test('a missing home refuses before a record read can create the home', async (t
   });
   const result = await inventoryConfirm({ host, isTTY: true, prompt: async () => true });
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /No format-2 installation record was found.*codex-bridge update/);
+  assert.match(result.output, /No format-2 installation record was found.*llm-bridge update/);
   assert.equal(reads, 0, 'no record read is allowed without a lifecycle ticket');
   await assert.rejects(fs.access(installRecordPath(host)), { code: 'ENOENT' });
   await assert.rejects(fs.access(host.brandRoot), { code: 'ENOENT' });
@@ -239,7 +239,7 @@ test('format 1 names update without writing or asking', async (t) => {
   const before = await recordSnapshot(host);
   const result = await inventoryConfirm({ host, isTTY: true, prompt: noPrompt });
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /codex-bridge update/);
+  assert.match(result.output, /llm-bridge update/);
   assert.deepEqual(await recordSnapshot(host), before);
 });
 
@@ -267,7 +267,7 @@ for (const [name, damage] of [
     const before = await recordSnapshot(host);
     const result = await inventoryConfirm({ host, isTTY: true, prompt: noPrompt });
     assert.equal(result.exitCode, 1);
-    assert.match(result.output, /codex-bridge update/);
+    assert.match(result.output, /llm-bridge update/);
     assert.deepEqual(await recordSnapshot(host), before);
   });
 }
@@ -278,6 +278,6 @@ test('invalid JSON names update without asking or writing', async (t) => {
   const before = await recordSnapshot(host);
   const result = await inventoryConfirm({ host, isTTY: true, prompt: noPrompt });
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /codex-bridge update/);
+  assert.match(result.output, /llm-bridge update/);
   assert.deepEqual(await recordSnapshot(host), before);
 });

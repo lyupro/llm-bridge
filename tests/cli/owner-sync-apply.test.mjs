@@ -306,7 +306,7 @@ test('ownerApplyLines formats each terminal status and reuses planner conflict/u
   ];
   assert.deepEqual(ownerApplyLines({ owners }), [
     'Updated 2 file(s) and 3 hook(s) of D.',
-    'Left E behind: Copy failed; run codex-bridge update --host "E".',
+    'Left E behind: Copy failed; run llm-bridge update --host "E".',
     ...ownerSyncLines({ owners: [conflict, unreachable] }),
   ]);
   assert.deepEqual(ownerApplyLines({ owners: [{ root: 'A', status: 'in-sync' }] }), []);

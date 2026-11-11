@@ -7,7 +7,7 @@ import { platformSandboxArgs } from './sandbox-flags.mjs';
 import { resolveCodexHome } from '../codex-home.mjs';
 import { snapshotSandboxLogs, diagnoseSandbox, formatSandboxDiagnosis } from './sandbox-diagnosis.mjs';
 
-export const SANDBOX_PROBE_MARKER = 'codex-bridge-sandbox-ok';
+export const SANDBOX_PROBE_MARKER = 'llm-bridge-sandbox-ok';
 // Plan_57 D12/D19: a platform is judged only after both outcomes were seen live. Linux joined on
 // 2026-09-17: dead on an Ubuntu 24.04 VPS (bwrap without a user namespace, exit 1, no marker), alive
 // on the same host after the AppArmor repair. macOS has never been observed.

@@ -1,4 +1,4 @@
-/** Tracks which Claude Code hosts own the shared Codex bridge rules file. */
+/** Tracks which Claude Code hosts own the shared Codex rules file. */
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';

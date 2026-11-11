@@ -1,4 +1,4 @@
-/** Merges and removes named codex-bridge hooks without disturbing host settings. */
+/** Merges and removes named llm-bridge hooks without disturbing host settings. */
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
@@ -27,7 +27,7 @@ export function commandReachable(name = CLI_NAMES[0], env = process.env) {
  * The version the command on PATH reports, or null when there is none or it will not say.
  *
  * Existence used to be the only question, and on 2026-08-11 that cost the operator every guard on
- * the machine: an install from the clone wrote `codex-bridge hook <name>` while the command on
+ * the machine: an install from the clone wrote `llm-bridge hook <name>` while the command on
  * PATH was the previous release, which has no `hook` subcommand. Every guard then failed before it
  * could decide anything, and the host refused Bash, PowerShell, file edits and agent launches.
  */
@@ -67,14 +67,14 @@ export function hookRegistration(name, target, probe) {
     return {
       command: shortCommandFor(name),
       form: 'short',
-      reason: `codex-bridge on PATH launches guards from this home (${probe.homeRoot})`,
+      reason: `llm-bridge on PATH launches guards from this home (${probe.homeRoot})`,
     };
   }
   return { command: commandFor(target), form: 'path', reason: `${probe.reason}; the installed copy will execute` };
 }
 
 export function commandForm(command) {
-  return command.startsWith('codex-bridge hook ') ? 'short' : 'path';
+  return command.startsWith('llm-bridge hook ') ? 'short' : 'path';
 }
 
 function normalizeSpec(specOrPath) {
@@ -177,7 +177,7 @@ export async function inspectHook(settingsPath, specOrPath) {
 
 function backupName(settingsPath) {
   const stamp = new Date().toISOString().replaceAll(':', '-');
-  return `${settingsPath}.codex-bridge-backup-${stamp}-${randomUUID()}`;
+  return `${settingsPath}.llm-bridge-backup-${stamp}-${randomUUID()}`;
 }
 
 function runKey(settingsPath) {

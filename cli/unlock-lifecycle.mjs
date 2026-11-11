@@ -25,7 +25,7 @@ function renderClear(observation) {
       break;
     case 'kernel-managed':
       lines.push('Kernel-managed lock; nothing to clear.');
-      lines.push('Run codex-bridge unlock --lifecycle to see its holder.');
+      lines.push('Run llm-bridge unlock --lifecycle to see its holder.');
       break;
     case 'refused':
       lines.push(`Refused: ${observation.reason}. Nothing was removed.`);
@@ -39,7 +39,7 @@ function renderClear(observation) {
       exitCode = 1;
       break;
     case 'no-home':
-      lines.push(`codex-bridge unlock --lifecycle: no package home at ${homeRoot}; nothing to inspect.`);
+      lines.push(`llm-bridge unlock --lifecycle: no package home at ${homeRoot}; nothing to inspect.`);
       exitCode = 1;
       break;
     default:
@@ -61,7 +61,7 @@ export async function unlockLifecycle(argv, options = {}) {
     const argument = argv[accepted];
     return {
       exitCode: 2,
-      output: withCommandHelp('unlock', `codex-bridge unlock --lifecycle: unexpected argument "${argument}".`),
+      output: withCommandHelp('unlock', `llm-bridge unlock --lifecycle: unexpected argument "${argument}".`),
     };
   }
   const homeRoot = options.homeRoot ?? resolveBrandHome().root;
@@ -83,7 +83,7 @@ export async function unlockLifecycle(argv, options = {}) {
       if (strategy === 'file') {
         lines.push(`Holder process: ${liveness}.`);
         if (liveness === 'dead') {
-          lines.push('The file was left by a crash. Clear it with codex-bridge unlock --lifecycle --clear');
+          lines.push('The file was left by a crash. Clear it with llm-bridge unlock --lifecycle --clear');
         }
       }
       break;
@@ -92,7 +92,7 @@ export async function unlockLifecycle(argv, options = {}) {
       exitCode = 1;
       break;
     case 'no-home':
-      lines.push(`codex-bridge unlock --lifecycle: no package home at ${homeRoot}; nothing to inspect.`);
+      lines.push(`llm-bridge unlock --lifecycle: no package home at ${homeRoot}; nothing to inspect.`);
       exitCode = 1;
       break;
     default:

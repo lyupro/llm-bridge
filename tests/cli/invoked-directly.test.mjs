@@ -11,14 +11,14 @@ import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 import { isInvokedDirectly } from '../../cli/invoked-directly.mjs';
 
 const run = promisify(execFile);
-const BIN = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..', 'bin', 'codex-bridge.mjs');
+const BIN = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..', 'bin', 'llm-bridge.mjs');
 
 test('a module started as itself is invoked directly', () => {
   assert.equal(isInvokedDirectly(BIN, pathToFileURL(BIN).href), true);
 });
 
 test('an unnormalised spelling of the same file still counts', () => {
-  const detoured = path.join(path.dirname(BIN), '..', 'bin', 'codex-bridge.mjs');
+  const detoured = path.join(path.dirname(BIN), '..', 'bin', 'llm-bridge.mjs');
   assert.equal(isInvokedDirectly(detoured, pathToFileURL(BIN).href), true);
 });
 
@@ -31,7 +31,7 @@ test('a missing argv entry does not count', () => {
 });
 
 test('a path that cannot be resolved falls back to plain resolution', () => {
-  const absent = path.join(os.tmpdir(), 'codex-bridge-not-here', 'bin.mjs');
+  const absent = path.join(os.tmpdir(), 'llm-bridge-not-here', 'bin.mjs');
   assert.equal(isInvokedDirectly(absent, pathToFileURL(absent).href), true);
 });
 
@@ -41,7 +41,7 @@ test('the CLI prints its version when started through a symlink', async (t) => {
   // guard that prints nothing permits everything it was installed to refuse.
   const root = makeTempTree('bridge-link-');
   t.after(() => removeTempTree(root));
-  const link = path.join(root, 'codex-bridge.mjs');
+  const link = path.join(root, 'llm-bridge.mjs');
   try {
     await fs.symlink(BIN, link, 'file');
   } catch (err) {

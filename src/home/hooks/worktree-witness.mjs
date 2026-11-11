@@ -92,7 +92,7 @@ process.stdout.write(JSON.stringify({
       + `files are already excluded. These paths changed outside the scope of live run folder ${dir} `
       + `(agent ${status.agent}, slug ${status.slug}): ${paths}. The snapshot does not show who changed `
       + `these paths; they may be yours, another session's or a tool's. If they are your own edits, `
-      + `revert them or stop the run with codex-bridge stop ${folder}, and keep further changes out `
+      + `revert them or stop the run with llm-bridge stop ${folder}, and keep further changes out `
       + `of this tree until the run ends. If they are not yours, leave them alone and report them `
       + `to the operator, because reverting would destroy someone else's work.`,
   },

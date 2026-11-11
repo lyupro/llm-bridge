@@ -11,14 +11,14 @@ function normalizeRoot(root) {
 }
 
 export function probeHookLauncher({ env, brandRoot }) {
-  const result = runReachableCommand('codex-bridge', ['hook', '--home'], env);
-  if (!result) return { ok: false, reason: 'codex-bridge is not on PATH' };
+  const result = runReachableCommand('llm-bridge', ['hook', '--home'], env);
+  if (!result) return { ok: false, reason: 'llm-bridge is not on PATH' };
   if (result.status !== 0) {
-    return { ok: false, reason: 'codex-bridge on PATH is not a launcher (hook --home failed)' };
+    return { ok: false, reason: 'llm-bridge on PATH is not a launcher (hook --home failed)' };
   }
   let answer;
   try {
-    answer = parseJsonText('codex-bridge hook --home', result.stdout);
+    answer = parseJsonText('llm-bridge hook --home', result.stdout);
   } catch {
     return { ok: false, reason: 'malformed launcher answer' };
   }

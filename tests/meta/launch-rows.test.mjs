@@ -114,7 +114,7 @@ for (const [agent, result] of agents) {
       assert.equal(meta.status, status, meta.reason);
       assert.ok(logAt >= 3);
       assert.deepEqual(rows.slice(logAt - 3, logAt), [retentionRow, probeRow, modelRow]);
-      assert.ok(rows[logAt].includes(`Log: codex-bridge read ${dir}`));
+      assert.ok(rows[logAt].includes(`Log: llm-bridge read ${dir}`));
       assert.equal(rows.filter((row) => row.startsWith('Retention: ')).length, 1);
       assert.equal(rows.filter((row) => row.startsWith('Sandbox probe: ')).length, 1);
     });

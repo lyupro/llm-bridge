@@ -59,7 +59,7 @@ test('uninstall leaves shared rules for another owner and removes them for the l
   });
   await install({ host: first });
   await install({ host: second });
-  const rulesPath = path.join(codexHome, 'rules', 'codex-bridge.rules');
+  const rulesPath = path.join(codexHome, 'rules', 'llm-bridge.rules');
   assert.equal((await readRulesRegistry(first)).owners.length, 2);
 
   const removedFirst = await uninstall({ host: first });
@@ -71,7 +71,7 @@ test('uninstall leaves shared rules for another owner and removes them for the l
   });
 
   const dryRun = await uninstall({ host: second, dryRun: true });
-  assert.match(dryRun.output, /Would remove .*codex-bridge\.rules/);
+  assert.match(dryRun.output, /Would remove .*llm-bridge\.rules/);
   await fs.access(rulesPath);
   assert.equal((await uninstall({ host: second })).exitCode, 0);
   await assert.rejects(() => fs.access(rulesPath), { code: 'ENOENT' });
@@ -160,7 +160,7 @@ test('uninstall preserves a manually changed rules file and explains why', async
   await fs.writeFile(rulesPath, 'operator change');
   const result = await uninstall({ host });
   assert.equal(result.exitCode, 0);
-  assert.match(result.output, /Left .*codex-bridge\.rules.*contents changed/);
+  assert.match(result.output, /Left .*llm-bridge\.rules.*contents changed/);
   assert.equal(await fs.readFile(rulesPath, 'utf8'), 'operator change');
 });
 
@@ -174,7 +174,7 @@ test('uninstall accepts a legacy record without rules metadata', async (t) => {
   await fs.writeFile(recordPath, `${JSON.stringify(legacy, null, 2)}\n`);
   // D6 keeps format-1 images because their complete owner inventory cannot be proven.
   assert.equal((await uninstall({ host })).exitCode, 1);
-  assert.equal(await fs.readFile(rulesPath, 'utf8'), await fs.readFile('src/codex/rules/codex-bridge.rules', 'utf8'));
+  assert.equal(await fs.readFile(rulesPath, 'utf8'), await fs.readFile('src/codex/rules/llm-bridge.rules', 'utf8'));
 });
 
 test('uninstall without an ownership registry uses the legacy fingerprint behavior', async (t) => {
@@ -197,7 +197,7 @@ test('uninstall completes with a corrupt registry and preserves shared rules', a
   const result = await uninstall({ host });
   assert.equal(result.exitCode, 0);
   assert.match(result.output, /Left .*rules ownership registry is invalid.*ownership is unknown/i);
-  assert.deepEqual(await fs.readFile(record.rules.path), await fs.readFile('src/codex/rules/codex-bridge.rules'));
+  assert.deepEqual(await fs.readFile(record.rules.path), await fs.readFile('src/codex/rules/llm-bridge.rules'));
   for (const file of record.files) {
     await assert.rejects(() => fs.access(recordTarget(host, file)), { code: 'ENOENT' });
   }

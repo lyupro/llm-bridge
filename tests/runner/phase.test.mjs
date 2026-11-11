@@ -50,7 +50,7 @@ process.exitCode = await runCodex(${JSON.stringify(args)});
   // raw argv: run the launcher with mocked process APIs in an isolated Node module.
   const output = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
     cwd: repo, input: '', encoding: 'utf8', timeout: 10_000, windowsHide: true,
-    env: { ...process.env, CODEX_BRIDGE_HOME: home, CODEX_RUNS_ROOT: runs },
+    env: { ...process.env, LLM_BRIDGE_HOME: home, LLM_BRIDGE_RUNS_ROOT: runs },
   });
   return { output, runs, repo, root, home };
 }
@@ -185,7 +185,7 @@ await import(${JSON.stringify(CONFIG.href)});
 `;
     // raw argv: isolate the run-config entry point to verify its exact display output.
     const output = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
-      encoding: 'utf8', windowsHide: true, env: { ...process.env, CODEX_BRIDGE_HOME: home },
+      encoding: 'utf8', windowsHide: true, env: { ...process.env, LLM_BRIDGE_HOME: home },
     });
     assert.equal(output.status, 0, output.stderr);
     const expected = budget === 15

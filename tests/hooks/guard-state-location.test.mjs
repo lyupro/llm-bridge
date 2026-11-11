@@ -15,7 +15,7 @@ const GUARD = path.resolve(fileURLToPath(new URL('../../src/home/hooks/reply-gua
 test('a blocked reply spends its try under state/ and writes nothing into ~/.claude/logs', async (t) => {
   const root = makeTempTree('bridge-guard-state-');
   t.after(() => removeTempTree(root));
-  const brand = path.join(root, '.lyupro', '.codex-bridge');
+  const brand = path.join(root, '.lyupro', '.llm-bridge');
   const result = spawnSync(process.execPath, [GUARD], {
     input: JSON.stringify({
       agent_type: 'codex-build',
@@ -23,7 +23,7 @@ test('a blocked reply spends its try under state/ and writes nothing into ~/.cla
       last_assistant_message: 'I changed the files myself.',
     }),
     encoding: 'utf8',
-    env: { ...process.env, CODEX_RUNS_ROOT: path.join(root, 'runs'), HOME: root, USERPROFILE: root, CODEX_BRIDGE_HOME: brand },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'), HOME: root, USERPROFILE: root, LLM_BRIDGE_HOME: brand },
   });
   assert.equal(result.status, 0);
   assert.equal(JSON.parse(result.stdout).decision, 'block');

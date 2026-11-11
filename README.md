@@ -1,28 +1,27 @@
-# codex-bridge
+# llm-bridge
 
 **Delegate implementation, reconnaissance, review and design advice from Claude Code to Codex — eight host guards, zero runtime dependencies, zero build steps.**
 
-[![npm version](https://img.shields.io/npm/v/@lyupro/codex-bridge)](https://www.npmjs.com/package/@lyupro/codex-bridge)
-[![Node.js](https://img.shields.io/node/v/@lyupro/codex-bridge)](https://www.npmjs.com/package/@lyupro/codex-bridge)
+[![npm version](https://img.shields.io/npm/v/@lyupro/llm-bridge)](https://www.npmjs.com/package/@lyupro/llm-bridge)
+[![Node.js](https://img.shields.io/node/v/@lyupro/llm-bridge)](https://www.npmjs.com/package/@lyupro/llm-bridge)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[![npm downloads](https://img.shields.io/npm/dm/@lyupro/codex-bridge)](https://www.npmjs.com/package/@lyupro/codex-bridge)
-[![npm unpacked size](https://img.shields.io/npm/unpacked-size/@lyupro/codex-bridge)](https://www.npmjs.com/package/@lyupro/codex-bridge)
+[![npm downloads](https://img.shields.io/npm/dm/@lyupro/llm-bridge)](https://www.npmjs.com/package/@lyupro/llm-bridge)
+[![npm unpacked size](https://img.shields.io/npm/unpacked-size/@lyupro/llm-bridge)](https://www.npmjs.com/package/@lyupro/llm-bridge)
 [![dependencies: zero](https://img.shields.io/badge/dependencies-zero-brightgreen)](package.json)
 
-Agentic coding spends one model subscription on everything, and implementation is the expensive part. codex-bridge moves that work to a separate [Codex CLI](https://developers.openai.com/codex/cli) subscription: Claude Code plans, dispatches and accepts, Codex executes — and every delegated run is guarded, verified and audited on disk.
+Agentic coding spends one model subscription on everything, and implementation is the expensive part. llm-bridge moves that work to a separate [Codex CLI](https://developers.openai.com/codex/cli) subscription: Claude Code plans, dispatches and accepts, Codex executes — and every delegated run is guarded, verified and audited on disk.
 
 ## Install
 
 ```bash
-npm i -g @lyupro/codex-bridge   # puts both command names on PATH
-codex-bridge install            # into ~/.claude and ~/.lyupro/.codex-bridge/
-codexb install                  # the short name, same command
+npm i -g @lyupro/llm-bridge   # puts the command on PATH
+llm-bridge install            # into ~/.claude and ~/.lyupro/.llm-bridge/
 ```
 
-Two other entry points reach the same command: `npx @lyupro/codex-bridge install` for a one-off run without a global install, and `node bin/codex-bridge.mjs install` from a clone. Every command below works through all three.
+Two other entry points reach the same command: `npx @lyupro/llm-bridge install` for a one-off run without a global install, and `node bin/llm-bridge.mjs install` from a clone. Every command below works through all three.
 
-Shipped agents invoke delegated runs through `codex-bridge run`. This is a permission contract,
+Shipped agents invoke delegated runs through `llm-bridge run`. This is a permission contract,
 not a style choice: the stable package command lets host permission rules match the invocation
 without exposing an installation-specific absolute path and prompting on every delegation.
 
@@ -32,7 +31,7 @@ Use `--scope project` to install the Claude Code-facing files under `<repo>/.cla
 
 Installation has two roots:
 
-- `~/.lyupro/.codex-bridge/` contains package runtime files, guards, configuration, conventions, the installation record, and run records under `runs/` as user data.
+- `~/.lyupro/.llm-bridge/` contains package runtime files, guards, configuration, conventions, the installation record, and run records under `runs/` as user data.
 - The selected Claude Code root (`~/.claude/` or `<repo>/.claude/`) contains the four agents (`codex-scout`, `codex-build`, `codex-review`, `codex-advisor`), two slash commands, and merged hook registrations in `settings.json`. Before the move, existing run records remain in `~/.claude/codex-runs/`.
 
 The repository's `src/home/` directory is the literal image copied into the branded root: its
@@ -41,9 +40,9 @@ Only npm's `package.json` is copied into that root from outside the image.
 
 Before every `settings.json` write, the existing file is backed up. Existing settings and foreign hooks are preserved. `--dry-run` prints the plan without writing.
 
-If a global install and a clone coexist, you have two package copies. `codex-bridge update`, `codexb update`, and the clone entry point copy files from whichever copy launched the command; using the wrong one can replace a newer host installation with older files.
+If a global install and a clone coexist, you have two package copies. `llm-bridge update`, `codexb update`, and the clone entry point copy files from whichever copy launched the command; using the wrong one can replace a newer host installation with older files.
 
-Run records in `~/.lyupro/.codex-bridge/runs/` (or `~/.claude/codex-runs/` before the move) are user data. Uninstall, including `--purge`, never removes either folder.
+Run records in `~/.lyupro/.llm-bridge/runs/` (or `~/.claude/codex-runs/` before the move) are user data. Uninstall, including `--purge`, never removes either folder.
 
 ## Requirements
 
@@ -66,34 +65,34 @@ The current suite contains **5900 automated tests: 5896 passing and 4 skipped**.
 ## Verify
 
 ```bash
-codex-bridge doctor
+llm-bridge doctor
 ```
 
 Output on a healthy host (trimmed):
 
 ```text
 [ok] host: ~/.claude (user, exists)
-[ok] installation: @lyupro/codex-bridge@0.5.1 (matches package)
+[ok] installation: @lyupro/llm-bridge@0.5.1 (matches package)
 [ok] files: 53 installed file(s) present
 [ok] homeImage: 167 image file(s) on disk match this package
-[ok] rules: ~/.codex/rules/codex-bridge.rules (matches record)
+[ok] rules: ~/.codex/rules/llm-bridge.rules (matches record)
 [ok] permissions: installed (24/24 own strings in allow/deny)
-[ok] hook:SubagentStop: matcher * -> ~/.lyupro/.codex-bridge/hooks/reply-guard.mjs
-[ok] hook:PreToolUse: matcher Agent|Task -> ~/.lyupro/.codex-bridge/hooks/order-gate.mjs
-[ok] hook:PreToolUse: matcher Write|Edit|MultiEdit|NotebookEdit -> ~/.lyupro/.codex-bridge/hooks/worktree-lock.mjs
-[ok] hook:PreToolUse: matcher Bash|PowerShell -> ~/.lyupro/.codex-bridge/hooks/prune-guard.mjs
-[ok] hook:PreToolUse: matcher TaskStop -> ~/.lyupro/.codex-bridge/hooks/stop-guard.mjs
+[ok] hook:SubagentStop: matcher * -> ~/.lyupro/.llm-bridge/hooks/reply-guard.mjs
+[ok] hook:PreToolUse: matcher Agent|Task -> ~/.lyupro/.llm-bridge/hooks/order-gate.mjs
+[ok] hook:PreToolUse: matcher Write|Edit|MultiEdit|NotebookEdit -> ~/.lyupro/.llm-bridge/hooks/worktree-lock.mjs
+[ok] hook:PreToolUse: matcher Bash|PowerShell -> ~/.lyupro/.llm-bridge/hooks/prune-guard.mjs
+[ok] hook:PreToolUse: matcher TaskStop -> ~/.lyupro/.llm-bridge/hooks/stop-guard.mjs
 [warn] retention: Automatic cleanup is ON — run transport older than 30 days is removed to reclaim disk space.
-[ok] conventions: ~/.lyupro/.codex-bridge/conventions.md (found)
+[ok] conventions: ~/.lyupro/.llm-bridge/conventions.md (found)
 [ok] codex: codex-cli 0.146.1
 [ok] node: 24.18.0 (requires >=24)
-[ok] runsRoot: ~/.lyupro/.codex-bridge/runs (default)
+[ok] runsRoot: ~/.lyupro/.llm-bridge/runs (default)
 [ok] liveRuns: 0 runs working right now
 ```
 
 `doctor` reports the selected host, package source, installed files and guards, Codex availability, retention policy, permissions, live runs, and the current repository's run folder. Its `sessionAgents` row reports which recent sessions did not load the dispatchers, because on 2026-10-21 matching files on disk hid a window whose first dispatcher call failed. Its `homeImage` row checks the home's image files against the package of the running command, because on 2026-10-21 a newer clone's home beside the older global CLI broke guidance while the recorded installation version still matched. It judges contracts against the newest host version observed in a session transcript, not `claude` on `PATH`: on 2026-09-25 the VS Code extension ran sessions on 2.1.282 while `PATH` resolved to 2.1.281, and the extension's `CLAUDE_CODE_EXECPATH` and `CLAUDE_AGENT_SDK_VERSION` were inherited by every descendant `claude`. The transcript entry's `version` identifies the host. The dispatcher gate records it once per session in `state/host-observations.json` (sessions kept 7 days, hosts 30); `doctor` and `install` judge the newest observed host. `doctor` prints `sessionHost` and one `otherHost:<version>` line for each other observed version, with `ok`, `warn` and a probe command, or `fail` with exit 1. If no session has been observed, they say so instead of using `PATH`. Refusal and dispatcher contract records keep one verdict per host version, so a measurement of version V applies to every host of version V; older single-version records count only for their recorded version.
 
-`doctor` also reports `handbackWitness`, `dispatcherModel:<type>` rows, and the four dispatcher contract lines (`dispatcherContract:agentIdentity`, `dispatcherContract:shellStdout`, `dispatcherContract:shellFailure`, and `dispatcherContract:agentTranscript`): verified contracts are `ok`, unknown, unprobed, or stale contracts are `warn`, and a measured change is `fail` with exit 1. Witness and model checks cover every host whose dispatchers ran in the last 24 hours; two VS Code windows on 2.1.291 and 2.1.292 on 2026-10-07 showed why the newest host alone could hide an active host's violation in history. The witness warns for unresolved causes on any active host; later disproving evidence clears the warning while retaining history. Intercepted handbacks are not recovery evidence, and old untyped alarms without dispatcher evidence remain unverified history. A stop missing `agent_type` alarms only with dispatcher evidence for that stop. Each active host's model entries have their own rows prefixed `host <version>:`, comparing transcript-observed families with the installed contract: a latest violation on any active host is `fail` with exit 1, uncertainty is `warn`, and a match, including recovery, is `ok`; no model entries for active hosts is also `ok`. Hosts outside the 24-hour window and recovered incidents remain history, not permanent warnings. Contracts, `otherHost:*` and install still use the newest observed host selector. See [Response guard](docs/overview.md#response-guard) for the evidence rules. The `agents` line is a read, not a file count: each installed definition is parsed and its `name` checked against the dispatcher it claims to be, because a definition the host cannot read is a dispatcher that does not exist while every other line still says `[ok]`. Content that drifts from the packaged definition is a failure, not a warning: `doctor` exits 1 and names `codex-bridge update --force`, because a host running someone else's agent files may be calling the runner in a form no permission rule matches.
+`doctor` also reports `handbackWitness`, `dispatcherModel:<type>` rows, and the four dispatcher contract lines (`dispatcherContract:agentIdentity`, `dispatcherContract:shellStdout`, `dispatcherContract:shellFailure`, and `dispatcherContract:agentTranscript`): verified contracts are `ok`, unknown, unprobed, or stale contracts are `warn`, and a measured change is `fail` with exit 1. Witness and model checks cover every host whose dispatchers ran in the last 24 hours; two VS Code windows on 2.1.291 and 2.1.292 on 2026-10-07 showed why the newest host alone could hide an active host's violation in history. The witness warns for unresolved causes on any active host; later disproving evidence clears the warning while retaining history. Intercepted handbacks are not recovery evidence, and old untyped alarms without dispatcher evidence remain unverified history. A stop missing `agent_type` alarms only with dispatcher evidence for that stop. Each active host's model entries have their own rows prefixed `host <version>:`, comparing transcript-observed families with the installed contract: a latest violation on any active host is `fail` with exit 1, uncertainty is `warn`, and a match, including recovery, is `ok`; no model entries for active hosts is also `ok`. Hosts outside the 24-hour window and recovered incidents remain history, not permanent warnings. Contracts, `otherHost:*` and install still use the newest observed host selector. See [Response guard](docs/overview.md#response-guard) for the evidence rules. The `agents` line is a read, not a file count: each installed definition is parsed and its `name` checked against the dispatcher it claims to be, because a definition the host cannot read is a dispatcher that does not exist while every other line still says `[ok]`. Content that drifts from the packaged definition is a failure, not a warning: `doctor` exits 1 and names `llm-bridge update --force`, because a host running someone else's agent files may be calling the runner in a form no permission rule matches.
 
 If a session answers `Agent type 'codex-build' not found`, a run can still be started without the dispatcher — the agent is a wrapper that types one command:
 
@@ -111,7 +110,7 @@ Implement the authentication change and verify it with the tests named in the ta
 ```
 
 ```bash
-codex-bridge run --agent codex-build --task-file "/abs/path/to/task.md"
+llm-bridge run --agent codex-build --task-file "/abs/path/to/task.md"
 ```
 
 The trade-off is explicit: `order-gate` and `reply-guard` sit on the dispatcher call, so a direct run is unguarded and its result is judged by the worktree and the suite.
@@ -121,8 +120,8 @@ The trade-off is explicit: `order-gate` and `reply-guard` sit on the dispatcher 
 Update the global package, then refresh the selected host installation:
 
 ```bash
-npm i -g @lyupro/codex-bridge
-codex-bridge update
+npm i -g @lyupro/llm-bridge
+llm-bridge update
 ```
 
 `update` refreshes unchanged package files, refuses to overwrite operator edits unless `--force` is supplied, and removes obsolete files only when their installed fingerprint is unchanged.
@@ -130,7 +129,7 @@ codex-bridge update
 ## Limitations
 
 - **Runs are not isolated from one another.** They share one worktree; guards prevent concurrent writers instead of creating sandboxes.
-- **A writing run has a hard deadline; `codex-bridge guidance budget` shows its value on this host.** Work and artifacts survive a timeout, but the run may need an explicit continuation.
+- **A writing run has a hard deadline; `llm-bridge guidance budget` shows its value on this host.** Work and artifacts survive a timeout, but the run may need an explicit continuation.
 - **A dispatcher verdict is not the work outcome.** Judge completion from the worktree and tests as well as the recorded verdict.
 
 Transport files from runs at least **30 days** old are pruned automatically when a new run starts. Configuration can change or disable that retention policy; reports, accounting, and worktree snapshots are retained.
@@ -144,7 +143,7 @@ Transport files from runs at least **30 days** old are pruned automatically when
 | `permissions [add\|remove] [--scope user\|project] [--host <path>]` | Inspect or manage optional shell rules. |
 | `uninstall [--scope user\|project] [--host <path>] [--dry-run] [--purge]` | Remove recorded package files while preserving run artifacts; `--purge` also deletes other operator data after one preflight and two consents, preserving `runs/` and its containing home (see [Uninstall and purge](docs/overview.md#uninstall-and-purge)). |
 | `inventory confirm [--scope user\|project] [--host <path>] [--dry-run]` | Confirm in a terminal that the recorded hosts are all the hosts using this home; until then the dispatcher model pin stays undetermined and `doctor` names this command. Changes only the inventory mark of the installation record. |
-| `runs move [--dry-run]` | Copy every run record from `~/.claude/codex-runs/` into `~/.lyupro/.codex-bridge/runs/`, verify each file by SHA-256, import the old repository's `codex-runs` git history, and write the move record last. Refused while a run is live (`--dry-run` names the refusal and still previews); offers to remove the old folder only when every file has an identical copy in the new store. |
+| `runs move [--dry-run]` | Copy every run record from `~/.claude/codex-runs/` into `~/.lyupro/.llm-bridge/runs/`, verify each file by SHA-256, import the old repository's `codex-runs` git history, and write the move record last. Refused while a run is live (`--dry-run` names the refusal and still previews); offers to remove the old folder only when every file has an identical copy in the new store. |
 | `doctor [--scope user\|project] [--host <path>] [--probe-contract] [--probe-executable <path>]` | Diagnose the selected host and Codex connection, including the handback witness and four dispatcher contract lines. `--probe-contract` targets the newest observed host, accepting `CLAUDE_CODE_EXECPATH` or `claude` on `PATH` only when each reports that version with `--version`; use `--probe-executable <path>` to name an executable (`--host` selects the Claude Code configuration). The probe prints its target and records nothing if the completed host run reports another transcript version. |
 | `run --agent <type> --task-file "<abs path>" [--no-wait]` | Start or attach to a delegated run through the permission-stable package command. The task-file header carries the whole order; its body carries the statement, scout questions and verification command. Its path must be absolute and use forward slashes; `$`, doubled backslashes and a final backslash are refused. Every other runner flag is a free refusal; stdin is not an input channel. |
 | `model [list\|set\|unset\|speed]` | Show the model, effort, pinned speed tier and provenance of each role, with the config path; `model list` prints the live catalogue from Codex, hidden models included and marked; `model set <role> <model> [effort]` checks the pair and any retained speed tier against that model's catalogue entry, and `model unset <role>` removes the profile. `model speed <role> <tier>` previews a live accelerated tier and its quoted cost description; repeat with trailing `confirm` to pin it. `model speed <role> unset` removes only speed, without confirmation. The profile is machine-wide, shared by every project on this machine. |
@@ -155,15 +154,15 @@ Transport files from runs at least **30 days** old are pruned automatically when
 | `read <run>` | Render a run's structured event stream. |
 | `stop <run>` | Stop a run and record a `FAIL` verdict. |
 
-Both `codex-bridge` and `codexb` invoke the same command. Run `codex-bridge --help` for exact forms, or `-h` after
-any command or action for its own usage (`codex-bridge model -h`, `codex-bridge model set -h`); a refusal of an unknown
+Both `llm-bridge` and `codexb` invoke the same command. Run `llm-bridge --help` for exact forms, or `-h` after
+any command or action for its own usage (`llm-bridge model -h`, `llm-bridge model set -h`); a refusal of an unknown
 option or an extra argument ends with that pointer.
 
 ### Development
 
 ```bash
 git clone https://github.com/lyupro/codex-bridge.git
-cd codex-bridge
+cd llm-bridge
 git config core.hooksPath .githooks
 npm test
 ```

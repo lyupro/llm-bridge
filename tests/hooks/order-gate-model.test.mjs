@@ -10,7 +10,7 @@ import { readDispatcherPin } from '../../src/home/lib/dispatcher-pin.mjs';
 import { orderDiagnosticMessage } from '../../src/home/lib/order-diagnostics.mjs';
 import { createStoredRun, decodeDenial, fixture, payload, runGate, validPrompt, writeTaskFile } from './order-gate-fixtures.mjs';
 
-const brandRoot = (root) => path.join(root, '.lyupro', '.codex-bridge');
+const brandRoot = (root) => path.join(root, '.lyupro', '.llm-bridge');
 const stateDir = (root) => path.join(brandRoot(root), 'state');
 const VIOLATION_TIME = '2026-10-07T10:00:00.000Z';
 
@@ -35,9 +35,9 @@ function call(prompt) {
 
 function assertLatch(result) {
   assert.equal(result.systemMessage,
-    'codex-bridge: the last codex-build ran on opus, sonnet while the installed contract pins haiku '
+    'llm-bridge: the last codex-build ran on opus, sonnet while the installed contract pins haiku '
     + `(2.1.257, ${VIOLATION_TIME}); the cause is outside this call — another hook or the host; `
-    + 'run codex-bridge doctor.');
+    + 'run llm-bridge doctor.');
 }
 
 async function installPin(root) {
@@ -46,8 +46,8 @@ async function installPin(root) {
   await fs.writeFile(path.join(brand, '.installed.json'), JSON.stringify({
     format: 2, inventory: 'complete', owners: { fixture: { root } },
   }));
-  await fs.mkdir(path.join(root, 'agents', 'codex-bridge'), { recursive: true });
-  await fs.writeFile(path.join(root, 'agents', 'codex-bridge', 'codex-build.md'),
+  await fs.mkdir(path.join(root, 'agents', 'llm-bridge'), { recursive: true });
+  await fs.writeFile(path.join(root, 'agents', 'llm-bridge', 'codex-build.md'),
     '---\nname: codex-build\nmodel: haiku\n---\nDispatcher fixture.\n');
   const pin = readDispatcherPin({ brandRoot: brand, agentType: 'codex-build' });
   assert.equal(pin.family, 'haiku', JSON.stringify(pin));
@@ -168,9 +168,9 @@ test('latch warning preserves dispatcher data and the unknown host version fallb
   await observe(root, ['opus', 'sonnet'], null, 'codex-review');
   const result = output(root, JSON.parse(payload('codex-review', undefined)));
   assert.equal(result.systemMessage,
-    'codex-bridge: the last codex-review ran on opus, sonnet while the installed contract pins haiku '
+    'llm-bridge: the last codex-review ran on opus, sonnet while the installed contract pins haiku '
     + `(unknown, ${VIOLATION_TIME}); the cause is outside this call — another hook or the host; `
-    + 'run codex-bridge doctor.');
+    + 'run llm-bridge doctor.');
   assert.equal(result.hookSpecificOutput, undefined);
 });
 
@@ -206,7 +206,7 @@ test('handwritten systemMessage journals its outgoing transport on pass and deny
         } } : {}),
       }));
     }
-  `], { env: { ...process.env, CODEX_BRIDGE_TEST_TMP: marker }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
+  `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: marker }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const directory = path.join(marker, 'order-text-violations');

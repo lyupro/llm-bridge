@@ -57,7 +57,7 @@ properties that broke the contract.
 Regular `codex exec` follows the schema (verified during scouting), so the review uses it: with
 `--ignore-user-config` (structurally read-only, half the startup ballast), `--sandbox
 read-only`, `--disable hooks --disable plugins` (operator extensions do not affect the run;
-the default, switched through `/codex-bridge:env`), and without `--model` — model IDs are volatile. The
+the default, switched through `/llm-bridge:env`), and without `--model` — model IDs are volatile. The
 runner determines the review scope
 itself through git: the exact file list and diff command go into the prompt and are saved in the run
 folder's
@@ -119,7 +119,7 @@ ATTACH=<artifact root>\myproject\2026-07-30_1412_review-auth started=2026-07-30T
 OK — verdict needs-attention
 Findings: critical 0 · high 1 · medium 2 · low 3
 Top: high src/api/auth.ts:88 — The promise is not awaited, and the error is lost
-Report: ...\review.json · Log: codex-bridge read ...\2026-08-05_120000_slug
+Report: ...\review.json · Log: llm-bridge read ...\2026-08-05_120000_slug
 ```
 
 Incorrect — "I analyzed the changes manually because Codex did not perform the review correctly,"

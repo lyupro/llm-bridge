@@ -9,13 +9,13 @@ const topicList = () => [
   'Topics:',
   ...Object.entries(GUIDANCE_TOPICS).map(([topic, summary]) => `  ${topic} — ${summary}`),
   '',
-  'Usage: codex-bridge guidance [<topic>]',
+  'Usage: llm-bridge guidance [<topic>]',
 ].join('\n');
 
 export async function guidance(argv, { env = process.env, homedir } = {}) {
   if (argv.length === 0) return { exitCode: 0, output: topicList() };
   if (argv.length > 1) {
-    return { exitCode: 2, output: `codex-bridge guidance accepts at most one topic.\n${topicList()}` };
+    return { exitCode: 2, output: `llm-bridge guidance accepts at most one topic.\n${topicList()}` };
   }
   const [topic] = argv;
   if (!Object.hasOwn(GUIDANCE_TOPICS, topic)) {
@@ -31,14 +31,14 @@ export async function guidance(argv, { env = process.env, homedir } = {}) {
   } catch (error) {
     return {
       exitCode: 1,
-      output: `Cannot read guidance file ${file}: ${error.message}\nrun codex-bridge update`,
+      output: `Cannot read guidance file ${file}: ${error.message}\nrun llm-bridge update`,
     };
   }
   return renderGuidance(text, { root, topic, configPath }).then(
     (output) => ({ exitCode: 0, output }),
     (error) => ({
       exitCode: 1,
-      output: error.hostConfig === true ? error.message : `${error.message}\nrun codex-bridge update`,
+      output: error.hostConfig === true ? error.message : `${error.message}\nrun llm-bridge update`,
     }),
   );
 }

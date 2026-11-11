@@ -21,7 +21,7 @@ export function readReceiptEvidence(state) {
 }
 
 export function missingIdsAlarm(agentType) {
-  return `codex-bridge: the host did not report session_id and agent_id for dispatcher ${agentType} — whose run this answer quotes cannot be checked; run codex-bridge doctor.`;
+  return `llm-bridge: the host did not report session_id and agent_id for dispatcher ${agentType} — whose run this answer quotes cannot be checked; run llm-bridge doctor.`;
 }
 
 // Plan_63 D10: a recent stranger is never evidence for this reply; only the gate receipt is.

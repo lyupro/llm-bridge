@@ -31,7 +31,7 @@ function run({ root, repo }, argv) {
   return spawnSync(process.execPath, [RUNNER, ...argv], {
     cwd: repo,
     encoding: 'utf8',
-    env: { ...process.env, CODEX_RUNS_ROOT: path.join(root, 'runs') },
+    env: { ...process.env, LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs') },
   });
 }
 
@@ -68,7 +68,7 @@ try {
   // raw argv: Node isolates input settlement from the suite's interactive stdin.
   const out = spawnSync(process.execPath, ['--input-type=module', '-e', source], {
     encoding: 'utf8', env: { ...process.env, CODEX_TEST_ARGV: JSON.stringify(argv),
-      CODEX_RUNS_ROOT: path.join(context.root, 'runs') },
+      LLM_BRIDGE_RUNS_ROOT: path.join(context.root, 'runs') },
   });
   return { code: out.status, stderr: out.stderr, opts: !launch && out.stdout ? JSON.parse(out.stdout) : null };
 }

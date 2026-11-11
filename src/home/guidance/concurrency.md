@@ -24,6 +24,6 @@ Treat a snapshot as evidence that a path changed, never of who changed it. Rever
 
 ## Stop a live run
 
-Use the run path from its receipt and call `codex-bridge stop <run>` before `TaskStop`. The bridge stop terminates the Codex run and records FAIL. `TaskStop` alone stops the dispatcher task while the Codex process can keep writing.
+Use the run path from its receipt and call `llm-bridge stop <run>` before `TaskStop`. The bridge stop terminates the Codex run and records FAIL. `TaskStop` alone stops the dispatcher task while the Codex process can keep writing.
 
 Inspect the resulting status and working-tree changes before launching another writer. Stopping a run does not undo the files it already changed.

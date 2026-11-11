@@ -87,7 +87,7 @@ async function purgeInRun(options, ticket) {
   const appeared = appearedLines(host, plan, outcomes);
   return {
     exitCode: appeared.length ? 1 : outcomeExitCode(outcomes),
-    output: ['Purged codex-bridge.', permissionLine, ...hostSide.lines, ...rules.lines,
+    output: ['Purged llm-bridge.', permissionLine, ...hostSide.lines, ...rules.lines,
       ...outcomeLines(outcomes, { host }), ...appeared].join('\n'),
   };
 }

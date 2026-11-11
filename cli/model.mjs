@@ -44,10 +44,10 @@ export async function model(argv = [], options = {}) {
   }
   if (action === 'speed') return editModelSpeed(optionArgs, options);
   if (action && action !== 'list') {
-    return { exitCode: 2, output: withCommandHelp('model', `codex-bridge model: unknown action "${action}". Use model, model list, model set, model unset or model speed.`) };
+    return { exitCode: 2, output: withCommandHelp('model', `llm-bridge model: unknown action "${action}". Use model, model list, model set, model unset or model speed.`) };
   }
   if (optionArgs.length) {
-    return { exitCode: 2, output: withCommandHelp('model', `codex-bridge model: unexpected argument "${optionArgs[0]}".`) };
+    return { exitCode: 2, output: withCommandHelp('model', `llm-bridge model: unexpected argument "${optionArgs[0]}".`) };
   }
 
   try {
@@ -77,10 +77,10 @@ export async function model(argv = [], options = {}) {
       exitCode: 0,
       output: `${renderTable(PROFILE_COLUMNS, rows, options.terminalWidth)}\n\nConfig file: ${configPath}\n`
         + 'Machine-wide: shared by every project on this machine, not per-project.\n'
-        + 'Set: codex-bridge model set <role> <model> [effort] · catalogue: codex-bridge model list',
+        + 'Set: llm-bridge model set <role> <model> [effort] · catalogue: llm-bridge model list',
     };
   } catch (error) {
     const subject = action === 'list' ? 'live catalogue unavailable; refusing to list models' : 'cannot read profile';
-    return { exitCode: 1, output: `codex-bridge model: ${subject}: ${error?.message ?? String(error)}` };
+    return { exitCode: 1, output: `llm-bridge model: ${subject}: ${error?.message ?? String(error)}` };
   }
 }

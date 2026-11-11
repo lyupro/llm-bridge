@@ -52,7 +52,7 @@ export function readLoadWitness({ stateDir }) {
 
 export function isCoreLoadCandidate(filePath) {
   return typeof filePath === 'string'
-    && filePath.replaceAll('\\', '/').toLowerCase().endsWith('/rules/codex-bridge/core.md');
+    && filePath.replaceAll('\\', '/').toLowerCase().endsWith('/rules/llm-bridge/core.md');
 }
 
 export async function recordCoreLoad({ stateDir, input, now = new Date(), readCore = readBoundedCoreBytes }) {

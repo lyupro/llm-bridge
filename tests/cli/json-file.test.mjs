@@ -32,7 +32,7 @@ async function writeSettings(host, settings, bom = false) {
 
 async function backups(host) {
   return (await fs.readdir(host.root))
-    .filter((name) => name.startsWith('settings.json.codex-bridge-backup-'));
+    .filter((name) => name.startsWith('settings.json.llm-bridge-backup-'));
 }
 
 const codexProbe = () => ({ available: true, value: 'codex-cli test' });

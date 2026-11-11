@@ -25,27 +25,27 @@ async function setup(t, command, proof) {
 }
 
 test('short registration fails and exits nonzero when PATH launcher proof fails', async (t) => {
-  const { result, hook } = await setup(t, 'codex-bridge hook reply-guard', {
+  const { result, hook } = await setup(t, 'llm-bridge hook reply-guard', {
     ok: false, reason: 'unsupported launcher protocol 1',
   });
   assert.equal(hook.status, 'fail');
   assert.match(hook.value, /unsupported launcher protocol 1/);
-  assert.match(hook.value, /codex-bridge update/);
+  assert.match(hook.value, /llm-bridge update/);
   assert.equal(result.exitCode, 1);
   assert.doesNotMatch(hook.value, /version/i);
 });
 
 test('short registration is healthy when PATH launcher proof succeeds', async (t) => {
-  const { hook } = await setup(t, 'codex-bridge hook reply-guard', { ok: true });
+  const { hook } = await setup(t, 'llm-bridge hook reply-guard', { ok: true });
   assert.equal(hook.status, 'ok');
-  assert.match(hook.value, /codex-bridge on PATH launches guards from this home/);
+  assert.match(hook.value, /llm-bridge on PATH launches guards from this home/);
   assert.doesNotMatch(hook.value, /version/i);
 });
 
 test('path registration suggests update when PATH launcher proof succeeds', async (t) => {
   const { hook } = await setup(t, undefined, { ok: true });
   assert.equal(hook.status, 'warn');
-  assert.match(hook.value, /a short command is now safe; run codex-bridge update/);
+  assert.match(hook.value, /a short command is now safe; run llm-bridge update/);
 });
 
 test('path registration remains healthy when PATH launcher proof fails', async (t) => {

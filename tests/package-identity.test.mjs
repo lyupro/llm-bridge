@@ -9,19 +9,19 @@ import { RULES_NAME } from '../cli/install-record.mjs';
 import { RULES_REGISTRY_NAME } from '../cli/rules-owners.mjs';
 
 test('package identity keeps the current package and derived home directory names', () => {
-  assert.equal(PACKAGE_NAME, 'codex-bridge');
-  assert.equal(HOME_DIR_NAME, '.codex-bridge');
+  assert.equal(PACKAGE_NAME, 'llm-bridge');
+  assert.equal(HOME_DIR_NAME, '.llm-bridge');
   assert.equal(HOME_DIR_NAME, `.${PACKAGE_NAME}`);
 });
 
 test('environment identity contains only the current home and runs keys and is frozen', () => {
-  assert.deepEqual(ENV_KEYS, { home: 'CODEX_BRIDGE_HOME', runsRoot: 'CODEX_RUNS_ROOT' });
+  assert.deepEqual(ENV_KEYS, { home: 'LLM_BRIDGE_HOME', runsRoot: 'LLM_BRIDGE_RUNS_ROOT' });
   assert.ok(Object.isFrozen(ENV_KEYS));
-  assert.throws(() => { ENV_KEYS.home = 'LLM_BRIDGE_HOME'; }, TypeError);
+  assert.throws(() => { ENV_KEYS.home = 'CODEX_BRIDGE_HOME'; }, TypeError);
 });
 
-test('CLI names keep the current frozen aliases with the package name first', () => {
-  assert.deepEqual(CLI_NAMES, ['codex-bridge', 'codexb']);
+test('CLI names are frozen and hold the package name only', () => {
+  assert.deepEqual(CLI_NAMES, ['llm-bridge']);
   assert.equal(CLI_NAMES[0], PACKAGE_NAME);
   assert.ok(Object.isFrozen(CLI_NAMES));
 });
@@ -34,11 +34,11 @@ test('host folders and Codex rules names derive from the current package name', 
     ['commandsDir', 'commands'],
     ['rulesDir', 'rules'],
   ]) {
-    assert.equal(paths[key], path.join(root, folder, 'codex-bridge'));
+    assert.equal(paths[key], path.join(root, folder, 'llm-bridge'));
     assert.equal(path.basename(paths[key]), PACKAGE_NAME);
   }
-  assert.equal(RULES_NAME, 'codex-bridge.rules');
+  assert.equal(RULES_NAME, 'llm-bridge.rules');
   assert.equal(RULES_NAME, `${PACKAGE_NAME}.rules`);
-  assert.equal(RULES_REGISTRY_NAME, '.codex-bridge-rules.json');
+  assert.equal(RULES_REGISTRY_NAME, '.llm-bridge-rules.json');
   assert.equal(RULES_REGISTRY_NAME, `.${PACKAGE_NAME}-rules.json`);
 });

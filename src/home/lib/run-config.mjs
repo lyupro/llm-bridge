@@ -33,7 +33,7 @@ export const CONFIG_PATH = BRAND_CONFIG_PATH;
  * config.json, and no way to tell from the output which of them the run had just used.
  */
 const ORIGIN =
-  BRAND_HOME.source === 'CODEX_BRIDGE_HOME' ? 'from CODEX_BRIDGE_HOME' : 'default location';
+  BRAND_HOME.source === 'LLM_BRIDGE_HOME' ? 'from LLM_BRIDGE_HOME' : 'default location';
 
 export function retentionNotice(config) {
   if (config?.retention?.enabled) {
@@ -126,8 +126,8 @@ async function main(argv) {
     const known = LIST_KEYS.includes(key)
       ? `“${key}” is a pattern list, not a switch: edit it directly in ${CONFIG_PATH}`
       : OBJECT_KEYS.includes(key)
-        ? `“${key}” is not a switch: change it with “codex-bridge model set <role> <model> [effort]” `
-          + `or “codex-bridge model unset <role>”, which check the pair against the live catalogue`
+        ? `“${key}” is not a switch: change it with “llm-bridge model set <role> <model> [effort]” `
+          + `or “llm-bridge model unset <role>”, which check the pair against the live catalogue`
         : `unknown switch “${key}”. Allowed: ${SWITCH_KEYS.join(', ')}, reset`;
     console.error(`run-config: ${known}`);
     return 2;

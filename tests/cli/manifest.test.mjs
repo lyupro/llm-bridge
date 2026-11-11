@@ -41,20 +41,20 @@ async function fixture(t) {
   await fs.writeFile(path.join(packageRoot, 'src', 'claude', 'commands', 'env.md'), 'command');
   await fs.writeFile(path.join(packageRoot, 'src', 'home', 'hooks', 'guard.mjs'), 'guard');
   await fs.writeFile(path.join(packageRoot, 'src', 'home', 'lib', 'runtime.mjs'), 'runtime');
-  await fs.writeFile(path.join(packageRoot, 'src', 'codex', 'rules', 'codex-bridge.rules'), 'rules');
+  await fs.writeFile(path.join(packageRoot, 'src', 'codex', 'rules', 'llm-bridge.rules'), 'rules');
   return { root, packageRoot, host };
 }
 
 const record = {
-  name: '@lyupro/codex-bridge',
+  name: '@lyupro/llm-bridge',
   version: '0.1.0',
   installedAt: '2026-08-02T10:00:00.000Z',
   mode: 'copy',
   files: [
-    { root: 'claude', path: 'agents/codex-bridge/run-codex.mjs' },
-    { root: 'claude', path: 'agents/codex-bridge/hooks/reply-guard.mjs' },
+    { root: 'claude', path: 'agents/llm-bridge/run-codex.mjs' },
+    { root: 'claude', path: 'agents/llm-bridge/hooks/reply-guard.mjs' },
   ],
-  hooks: [{ event: 'SubagentStop', root: 'claude', path: 'agents/codex-bridge/hooks/reply-guard.mjs' }],
+  hooks: [{ event: 'SubagentStop', root: 'claude', path: 'agents/llm-bridge/hooks/reply-guard.mjs' }],
 };
 
 test('installation table is exported data', () => {
@@ -89,14 +89,14 @@ test('install plan maps agents, commands, and the literal home tree', async (t) 
   assert.deepEqual(plan.map((item) => item.relativeToRoot), [
     'hooks/guard.mjs',
     'lib/runtime.mjs',
-    'agents/codex-bridge/build.md',
-    'commands/codex-bridge/env.md',
+    'agents/llm-bridge/build.md',
+    'commands/llm-bridge/env.md',
   ]);
   assert.deepEqual(plan.map((item) => item.processing), ['copy', 'copy', 'placeholders', 'placeholders']);
   assert.deepEqual(rulesPlan(host, packageRoot), {
-    source: path.join(packageRoot, 'src', 'codex', 'rules', 'codex-bridge.rules'),
-    target: path.join(host.codexRulesDir, 'codex-bridge.rules'),
-    name: 'codex-bridge.rules',
+    source: path.join(packageRoot, 'src', 'codex', 'rules', 'llm-bridge.rules'),
+    target: path.join(host.codexRulesDir, 'llm-bridge.rules'),
+    name: 'llm-bridge.rules',
   });
 });
 
@@ -137,9 +137,9 @@ test('the installed runner finds its own version one level above the runner dire
 
 test('placeholder becomes an absolute POSIX agents path', () => {
   const agentsDir = path.resolve('C:\\fixture\\host\\agents\\codex');
-  const replaced = replacePlaceholders('node "{{CODEX_BRIDGE_DIR}}/run.mjs"', agentsDir);
+  const replaced = replacePlaceholders('node "{{LLM_BRIDGE_DIR}}/run.mjs"', agentsDir);
   assert.equal(replaced, `node "${agentsDir.split(path.sep).join('/')}/run.mjs"`);
-  assert.doesNotMatch(replaced, /\{\{CODEX_BRIDGE_DIR\}\}/);
+  assert.doesNotMatch(replaced, /\{\{LLM_BRIDGE_DIR\}\}/);
 });
 
 
@@ -171,7 +171,7 @@ test('installation record migrates an old single-hook record on read', async (t)
   const { host } = await fixture(t);
   const legacy = {
     ...record,
-    files: record.files.map((file) => ({ ...file, path: file.path.replace('agents/codex-bridge/', 'agents/codex/') })),
+    files: record.files.map((file) => ({ ...file, path: file.path.replace('agents/llm-bridge/', 'agents/codex/') })),
     hooks: undefined,
   };
   delete legacy.hooks;
@@ -200,13 +200,13 @@ test('installation record validates multiple hooks sharing one event by filename
     ...record,
     files: [
       ...record.files,
-      { root: 'claude', path: 'agents/codex-bridge/hooks/order-gate.mjs' },
-      { root: 'claude', path: 'agents/codex-bridge/hooks/worktree-lock.mjs' },
+      { root: 'claude', path: 'agents/llm-bridge/hooks/order-gate.mjs' },
+      { root: 'claude', path: 'agents/llm-bridge/hooks/worktree-lock.mjs' },
     ],
     hooks: [
       ...record.hooks,
-      { event: 'PreToolUse', root: 'claude', path: 'agents/codex-bridge/hooks/order-gate.mjs' },
-      { event: 'PreToolUse', root: 'claude', path: 'agents/codex-bridge/hooks/worktree-lock.mjs' },
+      { event: 'PreToolUse', root: 'claude', path: 'agents/llm-bridge/hooks/order-gate.mjs' },
+      { event: 'PreToolUse', root: 'claude', path: 'agents/llm-bridge/hooks/worktree-lock.mjs' },
     ],
   };
   assert.equal(validateInstallRecord(multiHook), multiHook);
@@ -215,7 +215,7 @@ test('installation record validates multiple hooks sharing one event by filename
 test('installation record accepts an optional absolute rules fingerprint', () => {
   const withRules = {
     ...record,
-    rules: { path: path.resolve('codex-home', 'rules', 'codex-bridge.rules'), fingerprint: 'a'.repeat(64) },
+    rules: { path: path.resolve('codex-home', 'rules', 'llm-bridge.rules'), fingerprint: 'a'.repeat(64) },
   };
   assert.equal(validateInstallRecord(withRules), withRules);
   assert.equal(validateInstallRecord(record), record);
@@ -226,16 +226,16 @@ test('installation record rejects malformed rules metadata', () => {
   assert.throws(() => validateInstallRecord({
     ...record,
     rules: { path: path.resolve('rules', 'foreign.rules'), fingerprint: 'a'.repeat(64) },
-  }), /rules path must name codex-bridge\.rules/);
+  }), /rules path must name llm-bridge\.rules/);
   assert.throws(() => validateInstallRecord({
     ...record,
-    rules: { path: path.resolve('rules', 'codex-bridge.rules'), fingerprint: 'not-hex' },
+    rules: { path: path.resolve('rules', 'llm-bridge.rules'), fingerprint: 'not-hex' },
   }), /rules fingerprint must be a 64-character hexadecimal/);
 });
 
 test('installation record rejects an extra fingerprint key', () => {
   const fingerprints = Object.fromEntries(record.files.map((file) => [file.path, 'a'.repeat(64)]));
-  fingerprints['agents/codex-bridge/extra.mjs'] = 'b'.repeat(64);
+  fingerprints['agents/llm-bridge/extra.mjs'] = 'b'.repeat(64);
   assert.throws(() => validateInstallRecord({ ...record, fingerprints }), /fingerprints keys must exactly match files/);
 });
 
@@ -255,7 +255,7 @@ test('missing record reads as not installed', async (t) => {
   assert.equal(await readInstallRecord(host), null);
   // Plan_82 D5 / OW-062 A6h: old host records must not become a second source of installation state.
   const oldDir = path.join(host.root, 'agents', 'codex');
-  const oldPath = path.join(oldDir, '.codex-bridge-install.json');
+  const oldPath = path.join(oldDir, '.llm-bridge-install.json');
   await fs.mkdir(oldDir, { recursive: true });
   await fs.writeFile(oldPath, JSON.stringify(record));
   assert.equal(await readInstallRecord(host), null);

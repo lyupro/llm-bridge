@@ -53,9 +53,9 @@ function expectReasons(result, count) {
 test('shared layout preserves all three package paths used by the installer', () => {
   const root = path.join('a', '.claude');
   assert.deepEqual(claudePaths(root), {
-    agentsDir: path.join(root, 'agents', 'codex-bridge'),
-    commandsDir: path.join(root, 'commands', 'codex-bridge'),
-    rulesDir: path.join(root, 'rules', 'codex-bridge'),
+    agentsDir: path.join(root, 'agents', 'llm-bridge'),
+    commandsDir: path.join(root, 'commands', 'llm-bridge'),
+    rulesDir: path.join(root, 'rules', 'llm-bridge'),
   });
 });
 

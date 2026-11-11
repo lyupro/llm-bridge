@@ -5,14 +5,14 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { main } from '../../bin/codex-bridge.mjs';
+import { main } from '../../bin/llm-bridge.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 import { makeHomeImage } from '../home-image.mjs';
 import { orderInvocation } from '../runner/order-invocation.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
-const BIN = path.join(ROOT, 'bin', 'codex-bridge.mjs');
+const BIN = path.join(ROOT, 'bin', 'llm-bridge.mjs');
 
 function run(args, env = {}) {
   // raw argv: Node transports dispatcher arguments; orders live in the task file (Plan_63 D8).
@@ -33,8 +33,8 @@ test('--help and -h print the command list', () => {
     const result = run([flag]);
     assert.equal(result.status, 0);
     assert.match(result.stdout, /Commands:[\s\S]*install[\s\S]*update[\s\S]*uninstall[\s\S]*doctor[\s\S]*unlock/);
-    assert.match(result.stdout, /codex-bridge run <runner options> --task-file <path>/);
-    assert.match(result.stdout, /codex-bridge hook <name>/);
+    assert.match(result.stdout, /llm-bridge run <runner options> --task-file <path>/);
+    assert.match(result.stdout, /llm-bridge hook <name>/);
   }
 });
 
@@ -49,7 +49,7 @@ test('run forwards runner arguments and returns the runner exit code unchanged',
   // raw argv: run and --no-wait wrap the helper transport invocation (Plan_63 D8).
   const result = run(
     ['run', ...argv, '--no-wait'],
-    { CODEX_RUNS_ROOT: path.join(root, 'runs'), CODEX_BRIDGE_HOME: home },
+    { LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs'), LLM_BRIDGE_HOME: home },
   );
   assert.equal(result.status, 4, result.stderr);
   assert.match(result.stdout, /--no-wait never starts a new run/);
@@ -68,7 +68,7 @@ test('run forwards header phase and an undeclared phase leaves no run directory'
       ? 'Compare boundaries.\n\n## Options\n- keep: Keep the boundary.\n- split: Split the boundary.\n\n## Paths\n- task.md\n'
       : 'check current state', dir: root,
   }).argv, '--no-wait'];
-  const env = { CODEX_RUNS_ROOT: runs, CODEX_BRIDGE_HOME: home };
+  const env = { LLM_BRIDGE_RUNS_ROOT: runs, LLM_BRIDGE_HOME: home };
   const invalid = run(args('undeclared', 'codex-advisor'), env);
   assert.equal(invalid.status, 2, invalid.stderr);
   assert.match(invalid.stderr, /undeclared `phase:` "undeclared".*allowed phases: scope, advise/);
@@ -130,7 +130,7 @@ test('update flags reach the command handler', (t) => {
   // raw argv: update installation flags, including its own --scope, remain dispatcher inputs.
   const result = run(
     ['update', '--host', host, '--scope', 'project', '--dry-run', '--force'],
-    { CODEX_HOME: path.join(host, 'codex-home'), CODEX_BRIDGE_HOME: path.join(host, 'brand') },
+    { CODEX_HOME: path.join(host, 'codex-home'), LLM_BRIDGE_HOME: path.join(host, 'brand') },
   );
   assert.equal(result.status, 1);
   assert.match(result.stdout, /not installed/);
@@ -143,7 +143,7 @@ test('doctor subcommand diagnoses only the explicit temporary host', (t) => {
   // raw argv: doctor diagnoses only the explicit temporary installation host.
   const result = run(
     ['doctor', '--host', host],
-    { CODEX_HOME: path.join(host, 'codex-home'), CODEX_BRIDGE_HOME: path.join(host, 'brand') },
+    { CODEX_HOME: path.join(host, 'codex-home'), LLM_BRIDGE_HOME: path.join(host, 'brand') },
   );
   assert.equal(result.status, 1);
   assert.match(result.stdout, /installation: not installed/);
