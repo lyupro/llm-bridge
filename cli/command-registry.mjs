@@ -27,6 +27,7 @@ import { runCodex } from './run-launcher.mjs';
 import { runsMove } from './runs-move.mjs';
 import { removeOldStore } from './runs-move-remove.mjs';
 import { permissions } from './permissions.mjs';
+import { settingsExport } from './settings-export.mjs';
 import { prune } from './prune.mjs';
 import { stop } from './stop.mjs';
 import { unlock } from './unlock.mjs';
@@ -35,6 +36,8 @@ import { purge } from './uninstall-purge.mjs';
 import { update } from './update.mjs';
 
 const CLI_NAME = CLI_NAMES[0];
+const SETTINGS_SUMMARY = 'Print the settings.json entries this package writes on this host';
+const SETTINGS_USAGE = `${CLI_NAME} settings export [--platform win32|linux] [--scope user|project] [--host <path>]`;
 
 export function commandOptions(command, argv) {
   const options = {};
@@ -55,10 +58,10 @@ export function commandOptions(command, argv) {
       continue;
     }
     if (command === 'runs') throw new Error(`unknown runs option "${arg}"`);
-    if (arg !== '--scope' && arg !== '--host' && !(command === 'doctor' && arg === '--probe-executable')) throw new Error(`unknown ${command} option "${arg}"`);
+    if (arg !== '--scope' && arg !== '--host' && !(command === 'settings' && arg === '--platform') && !(command === 'doctor' && arg === '--probe-executable')) throw new Error(`unknown ${command} option "${arg}"`);
     const value = argv[index + 1];
     if (!value || value.startsWith('-')) throw new Error(`${arg} requires a value`);
-    options[arg === '--scope' ? 'scope' : arg === '--host' ? 'host' : 'probeExecutable'] = value;
+    options[arg === '--scope' ? 'scope' : arg === '--host' ? 'host' : arg === '--platform' ? 'platform' : 'probeExecutable'] = value;
     index += 1;
   }
   return options;
@@ -121,6 +124,37 @@ export const COMMANDS = [
       const result = await permissions({ host, action });
       io.log(result.output);
       return result.exitCode;
+    },
+  },
+  {
+    name: 'settings',
+    summary: SETTINGS_SUMMARY,
+    usage: [SETTINGS_USAGE],
+    section: 'public',
+    actions: {
+      export: { summary: SETTINGS_SUMMARY, usage: [SETTINGS_USAGE] },
+    },
+    async handler(argv, io) {
+      if (argv.length === 0) {
+        io.log(`Usage: ${SETTINGS_USAGE}
+
+${SETTINGS_SUMMARY}`);
+        return 0;
+      }
+      if (argv[0] !== 'export') throw new Error(`unknown settings action "${argv[0]}"`);
+      const options = commandOptions('settings', argv.slice(1));
+      const platform = options.platform ?? process.platform;
+      if (!['win32', 'linux'].includes(platform)) {
+        io.error('--platform must be win32 or linux');
+        return 2;
+      }
+      // OW-081 R3/R4: this asserts the host; foreign home and launcher paths cannot be predicted.
+      if (platform !== process.platform) {
+        io.error('The list depends on this host (home and launcher); run this command on the target host.');
+        return 1;
+      }
+      io.log(await settingsExport({ host: resolveHost(options) }));
+      return 0;
     },
   },
   {

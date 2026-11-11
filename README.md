@@ -61,7 +61,7 @@ Run records in `~/.lyupro/.llm-bridge/runs/` (or `~/.claude/codex-runs/` before 
 - **Every run leaves an audit folder.** The verbatim task, scope, before/after git state, events, report, verdict, and reason remain together.
 - **Zero runtime dependencies and zero build steps.** The package is plain `.mjs` on the Node.js standard library.
 
-The current suite contains **5905 automated tests: 5901 passing and 4 skipped**.
+The current suite contains **5912 automated tests: 5908 passing and 4 skipped**.
 ## Verify
 
 ```bash
@@ -141,6 +141,7 @@ Transport files from runs at least **30 days** old are pruned automatically when
 | `install [--scope user\|project] [--host <path>] [--dry-run] [--force]` | Install into a Claude Code host. |
 | `update [--scope user\|project] [--host <path>] [--dry-run] [--force]` | Refresh a recorded installation. |
 | `permissions [add\|remove] [--scope user\|project] [--host <path>]` | Inspect or manage optional shell rules. |
+| `settings export [--platform win32\|linux] [--scope user\|project] [--host <path>]` | Print, read-only, the settings.json entries this package writes on this host, as JSON; a foreign platform is refused. |
 | `uninstall [--scope user\|project] [--host <path>] [--dry-run] [--purge]` | Remove recorded package files while preserving run artifacts; `--purge` also deletes other operator data after one preflight and two consents, preserving `runs/` and its containing home (see [Uninstall and purge](docs/overview.md#uninstall-and-purge)). |
 | `inventory confirm [--scope user\|project] [--host <path>] [--dry-run]` | Confirm in a terminal that the recorded hosts are all the hosts using this home; until then the dispatcher model pin stays undetermined and `doctor` names this command. Changes only the inventory mark of the installation record. |
 | `runs move [--dry-run]` | Copy every run record from `~/.claude/codex-runs/` into `~/.lyupro/.llm-bridge/runs/`, verify each file by SHA-256, import the old repository's `codex-runs` git history, and write the move record last. Refused while a run is live (`--dry-run` names the refusal and still previews); offers to remove the old folder only when every file has an identical copy in the new store. |

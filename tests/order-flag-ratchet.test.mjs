@@ -19,11 +19,13 @@ const EXCLUDED = new Set([
 
 // Plan_63 D9 G4: reviewed decreases after the task-file switch; never regenerate at test time.
 const BASELINE = {
-  'tests/cli/llm-bridge.test.mjs': 1,
   // +2 (Plan_67 N1b): `--scope user|project` of `inventory confirm` is the install scope, not the order scope.
   'tests/cli/commands.test.mjs': 3,
+  'tests/cli/llm-bridge.test.mjs': 1,
   'tests/cli/model-concurrent-edits.test.mjs': 3,
   'tests/cli/model.test.mjs': 5,
+  // +1 (OW-081): `--scope user|project` of `settings export` is the install scope, not the order scope.
+  'tests/cli/settings-export.test.mjs': 1,
   'tests/cli/uninstall-purge.test.mjs': 1,
   'tests/dispatcher-call.test.mjs': 4,
   'tests/dispatcher-command.test.mjs': 2,
