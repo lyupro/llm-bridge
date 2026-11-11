@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { readJsonFileWithRaw } from '../src/home/lib/json-file.mjs';
 import { envValue, resolveCommandOnPath } from '../src/home/lib/command-path.mjs';
 import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
@@ -125,6 +126,28 @@ const hasOwnCommand = (group, commands) => {
   return groupHooks(group).some((hook) => hook?.type === 'command' && expected.includes(hook.command));
 };
 
+function keptHook(settings, spec) {
+  const commands = [spec.command, ...spec.alternateCommands];
+  const eventGroups = groups(settings, spec.event);
+  let firstMatch;
+  // R2 reports the same survivor as merge: declared matcher first, in reverse group order.
+  for (let index = eventGroups.length - 1; index >= 0; index -= 1) {
+    const group = eventGroups[index];
+    const hook = groupHooks(group).find((entry) =>
+      entry?.type === 'command' && commands.includes(entry.command));
+    if (!hook) continue;
+    firstMatch ??= hook;
+    if (group.matcher === spec.matcher) return hook;
+  }
+  return firstMatch;
+}
+
+export function formatHookFieldDrift(fieldDrift) {
+  return fieldDrift.map(({ field, actual, packageValue }) =>
+    `${field} is ${actual === undefined ? 'absent' : JSON.stringify(actual)}, the package ${packageValue === undefined ? 'does not set it' : `sets ${JSON.stringify(packageValue)}`}`)
+    .join('; ');
+}
+
 /**
  * Presence is decided by the command, not by the matcher it currently sits under; writing then
  * places that command under the matcher the package declares. These are two halves of one rule.
@@ -159,6 +182,16 @@ export async function inspectHook(settingsPath, specOrPath) {
       if (group?.matcher !== spec.matcher) requiresMove = true;
     }
   }
+  const hook = keptHook(state.settings, spec);
+  const packageHook = hook ? declaredHook(hook.command) : {};
+  const fieldDrift = hook ? [...new Set([...Object.keys(hook), ...Object.keys(packageHook)])]
+    .filter((field) => field !== 'command')
+    .map((field) => ({
+      field,
+      actual: Object.hasOwn(hook, field) ? hook[field] : undefined,
+      packageValue: Object.hasOwn(packageHook, field) ? packageHook[field] : undefined,
+    }))
+    .filter(({ actual, packageValue }) => !isDeepStrictEqual(actual, packageValue)) : [];
   return {
     ...state,
     ...spec,
@@ -167,6 +200,7 @@ export async function inspectHook(settingsPath, specOrPath) {
     matchedMatcher,
     requiresMove,
     requiresRewrite,
+    fieldDrift,
     duplicates: duplicates > 1,
     current: Boolean(matchedCommand) && !requiresMove && !requiresRewrite && duplicates === 1,
   };
@@ -247,18 +281,13 @@ export async function mergeHook(settingsPath, specOrPath, inspected) {
     if (state.present) {
       const eventGroups = settings.hooks[spec.event];
       const commands = [spec.command, ...spec.alternateCommands];
-      // The entry in the declared group wins, so a field the operator added there (a timeout)
-      // survives the rewrite; groups are walked from the end, which would otherwise pick a stale copy.
-      let hookToMove;
-      let declaredHook;
+      const hookToMove = keptHook(settings, spec);
       for (let index = eventGroups.length - 1; index >= 0; index -= 1) {
         const group = eventGroups[index];
         if (!Array.isArray(group?.hooks)) continue;
         const hadOwnHook = hasOwnCommand(group, commands);
         group.hooks = group.hooks.filter((hook) => {
           if (hook?.type !== 'command' || !commands.includes(hook.command)) return true;
-          hookToMove ??= hook;
-          if (group.matcher === spec.matcher) declaredHook ??= hook;
           return false;
         });
         if (hadOwnHook && group.hooks.length === 0) eventGroups.splice(index, 1);
@@ -270,7 +299,7 @@ export async function mergeHook(settingsPath, specOrPath, inspected) {
         eventGroups.push(group);
       }
       if (!Array.isArray(group.hooks)) group.hooks = [];
-      group.hooks.push({ ...(declaredHook || hookToMove), command: spec.command });
+      group.hooks.push({ ...hookToMove, command: spec.command });
       await atomicWrite(settingsPath, settings, state);
       return { changed: true, createdGroup, ...(state.requiresMove ? { moved: true } : {}), ...(state.requiresRewrite ? { rewritten: true } : {}) };
     }

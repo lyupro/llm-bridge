@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { HOOK_DEFINITIONS } from './manifest.mjs';
 import { recordTarget } from './install-record.mjs';
-import { commandFor, inspectHook } from './settings-merge.mjs';
+import { commandFor, formatHookFieldDrift, inspectHook } from './settings-merge.mjs';
 import { check } from './doctor-format.mjs';
 import { probeHookLauncher } from './launcher-probe.mjs';
 
@@ -88,7 +88,8 @@ export async function hookChecks(host, record, launcherProbe = probeHookLauncher
         const health = problems.length ? `; ${problems.join('; ')}` : '';
         const status = form === 'short' && !launcher.ok ? 'fail'
           : form === 'path' && launcher.ok || problems.length ? 'warn' : 'ok';
-        return check(key, status, `${definition.event} matcher ${recordedMatcher} -> ${expected} (${form} command; ${reason}${form === 'path' ? `; ${hookVersion(record)}` : ''}${health})`);
+        const edit = state.fieldDrift.length ? `; your edit kept: ${formatHookFieldDrift(state.fieldDrift)}` : '';
+        return check(key, status, `${definition.event} matcher ${recordedMatcher} -> ${expected} (${form} command; ${reason}${form === 'path' ? `; ${hookVersion(record)}` : ''}${health})${edit}`);
       }
       const command = recorded.command || fullCommand;
       const form = command.startsWith('llm-bridge hook ') ? 'short' : 'path';

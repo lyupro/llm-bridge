@@ -21,6 +21,7 @@ import { syncOtherOwners } from './owner-sync-apply.mjs';
 import { ownerRecord } from './owner-record.mjs';
 import {
   commandFor,
+  formatHookFieldDrift,
   inspectHook,
   mergeHook,
   withSettingsRun,
@@ -145,6 +146,12 @@ async function installInRun(options = {}) {
   }
   const inspectedHooks = await Promise.all(targets.map(({ spec }) =>
     inspectHook(host.settingsPath, spec)));
+  const hookEdits = inspectedHooks.flatMap((state, index) => {
+    const { definition } = targets[index];
+    return state.fieldDrift.length
+      ? [`\nKept your edit to the ${definition.event} hook ${definition.name}: ${formatHookFieldDrift(state.fieldDrift)}.`]
+      : [];
+  }).join('');
   const states = await Promise.all(plan.map(async (item) => ({
     item,
     exists: await targetExists(item.target),
@@ -196,12 +203,12 @@ async function installInRun(options = {}) {
         hostContract,
         retentionOutput(
           configuredRetentionLine,
-          `llm-bridge is already installed; nothing to do.\n${permissionOutput(permissionResult, host.settingsPath)}`,
+          `llm-bridge is already installed; nothing to do.\n${permissionOutput(permissionResult, host.settingsPath)}${hookEdits}`,
         ),
       ));
     }
     return ownerSyncOutput(host, { packageRoot, env, dryRun },
-      contractOutput(hostContract, retentionOutput(configuredRetentionLine, 'llm-bridge is already installed; nothing to do.')));
+      contractOutput(hostContract, retentionOutput(configuredRetentionLine, `llm-bridge is already installed; nothing to do.${hookEdits}`)));
   }
 
   if (dryRun) {
@@ -221,7 +228,7 @@ async function installInRun(options = {}) {
     if (transition) lines.push(`A real run would ask whether this host is the only one using ${host.brandRoot}.`);
     lines.push('Would write installation record in the brand root.');
     return ownerSyncOutput(host, { packageRoot, env, dryRun },
-      contractOutput(hostContract, retentionOutput(configuredRetentionLine, lines.join('\n'))));
+      contractOutput(hostContract, retentionOutput(configuredRetentionLine, lines.join('\n') + hookEdits)));
   }
 
   // Claim ownership of the shared rules file before writing anything. Claiming it last meant a
@@ -258,7 +265,7 @@ async function installInRun(options = {}) {
     retentionOutput(
       configuredRetentionLine,
       `Installed ${plan.length} files and the Codex rules file, and registered ${hookSummary(targets)}.`
-        + `\n${permissionOutput(permissionResult, host.settingsPath)}${transitionLine}`,
+        + `\n${permissionOutput(permissionResult, host.settingsPath)}${transitionLine}${hookEdits}`,
     ),
   ));
 }
