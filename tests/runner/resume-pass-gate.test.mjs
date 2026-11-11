@@ -51,7 +51,7 @@ function run(tree, name, status, meta, artifacts = {}) {
     'events.jsonl': `${JSON.stringify({ type: 'thread.started', thread_id: THREAD })}\n`,
     'task-original.md': TASK,
     'schema.json': '{"type":"object"}\n',
-    ...(record.agent === 'codex-advisor' && record.phase === 'advise'
+    ...(record.agent === 'codex-advisor' && ['scope', 'advise'].includes(record.phase)
       ? { 'advisor-task.json': '{"frozen":true}\n' } : {}),
     ...artifacts,
   };
@@ -228,6 +228,7 @@ test('retry retains its original scope and advisor task and has no resume proven
 });
 
 for (const [artifacts, reasons] of [
+  [{ 'advisor-task.json': null }, ['artifact-missing:advisor-task.json']],
   [{ 'schema.json': null }, ['artifact-missing:schema.json']],
   [{ 'worker.json': '{}' }, ['profile-missing']],
   [{ 'schema.json': null, 'worker.json': '{}' }, ['profile-missing', 'artifact-missing:schema.json']],
@@ -288,3 +289,32 @@ test('a resume grant for another repository refuses before attaching to its repe
   assert.deepEqual(lines, []);
   assert.deepEqual(fs.readdirSync(tree.projectRunsRoot), [A, R]);
 });
+
+
+for (const phase of ['scope', 'advise']) {
+  for (const decisions of [undefined, 'docs/decisions.md', 'docs/./decisions.md',
+    ...(process.platform === 'win32' ? ['DOCS\\decisions.md'] : [])]) {
+    test(phase + ' resume keeps its frozen ledger with header ' + String(decisions), async () => {
+      const tree = fixture();
+      const raw = '\ufeff' + JSON.stringify({ decisions: 'docs/decisions.md', frozen: true });
+      run(tree, A, { phase }, {}, { 'advisor-task.json': raw });
+      session(tree, STOP);
+      const result = await gate(tree, 'resume', A, { phase, decisions });
+      assert.equal(result.advisorTask, null);
+      assert.equal(result.resumeInputs.files['advisor-task.json'], raw);
+      assert.deepEqual(fs.readdirSync(tree.projectRunsRoot), [A]);
+    });
+  }
+  for (const frozenDecisions of [undefined, null, 'docs/decisions.md']) {
+    test(phase + ' resume refuses replacing ledger ' + String(frozenDecisions) + ' before launch', async () => {
+      const tree = fixture();
+      run(tree, A, { phase }, {}, { 'advisor-task.json': JSON.stringify({ decisions: frozenDecisions }) });
+      session(tree, STOP);
+      const decisions = 'docs/other.md';
+      await assert.rejects(gate(tree, 'resume', A, { phase, decisions }), refusal(orderRuleMessage('resume-grant-usable', {
+        violation: 'ledger-replaced', run: A, frozenDecisions: frozenDecisions ?? null, decisions,
+      })));
+      assert.deepEqual(fs.readdirSync(tree.projectRunsRoot), [A]);
+    });
+  }
+}

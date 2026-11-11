@@ -32,11 +32,12 @@ function fixture() {
   return { root, repo, home, codexHome, runs: path.join(repo, 'runs') };
 }
 
-function launch(tree, phase, grant) {
+function launch(tree, phase, grant, { decisions, note = NOTE, expectedStatus = 0 } = {}) {
   const { argv } = orderInvocation({
-    agent: 'codex-advisor', order: { repository: tree.repo, 'order id': 'resume-launch', phase },
+    agent: 'codex-advisor', order: { repository: tree.repo, 'order id': 'resume-launch', phase,
+      ...(decisions === undefined ? {} : { decisions }) },
     grant: grant ? { ...grant, kind: grant.kind === 'resume' ? 'continue' : grant.kind } : undefined,
-    task: grant?.kind === 'resume' ? NOTE : TASK, dir: tree.root,
+    task: grant?.kind === 'resume' ? note : TASK, dir: tree.root,
   });
   // O8 enables the public label later; inject only the parsed grant, keeping the real input boundary.
   const inputWrapper = `
@@ -52,6 +53,9 @@ import { registerHooks, syncBuiltinESMExports } from 'node:module';
 ${launcherProcessMocks({ worker: 'spawn', probe: 'marker' })}
 const mockedSpawn = childProcess.spawn;
 childProcess.spawn = (command, args, options) => {
+  if (args.includes('--worker') && ${JSON.stringify(expectedStatus !== 0)}) {
+    throw new Error('A refused resume must not start a worker or spend quota');
+  }
   if (args.includes('--worker') && options.cwd !== ${JSON.stringify(tree.repo)}) {
     throw new Error('The worker must start in the repository');
   }
@@ -77,7 +81,8 @@ catch (error) {
     cwd: tree.repo, input: '', encoding: 'utf8', timeout: 10_000, windowsHide: true,
     env: { ...process.env, LLM_BRIDGE_HOME: tree.home, LLM_BRIDGE_RUNS_ROOT: tree.runs, CODEX_HOME: tree.codexHome },
   });
-  assert.equal(output.status, 0, output.stderr || output.stdout || output.error?.message);
+  assert.equal(output.status, expectedStatus, output.stderr || output.stdout || output.error?.message);
+  if (expectedStatus !== 0) return output;
   const line = output.stdout.split(/\r?\n/).find((part) => part.startsWith('RUN='));
   assert.ok(line, output.stdout);
   const dir = line.slice(4).split(' order-id=')[0];
@@ -97,7 +102,7 @@ function failedThread(tree, run, thread) {
   const stoppedAt = new Date().toISOString();
   finish(run, 'FAIL');
   fs.writeFileSync(path.join(run.dir, 'meta.json'), JSON.stringify({
-    agent: 'codex-advisor', phase: 'advise', status: 'FAIL', result_ok: false, session_id: thread,
+    agent: 'codex-advisor', phase: run.worker.phase, status: 'FAIL', result_ok: false, session_id: thread,
     situation: { kind: KIND },
     stop: { trigger: 'deadline', tree_stop: { state: 'stopped' },
       session: { state: 'observed', last_record_at: stoppedAt } },
@@ -185,3 +190,85 @@ test('fresh advisor advise retains its normal task, schema and null resume order
   assert.equal(fs.existsSync(path.join(advise.dir, 'task-original.md')), false);
   assert.equal(fs.existsSync(path.join(advise.dir, 'resume-note.md')), false);
 });
+
+
+test('scope resume copies its frozen ledger after the ledger file changes', () => {
+  const tree = fixture();
+  const ledger = path.join(tree.repo, 'decisions.md');
+  fs.writeFileSync(ledger, '# Decisions\n\nKeep the boundary.\n');
+  const scope = launch(tree, 'scope', undefined, { decisions: 'decisions.md' });
+  const frozen = scope.read('advisor-task.json');
+  assert.equal(JSON.parse(frozen).decisions, 'decisions.md');
+  failedThread(tree, scope, randomUUID());
+  fs.writeFileSync(ledger, '# Decisions\n\nChanged after the stopped pass.\n');
+  const resumed = launch(tree, 'scope', {
+    kind: 'resume', run: path.basename(scope.dir), reason: 'finish scope',
+  });
+  assert.equal(resumed.read('advisor-task.json'), frozen);
+});
+
+
+function stoppedPass(phase, decisions) {
+  const tree = fixture();
+  fs.writeFileSync(path.join(tree.repo, 'decisions.md'), '# Decisions\n\nKeep the boundary.\n');
+  fs.writeFileSync(path.join(tree.repo, 'other.md'), '# Other decisions\n\nSplit the boundary.\n');
+  let scope = launch(tree, 'scope', undefined, { decisions });
+  if (phase === 'advise') {
+    finish(scope, 'OK');
+    fs.writeFileSync(path.join(scope.dir, 'result.json'), JSON.stringify(validScope()));
+    scope = launch(tree, 'advise', {
+      kind: 'continue', run: path.basename(scope.dir), reason: 'settle the risks',
+    }, { decisions });
+  }
+  failedThread(tree, scope, randomUUID());
+  return { tree, run: scope, grant: { kind: 'resume', run: path.basename(scope.dir), reason: 'finish the pass' } };
+}
+
+for (const phase of ['scope', 'advise']) {
+  for (const decisions of [undefined, './decisions.md']) {
+    test(phase + ' resume preserves frozen ledger with header ' + String(decisions), () => {
+      const { tree, run, grant } = stoppedPass(phase, 'decisions.md');
+      const frozen = run.read('advisor-task.json');
+      const resumed = launch(tree, phase, grant, { decisions });
+      assert.equal(resumed.read('advisor-task.json'), frozen);
+      assert.equal(JSON.parse(resumed.read('advisor-task.json')).decisions, 'decisions.md');
+    });
+  }
+  for (const archived of [false, true]) {
+    test(phase + ' resume preserves a ' + (archived ? 'missing' : 'null') + ' ledger without a label', () => {
+      const { tree, run, grant } = stoppedPass(phase);
+      const frozen = JSON.parse(run.read('advisor-task.json'));
+      assert.equal(frozen.decisions, null);
+      if (archived) delete frozen.decisions;
+      fs.writeFileSync(path.join(run.dir, 'advisor-task.json'), JSON.stringify(frozen));
+      const resumed = launch(tree, phase, grant);
+      assert.equal(resumed.read('advisor-task.json'), run.read('advisor-task.json'));
+    });
+  }
+  for (const original of ['decisions.md', null, undefined]) {
+    test(phase + ' resume cannot add or replace ledger ' + String(original) + ' and spends no quota', () => {
+      const { tree, run, grant } = stoppedPass(phase, original ?? undefined);
+      if (original === undefined) {
+        const frozen = JSON.parse(run.read('advisor-task.json'));
+        delete frozen.decisions;
+        fs.writeFileSync(path.join(run.dir, 'advisor-task.json'), JSON.stringify(frozen));
+      }
+      const folders = fs.readdirSync(tree.runs);
+      const output = launch(tree, phase, grant, { decisions: 'other.md', expectedStatus: 2 });
+      assert.ok(output.stderr.includes('Resume is refused:'), output.stderr);
+      assert.ok(output.stderr.includes(JSON.stringify(original ?? null)), output.stderr);
+      assert.ok(output.stderr.includes('"other.md"'), output.stderr);
+      assert.match(output.stderr, /a different ledger needs retry: or a new order id/);
+      assert.match(output.stderr, /The run folder was not created; quota was not spent/);
+      assert.doesNotMatch(output.stdout, /^RUN=/m);
+      assert.deepEqual(fs.readdirSync(tree.runs), folders);
+    });
+  }
+  test(phase + ' resume treats another ledger in the body as a note', () => {
+    const { tree, run, grant } = stoppedPass(phase, 'decisions.md');
+    const note = 'Resume the frozen pass.\n\ndecisions: other.md\nThis is only a note.';
+    const resumed = launch(tree, phase, grant, { note });
+    assert.equal(resumed.read('advisor-task.json'), run.read('advisor-task.json'));
+    assert.equal(resumed.read('resume-note.md'), note);
+  });
+}

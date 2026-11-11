@@ -53,7 +53,7 @@ export function readResumeInputs(runDir) {
     { name: 'schema.json', json: true },
   ];
   if (status?.agent === 'codex-scout') artifacts.push({ name: 'questions.json', json: true, shape: Array.isArray });
-  if (status?.agent === 'codex-advisor' && status.phase === 'advise') {
+  if (status?.agent === 'codex-advisor' && ['scope', 'advise'].includes(status.phase)) {
     artifacts.push({ name: 'advisor-task.json', json: true, shape: isObject });
   }
   if (status?.agent === 'codex-review') artifacts.push({ name: 'scope.txt' });

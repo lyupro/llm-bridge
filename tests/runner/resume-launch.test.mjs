@@ -55,8 +55,8 @@ function namedRun(root, agent, phase) {
     'task.md': '# Original task\n\nPreserve whitespace, café, and 日本語.  \n',
     'schema.json': '{\r\n  "type" : "object", "properties": {}\r\n}\r\n',
   };
-  if (agent === 'codex-advisor' && phase === 'advise') {
-    files['advisor-task.json'] = '{ "question" : "frozen design", "options" : [] }\n';
+  if (agent === 'codex-advisor' && ['scope', 'advise'].includes(phase)) {
+    files['advisor-task.json'] = '{ "question" : "frozen design", "options" : [], "decisions" : "docs/decisions.md" }\n';
   }
   if (agent === 'codex-scout') files['questions.json'] = '[  { "id" : "Q1" }  ]\n';
   if (agent === 'codex-review') files['scope.txt'] = 'src/example.mjs\nspace in name.mjs\n';
@@ -79,6 +79,7 @@ function emptyRun(root, name = 'resume') {
 }
 
 for (const [agent, phase, extra] of [
+  ['codex-advisor', 'scope', 'advisor-task.json'],
   ['codex-advisor', 'advise', 'advisor-task.json'],
   ['codex-scout', 'scout', 'questions.json'],
   ['codex-review', 'review', 'scope.txt'],

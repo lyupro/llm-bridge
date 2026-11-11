@@ -6,6 +6,7 @@
  * 2026-10-03 TradeForge advise that died on model capacity showed this gate needs a retry path.
  * It is handed no run directory, so like preflight.mjs it cannot leave a folder behind a refusal.
  */
+import { parseJsonText as parseFrozenJson } from '../json-file.mjs';
 import path from 'node:path';
 import { chainRuns, startedRuns, taskFingerprint, readJson } from '../write-meta.mjs';
 import { die } from './args.mjs';
@@ -76,6 +77,16 @@ export async function passGate({ opts, taskText, header, projectRunsRoot, repoRo
       violation: 'inputs-unusable', run: grant.run, reasons: frozen.reasons,
     }), orderDiagnosticMessage('run-not-created')].join(' '), { action: 'grant-decision' });
     resumeInputs = frozen.inputs;
+    // OW-083 R1: a resume keeps the ledger of the frozen pass, including archived null ledgers.
+    if (resumeInputs.agent === 'codex-advisor' && opts.decisions != null) {
+      const frozenDecisions = parseFrozenJson(path.join(projectRunsRoot, grant.run, 'advisor-task.json'),
+        resumeInputs.files['advisor-task.json']).decisions ?? null;
+      if (frozenDecisions === null || normalizeRepoPath(opts.decisions) !== normalizeRepoPath(frozenDecisions)) {
+        die([orderRuleMessage('resume-grant-usable', {
+          violation: 'ledger-replaced', run: grant.run, frozenDecisions, decisions: opts.decisions,
+        }), orderDiagnosticMessage('run-not-created')].join(' '), { action: 'grant-decision' });
+      }
+    }
     const namedStatus = readJson(path.join(projectRunsRoot, grant.run, 'status.json'));
     // Plan_80 E13: a resume replays the named pass against its recorded continuation base.
     continuationGrant = String(namedStatus.continued_from ?? '').trim()

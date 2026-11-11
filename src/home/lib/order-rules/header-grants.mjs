@@ -140,14 +140,14 @@ export const RULES = Object.freeze({
   }),
   'resume-grant-usable': Object.freeze({
     data: Object.freeze(['violation', 'run', 'runsRoot', 'previousOrder', 'orderId', 'labelName',
-      'blockers', 'state', 'reason', 'recordedAt', 'currentAt', 'reasons', 'successor']),
+      'blockers', 'state', 'reason', 'recordedAt', 'currentAt', 'reasons', 'successor', 'frozenDecisions', 'decisions']),
     topic: 'order',
     rule: 'Grant resume only to the last run of the task chain under its own order id, after a finished non-OK ' +
       'verdict with its worker stopped, when the run is eligible by its recorded stop facts and its Codex thread ' +
       'has not advanced since it stopped; resume continues that pass\'s thread, retry repeats it on a fresh ' +
       'thread, continue grants the next pass.',
     message: ({ violation, run, runsRoot, previousOrder, orderId, labelName, blockers, state, reason,
-      recordedAt, currentAt, reasons, successor }) => {
+      recordedAt, currentAt, reasons, successor, frozenDecisions, decisions }) => {
       if (violation === 'missing-folder') {
         return `Resume is refused: ${run} is not a bare existing run folder in ${runsRoot}.`;
       }
@@ -177,6 +177,10 @@ export const RULES = Object.freeze({
       if (violation === 'inputs-unusable') {
         return `Resume is refused: run ${run} cannot be replayed: ${reasons.join(', ')}. ` +
           'A retry: grant repeats it on a fresh thread.';
+      }
+      if (violation === 'ledger-replaced') {
+        return `Resume is refused: run ${run} froze decisions ${JSON.stringify(frozenDecisions)}, but the resume order ` +
+          `names ${JSON.stringify(decisions)}; a different ledger needs retry: or a new order id.`;
       }
       if (violation === 'thread-unreadable') {
         return `Resume is refused: run ${run} Codex thread is ${state}; reason: ${reason}.`;

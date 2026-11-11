@@ -99,6 +99,13 @@ const REFUSALS = [
     why: 'Plan_80 E13 O6: a resume replays the named run\'s task, schema and profile, never today\'s files',
   },
   {
+    name: 'a resume order naming another decision ledger',
+    side: 'before',
+    file: 'pass-gate.mjs',
+    marker: "violation: 'ledger-replaced'",
+    why: 'OW-083 R1: a resume keeps the ledger its pass checked; another ledger is a new pass, not a replay',
+  },
+  {
     name: 'a refused retry',
     side: 'before',
     file: 'pass-gate.mjs',

@@ -37,7 +37,7 @@ function fixture(root, overrides = {}) {
   writeJson(runDir, 'meta.json', { session_id: 'frozen-thread' });
   write(runDir, 'task.md', task);
   write(runDir, 'schema.json', schema);
-  if (status.agent === 'codex-advisor' && status.phase === 'advise') write(runDir, 'advisor-task.json', advisorTask);
+  if (status.agent === 'codex-advisor' && ['scope', 'advise'].includes(status.phase)) write(runDir, 'advisor-task.json', advisorTask);
   if (status.agent === 'codex-scout') write(runDir, 'questions.json', questions);
   if (status.agent === 'codex-review') write(runDir, 'scope.txt', scope);
   return { runDir, status };
@@ -290,12 +290,27 @@ test('BOM JSON boundaries, truncated events and current configuration preserve t
   });
 });
 
-test('advisor scope phase requires no advise artifact', async () => {
+test('advisor scope phase freezes its advisor task including decisions', async () => {
   await withTempTree('resume-inputs-', (root) => {
     const { runDir } = fixture(root, { phase: 'scope' });
-    assert.deepEqual(Object.keys(readResumeInputs(runDir).inputs.files), ['task-original.md', 'schema.json']);
+    const raw = JSON.stringify({ question: 'Frozen scope', decisions: 'docs/decisions.md' });
+    write(runDir, 'advisor-task.json', raw);
+    assert.deepEqual(readResumeInputs(runDir).inputs.files, {
+      'task-original.md': task, 'schema.json': schema, 'advisor-task.json': raw,
+    });
   });
 });
+
+for (const content of [undefined, '{broken', '[]', 'null', '"text"']) {
+  test('advisor scope requires an object advisor-task.json (' + String(content) + ')', async () => {
+    await withTempTree('resume-inputs-', (root) => {
+      const { runDir } = fixture(root, { phase: 'scope' });
+      if (content === undefined) fs.unlinkSync(path.join(runDir, 'advisor-task.json'));
+      else write(runDir, 'advisor-task.json', content);
+      expectReasons(runDir, ['artifact-' + (content === undefined ? 'missing' : 'malformed') + ':advisor-task.json']);
+    });
+  });
+}
 
 test('reader creates and writes nothing on success or failure, including a missing directory', async () => {
   await withTempTree('resume-inputs-', (root) => {

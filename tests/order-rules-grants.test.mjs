@@ -104,6 +104,12 @@ const resumeMessages = [
   ['inputs-unusable', { run: 'B', reasons: ['artifact-missing:schema.json', 'profile-missing'] },
     'Resume is refused: run B cannot be replayed: artifact-missing:schema.json, profile-missing. ' +
       'A retry: grant repeats it on a fresh thread.'],
+  ['ledger-replaced', { run: 'B', frozenDecisions: 'docs/decisions.md', decisions: 'docs/other.md' },
+    'Resume is refused: run B froze decisions "docs/decisions.md", but the resume order ' +
+      'names "docs/other.md"; a different ledger needs retry: or a new order id.'],
+  ['ledger-replaced', { run: 'B', frozenDecisions: null, decisions: 'docs/other.md' },
+    'Resume is refused: run B froze decisions null, but the resume order ' +
+      'names "docs/other.md"; a different ledger needs retry: or a new order id.'],
   ['thread-unreadable', { run: 'B', state: 'unreadable', reason: 'access denied' },
     'Resume is refused: run B Codex thread is unreadable; reason: access denied.'],
   ['thread-advanced-after-stop', { run: 'B', recordedAt: '2026-10-16T09:25:00.000Z', currentAt: '2026-10-16T09:26:00.000Z' },
