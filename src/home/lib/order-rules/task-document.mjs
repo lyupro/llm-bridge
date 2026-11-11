@@ -1,4 +1,9 @@
 /** Plan_79 D4: owns rules for task-body sections. */
+
+// The rule catalog imports nothing from the runner (tests/order-registry-layout.test.mjs copies it alone).
+// tests/runner/question-kind.test.mjs fails when this list drifts from the classifier's marker table.
+const REGISTERED_MARKERS = '[context-only], [web-research]';
+
 export const RULES = Object.freeze({
   'resume-task-body': Object.freeze({
     data: Object.freeze(['heading']),
@@ -29,17 +34,18 @@ export const RULES = Object.freeze({
       throw new Error(`unknown scout-questions violation: ${violation}`);
     },
   }),
-  'question-context-marker': Object.freeze({
+  'question-kind-marker': Object.freeze({
     data: Object.freeze(['index', 'text', 'context']),
     topic: 'order',
-    rule: 'If a question uses a context-only marker, spell it exactly [context-only] and place it ' +
-      'only once, at the start, followed by whitespace (such as a space) and non-empty question text.',
+    rule: `If a question uses a kind marker, use exactly one of ${REGISTERED_MARKERS} ` +
+      'at the start, followed by whitespace (such as a space) and non-empty question text. ' +
+      'An unregistered leading bracket token containing only letters, spaces, hyphens or underscores is refused.',
     message: ({ index, text, context, refusal }) => {
       if (context === 'task-input') {
-        return `${refusal}; the marker is exactly [context-only] followed by a space and the question; no quota was spent.`;
+        return `${refusal}; use exactly one registered marker at the start, followed by whitespace and non-empty question text; no quota was spent.`;
       }
-      if (context !== undefined) throw new Error(`unknown question-context-marker context: ${context}`);
-      return `Q${index + 1} has an invalid context-only marker in ${JSON.stringify(text)}`;
+      if (context !== undefined) throw new Error(`unknown question-kind-marker context: ${context}`);
+      return `Q${index + 1} has an invalid question-kind marker (${REGISTERED_MARKERS}) in ${JSON.stringify(text)}`;
     },
   }),
   'verify-line': Object.freeze({

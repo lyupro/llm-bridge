@@ -38,20 +38,20 @@ for (const [key, values, document, expected] of taskRefusals) {
 
 // The marker's placement/spelling branch and its missing-whitespace/text branch share one key.
 const markerRefusals = [
-  [0, '[Context-Only] x', 'Q1 has an invalid context-only marker in "[Context-Only] x"'],
-  [1, 'x [context-only]', 'Q2 has an invalid context-only marker in "x [context-only]"'],
+  [0, '[Context-Only] x', 'Q1 has an invalid question-kind marker ([context-only], [web-research]) in "[Context-Only] x"'],
+  [1, 'x [context-only]', 'Q2 has an invalid question-kind marker ([context-only], [web-research]) in "x [context-only]"'],
   [1, '[context-only] a [context-only] b',
-    'Q2 has an invalid context-only marker in "[context-only] a [context-only] b"'],
-  [9, '[context-only]x', 'Q10 has an invalid context-only marker in "[context-only]x"'],
-  [0, '[context-only]', 'Q1 has an invalid context-only marker in "[context-only]"'],
-  [1, '[context-only]\t\n', 'Q2 has an invalid context-only marker in "[context-only]\\t\\n"'],
+    'Q2 has an invalid question-kind marker ([context-only], [web-research]) in "[context-only] a [context-only] b"'],
+  [9, '[context-only]x', 'Q10 has an invalid question-kind marker ([context-only], [web-research]) in "[context-only]x"'],
+  [0, '[context-only]', 'Q1 has an invalid question-kind marker ([context-only], [web-research]) in "[context-only]"'],
+  [1, '[context-only]\t\n', 'Q2 has an invalid question-kind marker ([context-only], [web-research]) in "[context-only]\\t\\n"'],
   [1, '"quoted" [context-only]',
-    'Q2 has an invalid context-only marker in "\\"quoted\\" [context-only]"'],
+    'Q2 has an invalid question-kind marker ([context-only], [web-research]) in "\\"quoted\\" [context-only]"'],
 ];
 for (const [index, text, expected] of markerRefusals) {
-  test(`question-context-marker reproduces the refusal: ${expected}`, () => {
+  test(`question-kind-marker reproduces the refusal: ${expected}`, () => {
     const texts = [...Array(index).fill('An ordinary question.'), text];
-    assert.equal(orderRuleMessage('question-context-marker', { index, text }), expected);
+    assert.equal(orderRuleMessage('question-kind-marker', { index, text }), expected);
     assert.equal(questionKindRefusal(texts), expected);
     assert.throws(() => questionsFromTexts(texts), { message: expected });
   });
@@ -158,18 +158,18 @@ test('scout-questions preserves the required sub-question refusal', () => {
 
 const contextualMarkerRefusals = [
   ['[Context-Only] x',
-    'Q1 has an invalid context-only marker in "[Context-Only] x"; the marker is exactly [context-only] ' +
-      'followed by a space and the question; no quota was spent.'],
+    'Q1 has an invalid question-kind marker ([context-only], [web-research]) in "[Context-Only] x"; use exactly one registered marker at the start, ' +
+      'followed by whitespace and non-empty question text; no quota was spent.'],
   ['[context-only]x',
-    'Q1 has an invalid context-only marker in "[context-only]x"; the marker is exactly [context-only] ' +
-      'followed by a space and the question; no quota was spent.'],
+    'Q1 has an invalid question-kind marker ([context-only], [web-research]) in "[context-only]x"; use exactly one registered marker at the start, ' +
+      'followed by whitespace and non-empty question text; no quota was spent.'],
   ['[context-only]\t\n',
-    'Q1 has an invalid context-only marker in "[context-only]\\t\\n"; the marker is exactly [context-only] ' +
-      'followed by a space and the question; no quota was spent.'],
+    'Q1 has an invalid question-kind marker ([context-only], [web-research]) in "[context-only]\\t\\n"; use exactly one registered marker at the start, ' +
+      'followed by whitespace and non-empty question text; no quota was spent.'],
 ];
 for (const [text, expected] of contextualMarkerRefusals) {
-  test(`question-context-marker preserves the task-input suffix for ${JSON.stringify(text)}`, () => {
-    assert.equal(orderRuleMessage('question-context-marker', {
+  test(`question-kind-marker preserves the task-input suffix for ${JSON.stringify(text)}`, () => {
+    assert.equal(orderRuleMessage('question-kind-marker', {
       context: 'task-input', refusal: questionKindRefusal([text]),
     }), expected);
   });
@@ -188,7 +188,7 @@ for (const [grant, expected] of [
 }
 
 test('contextual message functions reject unknown contexts', () => {
-  for (const key of ['repository-path', 'decisions-path', 'question-context-marker']) {
+  for (const key of ['repository-path', 'decisions-path', 'question-kind-marker']) {
     assert.throws(() => orderRuleMessage(key, { context: 'unknown' }), {
       message: `unknown ${key} context: unknown`,
     });

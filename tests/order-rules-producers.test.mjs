@@ -196,7 +196,7 @@ test('D6 producer probe journals handwritten text and unknown parameters in a se
     import { checkOutgoingRefusal } from ${JSON.stringify(new URL('order-text-record.mjs', lib).href)};
     checkOutgoingRefusal(advisorTaskRefusal(''), 'producers-probe');
     checkOutgoingRefusal(unavailableRows('signed out').join('\\n'), 'producers-probe');
-    orderRuleMessage('question-context-marker', { context: 'task-input', refusal: 'handwritten refusal' });
+    orderRuleMessage('question-kind-marker', { context: 'task-input', refusal: 'handwritten refusal' });
     orderDiagnosticMessage('codex-unavailable-handoff', { variant: 'handoff', unknown: 'handwritten parameter' });
   `], { env: { ...process.env, LLM_BRIDGE_TEST_TMP: root }, encoding: 'utf8', windowsHide: true, timeout: 10_000 });
   assert.ifError(result.error);
@@ -205,7 +205,7 @@ test('D6 producer probe journals handwritten text and unknown parameters in a se
   const entries = fs.readdirSync(directory).flatMap((file) =>
     fs.readFileSync(path.join(directory, file), 'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse));
   assert.deepEqual(entries.map(({ kind, key, parameter, message }) => [kind, key, parameter, message]), [
-    ['parameter', 'question-context-marker', 'refusal', 'handwritten refusal'],
+    ['parameter', 'question-kind-marker', 'refusal', 'handwritten refusal'],
     ['parameter', 'codex-unavailable-handoff', 'unknown', 'handwritten parameter'],
   ]);
   for (const entry of entries) {

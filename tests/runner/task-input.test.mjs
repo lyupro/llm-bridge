@@ -133,20 +133,24 @@ test('the direct file and package run command share the runner crash reply and e
   assert.equal(command.stderr, direct.stderr);
 });
 
-test('a malformed scout marker refuses before any run folder or quota is spent', (t) => {
-  const root = fixture(t);
-  const { argv } = orderInvocation({
-    agent: 'codex-scout', order: { repository: root, 'order id': 'bad-marker' },
-    task: 'Scout the startup context.', questions: ['[Context-Only] What were you handed?'], dir: root,
+for (const question of ['[Context-Only] What were you handed?', '[web-reserch] What changed?',
+  '[ web-research ] What changed?', 'What changed [web-research]?', '[web-research]']) {
+  test(`a malformed scout marker refuses before any run folder or quota is spent: ${question}`, (t) => {
+    const root = fixture(t);
+    const { argv } = orderInvocation({
+      agent: 'codex-scout', order: { repository: root, 'order id': 'bad-marker' },
+      task: 'Scout the question.', questions: [question], dir: root,
+    });
+    const result = run(RUNNER, argv, root);
+    assert.ifError(result.error);
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /Q1/);
+    assert.match(result.stderr, /\[context-only\]/);
+    assert.match(result.stderr, /\[web-research\]/);
+    assert.match(result.stderr, /no quota was spent/);
+    assert.equal(fs.existsSync(path.join(root, 'runs')), false);
   });
-  const result = run(RUNNER, argv, root);
-  assert.ifError(result.error);
-  assert.equal(result.status, 2);
-  assert.match(result.stderr, /Q1/);
-  assert.match(result.stderr, /\[context-only\]/);
-  assert.match(result.stderr, /no quota was spent/);
-  assert.equal(fs.existsSync(path.join(root, 'runs')), false);
-});
+}
 
 test('OW-061: repository must be an existing absolute directory kept verbatim by Windows', (t) => {
   const root = fixture(t);

@@ -11,7 +11,7 @@ import { DEFAULTS } from '../run-config.mjs';
 import { SERVICE_FOLDERS } from '../meta/paths.mjs';
 import { RUN_ENV } from './run-env.mjs';
 import { advisorSchema, schemaFor } from './schemas.mjs';
-import { QUESTION_KIND } from './question-kind.mjs';
+import { QUESTION_KIND, questionMarker } from './question-kind.mjs';
 import { ANSWER_RULES, answerRuleStatements } from '../answer-rules.mjs';
 
 /**
@@ -137,7 +137,7 @@ ${
 }
 - Base the response on what you read; support every fact about the code with a \`path:line\` reference in where.
 ${questions.some((question) => question?.kind === QUESTION_KIND.STARTUP_CONTEXT)
-    ? `- A sub-question marked [context-only] asks about what this run was handed at startup
+    ? `- A sub-question marked ${questionMarker(QUESTION_KIND.STARTUP_CONTEXT)} asks about what this run was handed at startup
   (task, instructions, schema, environment), not about the repository. Answer it from that context,
   cite evidence as \`startup:<source>\`, and never cite a repository \`path:line\` you did not read
   with a command — that fails the run.\n` : ''}- If facts are missing, list them in unknowns; do not make them up.

@@ -49,9 +49,9 @@ const laundering = [
     'unknown flag --bad: llm-bridge run takes only --agent, --task-file and --no-wait; ' +
       'the order belongs in the task-file header\nany text'],
   ['orderRefusalAt', null, 'message', "orderRefusalAt('task.md', 'any text')", 'task.md: any text'],
-  ['orderRuleMessage', 'question-context-marker', 'refusal',
-    "orderRuleMessage('question-context-marker', { context: 'task-input', refusal: 'any text' })",
-    'any text; the marker is exactly [context-only] followed by a space and the question; no quota was spent.'],
+  ['orderRuleMessage', 'question-kind-marker', 'refusal',
+    "orderRuleMessage('question-kind-marker', { context: 'task-input', refusal: 'any text' })",
+    'any text; use exactly one registered marker at the start, followed by whitespace and non-empty question text; no quota was spent.'],
   ['orderRuleMessage', 'repository-path', 'reason',
     "orderRuleMessage('repository-path', { context: 'task-input', label: 'repository', reason: 'any text' })",
     'repository any text\nThe run folder was not created; quota was not spent.'],
@@ -85,7 +85,7 @@ test('recorded text, repetitions and the outgoing separator alphabet pass in all
     const outputs = [
       orderDiagnosticMessage('unknown-flag', { name: 'bad', help: text }),
       orderRefusalAt('task.md', text),
-      orderRuleMessage('question-context-marker', { context: 'task-input', refusal: text }),
+      orderRuleMessage('question-kind-marker', { context: 'task-input', refusal: text }),
       orderRuleMessage('repository-path', { context: 'task-input', label: 'repository', reason: text }),
     ];
     for (const output of outputs) assert.equal(checkOutgoingRefusal(output, 'case'), output);
@@ -164,6 +164,11 @@ for (const name of ['order-rules', 'order-diagnostics']) {
       fs.copyFileSync(${JSON.stringify(fileURLToPath(new URL(`${name}.mjs`, lib)))}, path.join(installed, '${name}.mjs'));
       fs.copyFileSync(${JSON.stringify(fileURLToPath(new URL('order-text-record.mjs', lib)))}, path.join(installed, 'order-text-record.mjs'));
       fs.cpSync(${JSON.stringify(fileURLToPath(new URL(`${name}/`, lib)))}, path.join(installed, '${name}'), { recursive: true });
+      if ('${name}' === 'order-rules') {
+        fs.mkdirSync(path.join(installed, 'runner'));
+        fs.copyFileSync(${JSON.stringify(fileURLToPath(new URL('runner/question-kind.mjs', lib)))},
+          path.join(installed, 'runner', 'question-kind.mjs'));
+      }
       const owner = path.join(installed, '${name}', '${name === 'order-rules' ? 'call' : 'cli-flags'}.mjs');
       const source = fs.readFileSync(owner, 'utf8');
       const replacement = source.replace('Object.freeze({',
@@ -199,7 +204,7 @@ test('without test mode builders preserve text and neither check nor record or w
     for (const expression of [
       () => orderDiagnosticMessage('unknown-flag', { name: 'bad', help: 'unrecorded' }),
       () => orderRefusalAt('location', 'unrecorded'),
-      () => orderRuleMessage('question-context-marker', { context: 'task-input', refusal: 'unrecorded' }),
+      () => orderRuleMessage('question-kind-marker', { context: 'task-input', refusal: 'unrecorded' }),
       () => orderRuleMessage('repository-path', { context: 'task-input', label: 'repository', reason: 'unrecorded' }),
     ]) assert.doesNotThrow(expression);
     recordOrderText('not recorded');

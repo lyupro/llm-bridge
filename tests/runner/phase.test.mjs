@@ -103,6 +103,13 @@ test('single-phase defaults persist through headers and explicit defaults still 
   }
 });
 
+test('a scout launch hands Codex the numbered sub-question list', () => {
+  // OW-084: the launcher must render the list through the classifier, or the kind marker never reaches Codex.
+  const { dir } = workerFrom(launch({ agent: 'codex-scout' }).output);
+  const task = fs.readFileSync(path.join(dir, 'task.md'), 'utf8');
+  assert.match(task, /## Sub-questions, each requires a separate response\n\nQ1: What does the source export\?\n/);
+});
+
 test('a build launch freezes home environment new-file paths in env.json', () => {
   const environmentNewFilePaths = ['host-mail/*/incoming/*.md'];
   const { env } = workerFrom(launch({ agent: 'codex-build', extraConfig: { environmentNewFilePaths } }).output);

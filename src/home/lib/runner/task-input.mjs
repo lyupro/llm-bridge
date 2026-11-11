@@ -71,7 +71,7 @@ export function settleTaskInput(opts) {
   if (opts.agent === 'codex-scout' && header.grant?.kind !== 'resume') {
     const refusal = questionKindRefusal(opts.questions);
     if (refusal) {
-      die(orderRuleMessage('question-context-marker', { context: 'task-input', refusal }), { action: 'usage' });
+      die(orderRuleMessage('question-kind-marker', { context: 'task-input', refusal }), { action: 'usage' });
     }
   }
   if (opts.noWait && opts.continue) {

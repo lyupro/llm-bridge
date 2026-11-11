@@ -25,7 +25,7 @@ import { setRun } from './run-context.mjs';
 import { loadRunEnv, RUN_ENV, CLEAN_ENV, RECOVERY_BRAKE } from './run-env.mjs';
 import { parseArgs, die, withActionRow } from './args.mjs';
 import { settleTaskInput } from './task-input.mjs';
-import { questionsFromTexts, QUESTION_KIND } from './question-kind.mjs';
+import { questionsFromTexts, questionListLines } from './question-kind.mjs';
 import { adviseSection, decisionLedgerSection } from './advise-carry.mjs';
 import { schemaFor } from './schemas.mjs';
 import { INSTRUCTIONS } from './prompts.mjs';
@@ -279,8 +279,7 @@ export async function launcher(argv = process.argv.slice(2)) {
           [
             '## Sub-questions, each requires a separate response',
             '',
-            questions.map((q) =>
-              `${q.id}${q.kind === QUESTION_KIND.STARTUP_CONTEXT ? ' [context-only]' : ''}: ${q.text}`).join('\n'),
+            questionListLines(questions).join('\n'),
             '',
             'A missed sub-question fails the run; a response containing only coordinates counts as missed.',
           ].join('\n'),

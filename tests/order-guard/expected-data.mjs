@@ -5,7 +5,7 @@ export const expectedData = {
   'repository-path': ['violation', 'value', 'segment', 'context', 'label'],
   'decisions-path': ['violation', 'value', 'context', 'label'],
   'repository-source': ['violation', 'taskFile', 'taskFileRoot', 'labelRepo', 'error', 'context', 'label', 'run', 'runRepo'],
-  'scout-questions': ['violation', 'line'], 'question-context-marker': ['index', 'text', 'context'],
+  'scout-questions': ['violation', 'line'], 'question-kind-marker': ['index', 'text', 'context'],
   'verify-line': ['violation'], 'no-wait-grant-conflict': ['grant'], 'task-channel-conflict': [],
   'unexpected-argument': ['value'], 'unknown-flag': ['name'], 'boolean-flag-value': ['name', 'value'],
   'missing-flag-value': ['key'], 'flag-shell-safety': ['name', 'sequence'], 'agent-required': [],

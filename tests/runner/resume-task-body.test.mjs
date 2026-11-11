@@ -126,10 +126,10 @@ for (const grant of ['retry', 'continue']) {
     refused(run({ grant }), 'scout-questions', { violation: 'missing' });
   });
 
-  test(`scout ${grant} still checks question context markers`, () => {
+  test(`scout ${grant} still checks question kind markers`, () => {
     const result = run({ grant, body: `${NOTE}\n## Questions\n- [Context-Only] Why?` });
     assert.equal(result.status, 2, result.stderr);
-    assert.match(result.stderr, /invalid context-only marker/);
+    assert.match(result.stderr, /invalid question-kind marker/);
   });
 
   test(`scout ${grant} still accepts its own Questions and Verify`, () => {
