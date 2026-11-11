@@ -57,6 +57,7 @@ export async function passGate({ opts, taskText, header, projectRunsRoot, repoRo
   }
   const attachExistingRun = () => attach({
     runsRoot: projectRunsRoot, repo: repoRoot, slug: opts.slug, taskHash, orderId: opts.orderId, chain,
+    decisions: opts.decisions ? normalizeRepoPath(opts.decisions) : null,
     grantRun: continuationGrant?.run, isContinue: opts.continue, noWait: opts.noWait,
     retryRun: retryOf ?? undefined, resumeRun: resumedFrom ?? undefined, beforeWait,
   });

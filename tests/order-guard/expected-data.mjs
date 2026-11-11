@@ -48,7 +48,7 @@ export const expectedData = {
   'codex-readiness-unconfirmed': ['detail'],
   'codex-unavailable': ['detail'],
   'order-launch-exclusive': ['variant', 'orderId', 'role', 'pid', 'acquiredAt', 'run'],
-  'order-id-owner': ['violation', 'orderId', 'ownerDir', 'slug', 'startedAt', 'hashScheme', 'labelName'],
+  'order-id-owner': ['violation', 'orderId', 'ownerDir', 'slug', 'startedAt', 'hashScheme', 'labelName', 'runDecisions', 'orderDecisions'],
   'order-claim-input-valid': ['violation'],
   'project-runs-folder-required': ['projectRunsRoot'],
   'codex-availability-detail': ['variant', 'command', 'status', 'message'],

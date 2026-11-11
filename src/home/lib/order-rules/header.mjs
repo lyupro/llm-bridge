@@ -250,10 +250,15 @@ export const RULES = Object.freeze({
     },
   }),
   'order-id-owner': Object.freeze({
-    data: Object.freeze(['violation', 'orderId', 'ownerDir', 'slug', 'startedAt', 'hashScheme', 'labelName']),
+    data: Object.freeze(['violation', 'orderId', 'ownerDir', 'slug', 'startedAt', 'hashScheme', 'labelName', 'runDecisions', 'orderDecisions']),
     topic: 'order',
     rule: 'Use a new order id for a new task; another pass of an owned order needs a continue or retry header grant.',
-    message: ({ violation, orderId, ownerDir, slug, startedAt, hashScheme, labelName }) => {
+    message: ({ violation, orderId, ownerDir, slug, startedAt, hashScheme, labelName, runDecisions, orderDecisions }) => {
+      if (violation === 'ledger-changed') {
+        return `Order id collision: ${JSON.stringify(String(orderId ?? ''))} already belongs to run folder ${ownerDir} ` +
+          `with decisions ledger ${JSON.stringify(runDecisions)}; this order names ${JSON.stringify(orderDecisions)}. ` +
+          'A different ledger needs a new order id.';
+      }
       const identity = `Order id collision: ${JSON.stringify(String(orderId ?? ''))} already belongs to run folder ${ownerDir} ` +
         `(slug ${slug}, started_at ${startedAt})`;
       if (violation === 'predates-hash-scheme') {

@@ -263,6 +263,24 @@ test('a repeated resume grant attaches before the named run becomes a not-last r
   assert.deepEqual(fs.readdirSync(tree.projectRunsRoot), [S, A, R]);
 });
 
+test('a repeated resume naming another ledger refuses instead of attaching to the resumed run', async () => {
+  // OW-083 R1: the gate must hand the order's ledger to attach, or the repeat skips the comparison.
+  const tree = adviseFixture();
+  run(tree, R, { phase: 'advise', resumed_from: A, continued_from: S }, { status: 'OK' }, {
+    'reply.txt': 'OK — resumed pass finished\n',
+    'advisor-task.json': JSON.stringify({ decisions: 'docs/decisions.md' }),
+  });
+  const lines = [];
+  const original = console.log;
+  console.log = (...parts) => lines.push(parts.join(' '));
+  try {
+    assert.deepEqual(await gate(tree, 'resume', A, { decisions: 'docs/other.md' }), { exitCode: 2 });
+  } finally {
+    console.log = original;
+  }
+  assert.match(lines.join('\n'), /decisions ledger .*decisions\.md.*other\.md/);
+  assert.deepEqual(fs.readdirSync(tree.projectRunsRoot), [S, A, R]);
+});
 
 test('a resume grant for another repository refuses before attaching to its repeated run', async () => {
   const tree = fixture();

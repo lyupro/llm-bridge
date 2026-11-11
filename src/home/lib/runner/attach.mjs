@@ -13,6 +13,9 @@ import { conflictingOrderOwner, orderOwnerConflictText, runsForOrder } from './o
 import { withActionRow } from './args.mjs';
 import { postRunActionVariant } from '../meta/reply.mjs';
 import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
+import { orderRuleMessage } from '../order-rules.mjs';
+import { normalizeRepoPath } from './project-dir.mjs';
+import { savedAdviseReply } from './saved-advise-reply.mjs';
 
 // The attach call is the only process that waits for a worker it did not spawn. Keeping that
 // wait here leaves the launcher free to return before a caller's time ceiling kills it.
@@ -104,7 +107,7 @@ export async function waitForReply(runDir, workerPid, status) {
  * incident showed that repeating the identical continuation command must return to that run.
  */
 export async function attach({
-  runsRoot, repo, slug, taskHash, orderId, chain, grantRun, retryRun, resumeRun, isContinue, noWait, beforeWait,
+  runsRoot, repo, slug, taskHash, orderId, chain, decisions, grantRun, retryRun, resumeRun, isContinue, noWait, beforeWait,
 } = {}) {
   const runs = chain || chainRuns(runsRoot, repo, slug, taskHash, orderId);
   const started = startedRuns(runsRoot, runs);
@@ -153,6 +156,21 @@ export async function attach({
     return EXIT.PENDING;
   }
 
+  // OW-083 R1: the task hash excludes the header, so a repeat must also own its ledger. A resume
+  // without the label replays the frozen ledger (B6a), so its repeat has nothing to compare.
+  if (candidate.status.agent === 'codex-advisor' && !(resumeRun && decisions == null)) {
+    const ownerDir = path.join(runsRoot, candidate.run);
+    const frozenDecisions = readJsonFile(path.join(ownerDir, 'advisor-task.json'))?.decisions ?? null;
+    const runDecisions = frozenDecisions === null ? null : normalizeRepoPath(frozenDecisions);
+    const orderDecisions = decisions == null ? null : normalizeRepoPath(decisions);
+    if (runDecisions !== orderDecisions) {
+      console.log(withActionRow(orderRuleMessage('order-id-owner', {
+        violation: 'ledger-changed', orderId, ownerDir, runDecisions, orderDecisions,
+      }), 'usage'));
+      return EXIT.USAGE;
+    }
+  }
+
   let releasedBeforeWait = false;
   return answerRun(candidate, true);
 
@@ -161,7 +179,8 @@ export async function attach({
     const replyPath = path.join(runDir, 'reply.txt');
     if (fs.existsSync(replyPath)) {
       announceSavedReply(runDir, orderId, entry.status.started_at);
-      console.log(fs.readFileSync(replyPath, 'utf8').replace(/\s+$/, ''));
+      const reply = fs.readFileSync(replyPath, 'utf8').replace(/\s+$/, '');
+      console.log(savedAdviseReply(reply, runDir, entry.status));
       return afterReply(entry, followSuccessor, true);
     }
     // A successor can already be dead when the anchor's saved answer is read.
