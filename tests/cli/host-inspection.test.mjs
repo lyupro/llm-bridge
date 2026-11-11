@@ -12,7 +12,7 @@ import {
 } from '../../cli/manifest.mjs';
 import { readInstallRecordFile } from '../../cli/install-record.mjs';
 import { plannedContent } from '../../cli/copy.mjs';
-import { PERMISSION_RULES } from '../../cli/permissions.mjs';
+import { PERMISSION_RULES } from '../../cli/settings-declarations.mjs';
 import { inspectHost, hasPackageMarks } from '../../cli/host-inspection.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 

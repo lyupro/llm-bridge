@@ -14,7 +14,8 @@ import {
   readInstallRecord,
   recordTarget,
 } from '../../cli/manifest.mjs';
-import { inspectPermissions, PERMISSION_RULES } from '../../cli/permissions.mjs';
+import { inspectPermissions } from '../../cli/permissions.mjs';
+import { PERMISSION_RULES } from '../../cli/settings-declarations.mjs';
 import { RULES_REGISTRY_NAME } from '../../cli/rules-owners.mjs';
 import { uninstall } from '../../cli/uninstall.mjs';
 import { update } from '../../cli/update.mjs';

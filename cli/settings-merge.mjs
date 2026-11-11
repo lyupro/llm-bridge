@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { readJsonFileWithRaw } from '../src/home/lib/json-file.mjs';
 import { envValue, resolveCommandOnPath } from '../src/home/lib/command-path.mjs';
 import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
+import { declaredHook } from './settings-declarations.mjs';
 
 const LEGACY_SPEC = { event: 'SubagentStop', matcher: '*' };
 const settingsRuns = new AsyncLocalStorage();
@@ -113,10 +114,6 @@ export async function readSettings(settingsPath) {
 function groups(settings, event) {
   const value = settings?.hooks?.[event];
   return Array.isArray(value) ? value : [];
-}
-
-function ownHook(command) {
-  return { type: 'command', command, timeout: 10 };
 }
 
 function groupHooks(group) {
@@ -284,7 +281,7 @@ export async function mergeHook(settingsPath, specOrPath, inspected) {
       settings.hooks[spec.event].push(group);
     }
     if (!Array.isArray(group.hooks)) group.hooks = [];
-    group.hooks.push(ownHook(spec.command));
+    group.hooks.push(declaredHook(spec.command));
     await atomicWrite(settingsPath, settings, state);
     return { changed: true, createdGroup };
   });

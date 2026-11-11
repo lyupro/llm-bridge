@@ -6,9 +6,9 @@ import path from 'node:path';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 import { resolveHost } from '../../cli/hosts.mjs';
 import {
-  PERMISSION_RULES,
   permissions,
 } from '../../cli/permissions.mjs';
+import { PERMISSION_RULES } from '../../cli/settings-declarations.mjs';
 import { uninstall } from '../../cli/uninstall.mjs';
 import { permissionsCheck } from '../../cli/doctor-installation.mjs';
 
