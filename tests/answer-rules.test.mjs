@@ -42,6 +42,20 @@ const cases = [
     'D10 predicted_risks[1].id "r1": use a unique predicted risk id.'],
   ['advisor-already-decided-missing', {},
     "The run's contract requires the already_decided field and the answer has none."],
+  ['advisor-already-decided-shape', {},
+    'already_decided must contain only a valid status and a string or null address.'],
+  ['advisor-already-decided-no-ledger', {},
+    'already_decided.status must be not-checked when no decision ledger was declared.'],
+  ['advisor-already-decided-readable-ledger', {},
+    'The declared decision ledger must be a readable file inside the repository.'],
+  ['advisor-already-decided-check-owed', {},
+    'already_decided.status cannot be not-checked when a decision ledger was declared.'],
+  ['advisor-already-decided-null-address', {},
+    'already_decided.address must be null for not-found or not-checked.'],
+  ['advisor-already-decided-address', {},
+    'already_decided.address must name exactly the declared normalized ledger path and one positive integer line.'],
+  ['advisor-already-decided-line', {},
+    'already_decided.address must cite a safe integer line within the decision ledger.'],
   ['advisor-recommendation-option-id', { optionId: 'unknown' },
     'D5 recommendation.option_id "unknown": choose a task option id.'],
   ['advisor-unlisted-option-length', { unlistedOption: 'short' },
@@ -63,7 +77,7 @@ const cases = [
 ];
 
 test('every advisor rule has an independently written, byte-exact judge reason', () => {
-  assert.equal(cases.length, 25);
+  assert.equal(cases.length, 32);
   assert.deepEqual(cases.map(([key]) => key), Object.keys(rules));
   for (const [key, values, expected] of cases) {
     assert.equal(answerRuleMessage(AGENT, key, values), expected, key);

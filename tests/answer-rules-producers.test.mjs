@@ -1,6 +1,7 @@
 /** OW-068 / Plan_80 E21: judged agents produce failure reasons through the prompt's catalog. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { ANSWER_RULES } from '../src/home/lib/answer-rules.mjs';
 import { JUDGED_AGENTS } from './answer-rules-judges.mjs';
 import { tokensOf, closingToken, functionBody } from './source-tokens.mjs';
@@ -12,7 +13,8 @@ const checks = {
 };
 const judgedAgents = JUDGED_AGENTS.map((judge) => ({ ...judge, check: checks[judge.agent] }));
 const [advisor, scout, build] = judgedAgents;
-const source = advisor.files[0].source;
+const source = advisor.files[0].source + '\n' + fs.readFileSync(
+  new URL('../src/home/lib/meta/already-decided.mjs', import.meta.url), 'utf8');
 const catalogKeys = advisor.catalogKeys;
 
 // OW-068 / Plan_80 E21: future failure branches must use the same catalog as the prompt.
@@ -56,9 +58,10 @@ function producerProblems(source, catalogKeys) {
     }
     if (!closed) problems.push('unclosed reasons.push');
     for (const arg of args) {
-      // The citation dispatcher is the sole dynamic key: citationProblem returns catalog literals.
+      // OW-083 B4 adds a ledger dispatcher whose producer is included in the same catalog guard.
       const citationDispatch = /^reason\(problem\.key,\s*\{\s*field,\s*label,\s*\.\.\.problem\.values\s*\}\s*\)$/;
-      if (!/^reason\('[^']+'(?=\s*[,\)])/.test(arg) && !citationDispatch.test(arg)) {
+      const ledgerDispatch = /^reason\(problem\.key,\s*problem\.values\)$/;
+      if (!/^reason\('[^']+'(?=\s*[,\)])/.test(arg) && !citationDispatch.test(arg) && !ledgerDispatch.test(arg)) {
         problems.push(`reasons.push bypasses catalog: ${arg}`);
       }
     }
@@ -177,16 +180,21 @@ test('every catalog agent has a judge row and every judge row has a producer che
 
 for (const judge of judgedAgents) {
   test(`${judge.agent.replace('codex-', '')} judge produces every catalog rule and every reason goes through the catalog`, () => {
-    const input = judge === advisor ? judge.files[0].source : judge.files;
+    const input = judge === advisor ? source : judge.files;
     assert.deepEqual(judge.check(input, judge.catalogKeys), []);
   });
 }
 
 test('producer guard rejects unknown literal emitter and citation keys', () => {
-  for (const key of ['advisor-commands-run', 'advisor-citation-path']) {
+  for (const key of ['advisor-commands-run', 'advisor-citation-path', 'advisor-already-decided-shape']) {
     const edited = mutated(`'${key}'`, "'advisor-unknown'");
     assert.ok(producerProblems(edited, catalogKeys).includes('unknown catalog key: advisor-unknown'));
   }
+});
+
+test('producer guard detects a missing rule in the already-decided module', () => {
+  const edited = mutated("key: 'advisor-already-decided-shape'", "key: 'advisor-already-decided-address'");
+  assert.ok(producerProblems(edited, catalogKeys).includes('missing producer: advisor-already-decided-shape'));
 });
 
 test('producer guard rejects a handwritten reason added to the real judge', () => {

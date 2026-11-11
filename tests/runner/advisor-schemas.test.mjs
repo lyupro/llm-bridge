@@ -15,7 +15,7 @@ const sample = (phase) => (phase === 'advise' ? validAdvice() : validScope());
 function validates(schema, value) {
   const type = schema.type === 'integer' && Number.isInteger(value)
     ? 'integer' : value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
-  if (schema.type !== type) return false;
+  if (Array.isArray(schema.type) ? !schema.type.includes(type) : schema.type !== type) return false;
   if (schema.enum && !schema.enum.includes(value)) return false;
   if (schema.minimum !== undefined && value < schema.minimum) return false;
   if (type === 'string') {
@@ -134,21 +134,33 @@ test('every schema object has all properties required, disallows extras and has 
   inspect(advisorSchema('advise'));
 });
 
-test('advisor evidence always uses the shared location schema and never an address property', () => {
-  function inspect(schema) {
+test('advisor evidence uses the shared location schema and only already_decided has an address property', () => {
+  function inspect(schema, field = '') {
     if (schema.type === 'object') {
-      assert.equal(Object.hasOwn(schema.properties, 'address'), false);
+      assert.equal(Object.hasOwn(schema.properties, 'address'), field === 'already_decided');
       for (const [name, child] of Object.entries(schema.properties)) {
         if (name === 'evidence') {
           assert.equal(child.type, 'array');
           assert.equal(child.items, EVIDENCE_LOCATION);
         }
-        inspect(child);
+        inspect(child, name);
       }
     } else if (schema.type === 'array') inspect(schema.items);
   }
   inspect(advisorSchema('scope'));
   inspect(advisorSchema('advise'));
+});
+
+test('already_decided is advise-only and accepts every status with string or null address', () => {
+  assert.equal(Object.hasOwn(advisorSchema('scope').properties, 'already_decided'), false);
+  assert.equal(advisorSchema('scope').required.includes('already_decided'), false);
+  for (const status of ['found', 'not-found', 'not-checked']) {
+    for (const address of [null, 'docs/decisions.md:1']) {
+      const value = validAdvice();
+      value.already_decided = { status, address };
+      assert.equal(validates(advisorSchema('advise'), value), true);
+    }
+  }
 });
 
 test('evidence file pattern allows one repository path with spaces and rejects folded locations', () => {
@@ -192,6 +204,9 @@ for (const [name, change] of [
   ['old string assumption', (r) => { r.assumptions[0] = 'A claim without a rating.'; }],
   ['non-string unlisted option', (r) => { r.unlisted_option = null; }],
   ['invalid risk outcome', (r) => { r.risk_outcomes[0].outcome = 'pending'; }],
+  ['invalid already-decided status', (r) => { r.already_decided.status = 'pending'; }],
+  ['invalid already-decided address', (r) => { r.already_decided.address = 1; }],
+  ['already-decided extra', (r) => { r.already_decided.extra = true; }],
   ['non-string open question', (r) => { r.open_questions[0] = 1; }],
   ...['assumptions', 'risk_outcomes', 'pre_mortem'].map((field) => [`${field} extra`, (r) => { r[field][0].extra = true; }]),
   ['early-check extra', (r) => { r.pre_mortem[0].early_check.extra = true; }],

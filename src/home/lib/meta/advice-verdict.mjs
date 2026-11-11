@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { answerRuleMessage } from '../answer-rules.mjs';
 import { BACKSTOPS, UNLISTED_OPTION_MIN_CHARS } from '../answer-rules/advisor.mjs';
+import { alreadyDecidedProblem } from './already-decided.mjs';
 
 const reason = (key, values = {}) => answerRuleMessage('codex-advisor', key, values);
 const ADDRESS_TOKEN = /(?<![\p{L}\p{N}_./\\:~-])(?:[a-zA-Z]:)?[\p{L}\p{N}_@!$~.%+/\\-]+:\d+(?:-\d+)?(?![\p{L}\p{N}_:\d-])/gu;
@@ -134,8 +135,10 @@ function checkCitations({ phase, result, task, repoRoot, scopeResult }, reasons)
   };
   // D3 covers every address anywhere in the answer. A list of prose fields had to be edited by
   // hand when `falsifier` became `pre_mortem`, and each new field would have joined it unchecked.
+  // OW-083 R1 gives already_decided.address its stricter ledger-only judge instead of duplicate citation reasons.
   // Structured evidence and the free-text early_check.target are handled separately below.
   for (const { field, value } of strings(result)) {
+    if (field === 'already_decided.address') continue;
     if (/(?:^|\.)evidence(?:\[|\.|$)|\.early_check\.target$/.test(field)) continue;
     for (const address of addressesIn(value, root)) {
       if (isCitationInProse(address, root)) checkAddress(field, address);
@@ -219,6 +222,12 @@ export function judgeAdvice({ phase, result, task, repoRoot, commandsRun, langua
   } else {
     if (ledgerContract === 'required' && !Object.hasOwn(result, 'already_decided')) {
       reasons.push(reason('advisor-already-decided-missing'));
+    }
+    if (Object.hasOwn(result, 'already_decided')) {
+      const problem = alreadyDecidedProblem({
+        answer: result.already_decided, task, repoRoot, entryInRepo, lineCount,
+      });
+      if (problem) reasons.push(reason(problem.key, problem.values));
     }
     const ids = new Set(task.options.map(({ id }) => id));
     const chosen = result.recommendation.option_id;

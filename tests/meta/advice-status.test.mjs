@@ -82,12 +82,13 @@ test('OW-083 B3 leaves unreadable advise schemas compatible with archived answer
   }
 });
 
-test('OW-083 B3 checks field presence without validating its value', () => {
+test('OW-083 B4 rejects malformed present already_decided values', () => {
   const tree = fixture();
   const dir = runFolder(tree, 'advise', 'advise', { scope: { run: 'scope', ...validScope() } });
   fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify({ required: ['already_decided'] }));
   for (const already_decided of [[], null, '', false, 0, {}]) {
-    assert.equal(adviceGap(dir, { ...validAdvice(), already_decided }, events()), null);
+    assert.equal(adviceGap(dir, { ...validAdvice(), already_decided }, events()),
+      'advice contract broken (1): already_decided must contain only a valid status and a string or null address.');
   }
 });
 

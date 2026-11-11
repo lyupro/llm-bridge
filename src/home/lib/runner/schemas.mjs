@@ -215,9 +215,18 @@ export const PHASE_SCHEMAS = {
       required: [
         'recommendation', 'why', 'rejected', 'strongest_counterargument', 'question_defect',
         'unlisted_option', 'assumptions', 'risk_outcomes', 'pre_mortem', 'open_questions',
-        'confidence', 'independent_checks',
+        'confidence', 'independent_checks', 'already_decided',
       ],
       properties: {
+        already_decided: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['status', 'address'],
+          properties: {
+            status: { type: 'string', enum: ['found', 'not-found', 'not-checked'] },
+            address: { type: ['string', 'null'] },
+          },
+        },
         recommendation: {
           type: 'object',
           additionalProperties: false,

@@ -101,6 +101,7 @@ Scope phase:
 ` : `
 Advise phase:
 - Give a concise, complete recommendation that can stand on its own.
+- When already_decided.status is found and your recommendation differs, explain the conflict in \`why\` instead of hiding the recorded decision.
 - Settle every predicted risk listed under \`## Scope phase results\` in risk_outcomes with its
   risk_id, an outcome of confirmed or refuted, a \`note\` explaining it, and evidence.
 - Give ONE recommendation by task option_id, or none-of-these with a described unlisted_option.

@@ -17,8 +17,12 @@ for (const file of ['src/entry.mjs', 'docs/decisions.md', 'docs/undeclared.md', 
 const ledger = 'docs/decisions.md';
 
 function input(phase, decisions) {
+  const result = phase === 'scope' ? validScope() : validAdvice();
+  if (phase === 'advise' && typeof decisions.decisions === 'string') {
+    result.already_decided = { status: 'not-found', address: null };
+  }
   return {
-    phase, result: phase === 'scope' ? validScope() : validAdvice(),
+    phase, result,
     task: { options: [{ id: 'keep' }, { id: 'split' }], paths: ['src'], ...decisions },
     repoRoot, commandsRun: 1, language: 'English',
   };

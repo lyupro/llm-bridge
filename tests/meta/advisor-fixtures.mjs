@@ -4,6 +4,7 @@ import path from 'node:path';
 
 export function validAdvice() {
   return {
+    already_decided: { status: 'not-checked', address: null },
     recommendation: { option_id: 'keep', text: 'Keep the current boundary.' },
     unlisted_option: 'none',
     why: ['The entry point is explicit at src/entry.mjs:1.', 'The second line is stable.', 'No caller migration is needed.'],
