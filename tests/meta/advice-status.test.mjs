@@ -57,6 +57,47 @@ test('advise must resolve every risk predicted in phase 1', () => {
   assert.match(adviceGap(dir, validAdvice(), events()), /risk_outcomes/);
 });
 
+test('OW-083 B3 uses the advise run schema to require already_decided', () => {
+  const tree = fixture();
+  const dir = runFolder(tree, 'advise', 'advise', { scope: { run: 'scope', ...validScope() } });
+  const result = validAdvice();
+  delete result.already_decided;
+  const before = structuredClone(result);
+  fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify({ required: ['already_decided'] }));
+  assert.equal(adviceGap(dir, result, events()),
+    "advice contract broken (1): The run's contract requires the already_decided field and the answer has none.");
+  fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify({ required: ['recommendation'] }));
+  assert.equal(adviceGap(dir, result, events()), null);
+  assert.deepEqual(result, before);
+});
+
+test('OW-083 B3 leaves unreadable advise schemas compatible with archived answers', () => {
+  const tree = fixture();
+  const dir = runFolder(tree, 'advise', 'advise', { scope: { run: 'scope', ...validScope() } });
+  const result = validAdvice();
+  delete result.already_decided;
+  for (const schema of ['{', '{}', '{"required":null}']) {
+    fs.writeFileSync(path.join(dir, 'schema.json'), schema);
+    assert.equal(adviceGap(dir, result, events()), null);
+  }
+});
+
+test('OW-083 B3 checks field presence without validating its value', () => {
+  const tree = fixture();
+  const dir = runFolder(tree, 'advise', 'advise', { scope: { run: 'scope', ...validScope() } });
+  fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify({ required: ['already_decided'] }));
+  for (const already_decided of [[], null, '', false, 0, {}]) {
+    assert.equal(adviceGap(dir, { ...validAdvice(), already_decided }, events()), null);
+  }
+});
+
+test('OW-083 B3 does not impose the ledger field on scope answers', () => {
+  const tree = fixture();
+  const dir = runFolder(tree, 'scope', 'scope');
+  fs.writeFileSync(path.join(dir, 'schema.json'), JSON.stringify({ required: ['already_decided'] }));
+  assert.equal(adviceGap(dir, validScope(), events()), null);
+});
+
 test('advise can cite a path requested by phase 1', () => {
   const tree = fixture();
   const scopeResult = { ...validScope(), missing_paths: ['docs/guide.md'] };

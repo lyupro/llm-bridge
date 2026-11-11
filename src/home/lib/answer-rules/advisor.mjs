@@ -115,6 +115,13 @@ export const RULES = Object.freeze({
     message: ({ index, id }) => `D10 predicted_risks[${index}].id ${JSON.stringify(id)}: use a unique predicted risk id.`,
     data: Object.freeze(['index', 'id']),
   }),
+  'advisor-already-decided-missing': Object.freeze({
+    phases: ADVISE,
+    when: 'always',
+    rule: "When the run's saved schema requires already_decided, include the field in the answer.",
+    message: () => "The run's contract requires the already_decided field and the answer has none.",
+    data: Object.freeze([]),
+  }),
   'advisor-recommendation-option-id': Object.freeze({
     phases: ADVISE,
     when: 'always',

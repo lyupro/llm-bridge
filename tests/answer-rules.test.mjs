@@ -40,6 +40,8 @@ const cases = [
     'D4 missing_paths ["src/needed.mjs"] with sufficient true: resolve the scope contradiction.'],
   ['advisor-unique-risk-id', { index: 1, id: 'r1' },
     'D10 predicted_risks[1].id "r1": use a unique predicted risk id.'],
+  ['advisor-already-decided-missing', {},
+    "The run's contract requires the already_decided field and the answer has none."],
   ['advisor-recommendation-option-id', { optionId: 'unknown' },
     'D5 recommendation.option_id "unknown": choose a task option id.'],
   ['advisor-unlisted-option-length', { unlistedOption: 'short' },
@@ -61,7 +63,7 @@ const cases = [
 ];
 
 test('every advisor rule has an independently written, byte-exact judge reason', () => {
-  assert.equal(cases.length, 24);
+  assert.equal(cases.length, 25);
   assert.deepEqual(cases.map(([key]) => key), Object.keys(rules));
   for (const [key, values, expected] of cases) {
     assert.equal(answerRuleMessage(AGENT, key, values), expected, key);

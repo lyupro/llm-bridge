@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULTS } from '../run-config.mjs';
 import { judgeAdvice } from './advice-verdict.mjs';
+import { adviceLedgerContract } from './advice-contract.mjs';
 import { readJson, safeSlice } from './paths.mjs';
 import { readExecutionFact } from './execution-fact.mjs';
 
@@ -52,6 +53,7 @@ export function adviceGap(runDir, result, eventData, execution) {
       commandsRun: execution.chain,
       language: env.answerLanguage ?? DEFAULTS.answerLanguage,
       scopeResult,
+      ledgerContract: phase === 'advise' ? adviceLedgerContract(runDir) : undefined,
     });
     return verdict.ok ? null : contractReason(verdict.reasons);
   } catch (error) {

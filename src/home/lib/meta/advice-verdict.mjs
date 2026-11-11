@@ -186,7 +186,7 @@ function integrityProblems(result, reasons) {
   }
 }
 
-export function judgeAdvice({ phase, result, task, repoRoot, commandsRun, language, scopeResult }) {
+export function judgeAdvice({ phase, result, task, repoRoot, commandsRun, language, scopeResult, ledgerContract }) {
   if (phase !== 'scope' && phase !== 'advise') throw new RangeError('phase must be "scope" or "advise".');
   if (!Number.isInteger(commandsRun) || commandsRun < 0) {
     throw new TypeError('commandsRun must be a non-negative integer.');
@@ -217,6 +217,9 @@ export function judgeAdvice({ phase, result, task, repoRoot, commandsRun, langua
       riskIds.add(item.id);
     }
   } else {
+    if (ledgerContract === 'required' && !Object.hasOwn(result, 'already_decided')) {
+      reasons.push(reason('advisor-already-decided-missing'));
+    }
     const ids = new Set(task.options.map(({ id }) => id));
     const chosen = result.recommendation.option_id;
     if (!ids.has(chosen) && chosen !== 'none-of-these') {
