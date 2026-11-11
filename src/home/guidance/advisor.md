@@ -39,8 +39,22 @@ Which boundary should own the validation contract?
 
 For the scope task, declare the scope phase in the header and supply this question, neutral options and initial paths. For the advise task, declare the advise phase and the continuation grant in the header, preserving the question and options and incorporating the scope findings.
 
+## Decision ledger
+
+Declare `decisions: <repository-relative ledger file>` in the header of each phase that should check the owning plan's decision ledger. Phases do not inherit this label.
+
+The advise reply's first row includes `Already decided:` with one of these states:
+- `found <address>`: read the recorded decision before asking the operator; do not ask again what it already decides. A recommendation that conflicts with it explains the conflict.
+- `not-found (not found in the ledger)`: the supplied ledger has no entry for the question.
+- `not-checked (no ledger supplied)`: there is no assurance that the question is undecided.
+- `legacy result; field absent`: the saved result predates this field.
+- `unreadable schema; field not checked`: the saved schema could not be read, so the field was not checked.
+
+`ledger-replaced` means a resume keeps its frozen ledger; another ledger needs `retry:` or a new order id.
+`ledger-changed` means a repeat with another ledger needs a new order id.
+
 ## Use the answer
 
-An advise answer recommends one option id and explains the choice, rejects alternatives with their costs, gives the strongest counterargument and a pre-mortem of risks. Its short form begins `OK — recommend <option_id>: …` and includes `Rejected:`, `Counter:` and `Risks:`. The full structured result and report stay in the run folder.
+An advise answer recommends one option id and explains the choice, rejects alternatives with their costs, gives the strongest counterargument and a pre-mortem of risks. Its short form begins `OK — recommend <option_id>: Already decided: <state> · <text>` and includes `Rejected:`, `Counter:` and `Risks:`. The full structured result and report stay in the run folder.
 
 To cite it in a build task, use exactly one `advice:` line whose value is the absolute folder of the successful advise run. Its `meta.json` must identify `codex-advisor`, phase advise, status OK. A scope folder, report filename, failed advise or recommendation text is not a valid advice reference.

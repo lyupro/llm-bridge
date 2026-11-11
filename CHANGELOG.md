@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Advisor orders can name the plan's decision ledger with `decisions:`; the `already_decided`
+  answer field and first-row `Already decided:` state show whether the question was decided.
+  Resume keeps the frozen ledger, and attach refuses a different ledger (OW-083).
+
 ## [0.6.26] - 2026-11-04
 
 ### Added

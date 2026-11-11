@@ -17,7 +17,7 @@ The header ends at the first line that is not a recognized label line, including
 | codex-review | `order id` | `continue`, `retry`, `resume` | `repository`, `slug`, `effort`, `changeset` |
 | codex-advisor | `order id`, `phase` | `continue`, `retry`, `resume` | `repository`, `slug`, `effort`, `decisions` |
 
-`decisions` names one repository-relative decision-ledger file of the owning plan so the advise answer reports whether the question is already decided there; omit it when there is no ledger.
+`decisions` names one repository-relative decision-ledger file of the owning plan so the advise answer reports whether the question is already decided there; declare it in each phase that should check the ledger, as phases do not inherit it. Omit it when there is no ledger.
 
 The three grant labels are conditional when this pass continues or repeats a named run: `continue` names the continued run; `retry` repeats a failed pass on a fresh thread; `resume` continues a failed read-only pass in its own Codex thread; neither `retry` nor `resume` authorizes the next pass.
 Under `resume:`, the task body is a plain note for the record, saved as written (surrounding blank lines trimmed) as `resume-note.md` in the new run folder and never read by the resumed run, which reuses the frozen questions, options, paths and verification of the named run.

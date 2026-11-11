@@ -97,7 +97,20 @@ test('order guidance advertises decisions only for advisor and explains the ledg
     assert.doesNotMatch(row, /`decisions`/);
   }
   assert.ok(text.includes('`decisions` names one repository-relative decision-ledger file of the owning plan '
-    + 'so the advise answer reports whether the question is already decided there; omit it when there is no ledger.'));
+    + 'so the advise answer reports whether the question is already decided there; declare it in each phase '
+    + 'that should check the ledger, as phases do not inherit it. Omit it when there is no ledger.'));
+});
+
+test('advisor guidance explains ledger states and the operator decision boundary', () => {
+  const text = readTopic('advisor');
+  for (const required of ['## Decision ledger', 'decisions: <repository-relative ledger file>',
+    'Phases do not inherit this label.', 'Already decided:', 'found <address>',
+    'not-found (not found in the ledger)', 'not-checked (no ledger supplied)',
+    'legacy result; field absent', 'unreadable schema; field not checked',
+    'read the recorded decision before asking the operator', 'do not ask again what it already decides',
+    'conflicts with it explains the conflict', 'supplied ledger has no entry',
+    'no assurance that the question is undecided', 'ledger-replaced', 'retry:', 'ledger-changed',
+    'a repeat with another ledger needs a new order id']) assert.ok(text.includes(required), required);
 });
 
 test('records renders both required review field arrays from the schema', async (t) => {

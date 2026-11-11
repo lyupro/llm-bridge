@@ -129,16 +129,23 @@ cover the question and records missing paths and predicted risks. The `advise` p
 available only with a `continue:` grant in the header after an `OK` scope run for the same order; it can continue an
 insufficient-but-valid scope result too. The task file has `## Question` for the design question,
 `## Options` with at least two unbiased `- id: description` lines with unique ids and no preference
-markers, and `## Paths` with repository-relative paths. Every `path:line` citation must point to
-an existing line, and its path must be listed under `## Paths` or in phase 1's `missing_paths`.
+markers, and `## Paths` with repository-relative paths. Optional `decisions: <repository-relative ledger file>`
+in each phase's header names the owning plan's decision ledger; phases do not inherit it.
+Every `path:line` citation must point to an existing line, and its path must be listed under
+`## Paths`, in phase 1's `missing_paths`, or name the declared ledger.
 For the deadlines in force on this host, run `llm-bridge guidance budget`.
 
 The scope reply reports `OK` with sufficient or insufficient scope and, for a sufficient scope,
 directs the next pass to use `phase: advise` with a `continue:` header grant. It includes `Missing:` when needed, `Predicted risks:`,
 and `Report: ... · Log: ...`. An insufficient scope is still an `OK` run with `sufficient: false`,
-not a `LIMIT`. The advise reply contains `OK — recommend <option_id>: <text>`, `Rejected:`,
+not a `LIMIT`. The advise reply contains `OK — recommend <option_id>: Already decided: <state> · <text>`, `Rejected:`,
 `Counter:`, `Risks: <confirmed> confirmed · <refuted> refuted · open questions <count> · confidence
 <level>`, and `Report: ... · Log: ...`.
+`Already decided:` reports `found <address>`, `not-found (not found in the ledger)`, or
+`not-checked (no ledger supplied)`; archived replies may show `legacy result; field absent`
+or `unreadable schema; field not checked`. Read a found decision before asking the operator
+again; a conflicting recommendation explains the conflict. No supplied ledger gives no
+assurance that the question is undecided.
 
 ```markdown
 order id: order-43
