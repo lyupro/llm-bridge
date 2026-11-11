@@ -6,8 +6,8 @@ import { parseAdvisorTask } from '../meta/advisor-task.mjs';
 import { die } from './args.mjs';
 import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
 
-export function advisorTaskArtifact({ taskText, phase, runsRoot, grantRun }) {
-  const task = parseAdvisorTask(taskText);
+export function advisorTaskArtifact({ taskText, phase, runsRoot, grantRun, decisions }) {
+  const task = { ...parseAdvisorTask(taskText), decisions: decisions ?? null };
   if (phase !== 'advise') return task;
   if (typeof runsRoot !== 'string' || !runsRoot || typeof grantRun !== 'string' || !grantRun) {
     throw new Error(orderDiagnosticMessage('advise-scope-input-required'));
@@ -48,6 +48,18 @@ export function adviseSection(artifact) {
     '',
     'Paths you may additionally read and cite:',
     ...artifact.scope.missing_paths.map((entry) => `- ${entry}`),
+  ];
+  return lines.join('\n');
+}
+
+export function decisionLedgerSection(artifact) {
+  if (typeof artifact?.decisions !== 'string') return String();
+  const lines = [
+    '## Decision ledger',
+    '',
+    artifact.decisions,
+    '',
+    "This is the owning plan's decision ledger; you may read and cite it.",
   ];
   return lines.join('\n');
 }

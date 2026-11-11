@@ -46,6 +46,7 @@ test('advise artifact and prompt section carry every predicted risk and missing 
 test('scope phase artifact has no scope snapshot', () => {
   const artifact = advisorTaskArtifact({ taskText: TASK, phase: 'scope', runsRoot: 'unused', grantRun: undefined });
   assert.equal(Object.hasOwn(artifact, 'scope'), false);
+  assert.equal(artifact.decisions, null);
   assert.equal(adviseSection(artifact), '');
 });
 
@@ -56,3 +57,20 @@ test('missing scope result throws a clear error', () => {
     /Cannot read advise scope result.*result\.json/,
   );
 });
+
+for (const phase of ['scope', 'advise']) {
+  for (const decisions of [undefined, null, 'docs/decisions.md']) {
+    test(`${phase} artifact always records decisions=${decisions} without changing scope carry`, () => {
+      const runsRoot = makeTempTree('advise-ledger-carry-');
+      const scope = scopeFixture();
+      writeScopeResult(runsRoot, 'scope-run', scope);
+      const artifact = advisorTaskArtifact({ taskText: TASK, phase, runsRoot, grantRun: 'scope-run', decisions });
+      assert.equal(Object.hasOwn(artifact, 'decisions'), true);
+      assert.equal(artifact.decisions, decisions ?? null);
+      assert.deepEqual(artifact.paths, ['src/entry.mjs']);
+      if (phase === 'advise') {
+        assert.deepEqual(artifact.scope, { run: 'scope-run', predicted_risks: scope.predicted_risks, missing_paths: scope.missing_paths });
+      } else assert.equal(Object.hasOwn(artifact, 'scope'), false);
+    });
+  }
+}

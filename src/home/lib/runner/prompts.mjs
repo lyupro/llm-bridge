@@ -83,7 +83,7 @@ const BODIES = {
     return `Judge a DESIGN before code exists.
 
 Rules for both phases:
-- Read ONLY the paths listed under \`## Paths\` and, in the advise phase, under \`## Scope phase results\`, plus \`git log\` / \`git show\` on those paths.
+- Read ONLY the paths listed under \`## Paths\`${typeof opts.decisions === 'string' ? ', under \`## Decision ledger\`' : ''} and, in the advise phase, under \`## Scope phase results\`, plus \`git log\` / \`git show\` on those paths.
 - Write nothing. Do your own reading and checks; do not spawn or delegate to other agents.
 - Prose fields cite code as \`path:line\`; every \`evidence\` field is a list of
   \`{file, line_start, line_end}\` objects, ONE location per object. Several places mean several

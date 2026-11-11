@@ -109,6 +109,8 @@ function checkCitations({ phase, result, task, repoRoot, scopeResult }, reasons)
   const root = path.resolve(repoRoot);
   const allowed = [...task.paths, ...(phase === 'scope' ? result.missing_paths : scopeResult?.missing_paths ?? [])]
     .map((raw) => entryInRepo(root, raw)).filter(Boolean);
+  const ledger = typeof task.decisions === 'string' && entryInRepo(root, task.decisions);
+  if (ledger?.isFile) allowed.push(ledger);
   const locationLabel = ({ file, line_start, line_end }) =>
     `${file}:${line_start}${line_end === line_start ? '' : `-${line_end}`}`;
   const checkLocation = (field, location) => {

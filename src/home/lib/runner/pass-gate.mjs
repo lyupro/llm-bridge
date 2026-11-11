@@ -109,7 +109,7 @@ export async function passGate({ opts, taskText, header, projectRunsRoot, repoRo
     scopeRunRefusal({ agent: opts.agent, phase: opts.phase, runsRoot: projectRunsRoot, grantRun: continuationGrant.run });
   if (scopeRun) die(scopeRun, { action: 'grant-decision', exit: EXIT.FAIL });
   // Plan_59 D22: the advise snapshot is read before the folder exists, so a broken scope result refuses for free.
-  const advisorTask = !resumedFrom && opts.agent === 'codex-advisor' ? advisorTaskOrRefuse({ taskText, phase: opts.phase, runsRoot: projectRunsRoot, grantRun: continuationGrant?.run }) : null;
+  const advisorTask = !resumedFrom && opts.agent === 'codex-advisor' ? advisorTaskOrRefuse({ taskText, phase: opts.phase, runsRoot: projectRunsRoot, grantRun: continuationGrant?.run, decisions: opts.decisions }) : null;
 
   // One order produced six Codex runs on 2026-08-03 because the caller's time ceiling made it
   // restart the synchronous launcher. A live same-order run is now the repeat target: attach

@@ -26,7 +26,7 @@ import { loadRunEnv, RUN_ENV, CLEAN_ENV, RECOVERY_BRAKE } from './run-env.mjs';
 import { parseArgs, die, withActionRow } from './args.mjs';
 import { settleTaskInput } from './task-input.mjs';
 import { questionsFromTexts, QUESTION_KIND } from './question-kind.mjs';
-import { adviseSection } from './advise-carry.mjs';
+import { adviseSection, decisionLedgerSection } from './advise-carry.mjs';
 import { schemaFor } from './schemas.mjs';
 import { INSTRUCTIONS } from './prompts.mjs';
 import { git, branchName, worktreeSnapshot, reviewScope } from './git-state.mjs';
@@ -272,6 +272,8 @@ export async function launcher(argv = process.argv.slice(2)) {
       const sections = [`## Operator task (verbatim)\n\n${taskText}`];
       const scopeResults = adviseSection(advisorTask);
       if (scopeResults) sections.push(scopeResults);
+      const ledger = decisionLedgerSection(advisorTask);
+      if (ledger) sections.push(ledger);
       if (questions.length) {
         sections.push(
           [

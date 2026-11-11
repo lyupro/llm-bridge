@@ -41,10 +41,10 @@ function fixture(config = {}) {
   return { root, repo, home, runs };
 }
 
-function launch(tree, { phase, task = TASK, refuse = false, grant, taskFile = true } = {}) {
+function launch(tree, { phase, task = TASK, refuse = false, grant, taskFile = true, decisions } = {}) {
   const invocation = {
     agent: 'codex-advisor', order: { repository: tree.repo, 'order id': 'advisor-fixture',
-      ...(phase === undefined ? {} : { phase }) },
+      ...(phase === undefined ? {} : { phase }), ...(decisions === undefined ? {} : { decisions }) },
     grant, task, dir: tree.root,
   };
   let { argv: args } = orderInvocation(invocation);
@@ -164,26 +164,39 @@ try {
   }
 });
 
-test('advise continues the scope order with its own schema and budget', () => {
-  const tree = fixture();
-  const first = runFrom(launch(tree, { phase: 'scope' }));
-  fs.writeFileSync(path.join(first.dir, 'status.json'), JSON.stringify({ ...first.status, state: 'finished' }));
-  fs.writeFileSync(path.join(first.dir, 'meta.json'), JSON.stringify({ agent: 'codex-advisor', status: 'OK', phase: 'scope' }));
-  fs.writeFileSync(path.join(first.dir, 'result.json'), JSON.stringify(validScope()));
-  const grant = { kind: 'continue', run: path.basename(first.dir), reason: 'settle the scope predictions' };
-  const second = runFrom(launch(tree, { phase: 'advise', grant }));
-  assert.notEqual(second.dir, first.dir);
-  assert.deepEqual(second.schema, advisorSchema('advise'));
-  assert.equal(second.worker.phase, 'advise');
-  assert.equal(second.worker.budget_minutes, 35);
-  assert.equal(second.status.order_id, first.status.order_id);
-  assert.equal(second.status.continued_from, path.basename(first.dir));
-  assert.match(second.task, /Advise phase:/);
-  assert.match(second.task, /## Scope phase results[\s\S]*- r1: Concurrent callers could share mutable state\./);
-  for (const { id } of validScope().predicted_risks) assert.match(second.task, new RegExp(`- ${id}:`));
-  assert.equal(second.advisorTask.scope.run, path.basename(first.dir));
-  assert.deepEqual(second.advisorTask.scope.predicted_risks, validScope().predicted_risks);
-});
+for (const decisions of [undefined, './docs/decisions.md']) {
+  test(`advise continues the scope order with its own schema and budget (ledger=${decisions})`, () => {
+    const tree = fixture();
+    if (decisions) {
+      fs.mkdirSync(path.join(tree.repo, 'docs'));
+      fs.writeFileSync(path.join(tree.repo, decisions), '# Decisions\n');
+    }
+    const first = runFrom(launch(tree, { phase: 'scope', decisions }));
+    fs.writeFileSync(path.join(first.dir, 'status.json'), JSON.stringify({ ...first.status, state: 'finished' }));
+    fs.writeFileSync(path.join(first.dir, 'meta.json'), JSON.stringify({ agent: 'codex-advisor', status: 'OK', phase: 'scope' }));
+    fs.writeFileSync(path.join(first.dir, 'result.json'), JSON.stringify(validScope()));
+    const grant = { kind: 'continue', run: path.basename(first.dir), reason: 'settle the scope predictions' };
+    const second = runFrom(launch(tree, { phase: 'advise', grant, decisions }));
+    for (const run of [first, second]) {
+      assert.equal(run.advisorTask.decisions, decisions ? 'docs/decisions.md' : null);
+      if (decisions) {
+        assert.ok(run.task.includes("## Decision ledger\n\ndocs/decisions.md\n\nThis is the owning plan's decision ledger; you may read and cite it."));
+        assert.ok(run.task.includes('under `## Decision ledger`'));
+      } else assert.doesNotMatch(run.task, /## Decision ledger/);
+    }
+    assert.notEqual(second.dir, first.dir);
+    assert.deepEqual(second.schema, advisorSchema('advise'));
+    assert.equal(second.worker.phase, 'advise');
+    assert.equal(second.worker.budget_minutes, 35);
+    assert.equal(second.status.order_id, first.status.order_id);
+    assert.equal(second.status.continued_from, path.basename(first.dir));
+    assert.match(second.task, /Advise phase:/);
+    assert.match(second.task, /## Scope phase results[\s\S]*- r1: Concurrent callers could share mutable state\./);
+    for (const { id } of validScope().predicted_risks) assert.match(second.task, new RegExp(`- ${id}:`));
+    assert.equal(second.advisorTask.scope.run, path.basename(first.dir));
+    assert.deepEqual(second.advisorTask.scope.predicted_risks, validScope().predicted_risks);
+  });
+}
 
 // Plan_59 D22: the snapshot is read before registration, so a scope result that cannot be carried
 // refuses for free instead of leaving a folder whose advise pass is doomed.
@@ -207,7 +220,7 @@ test('advise refuses for free when the scope result cannot be carried', () => {
 test('launcher saves the exact parsed task given to the advisor', () => {
   const tree = fixture();
   const run = runFrom(launch(tree, { phase: 'scope' }));
-  assert.deepEqual(run.advisorTask, parseAdvisorTask(TASK));
+  assert.deepEqual(run.advisorTask, { ...parseAdvisorTask(TASK), decisions: null });
 });
 
 test('advise refuses for free when the continued run is not an OK scope run', () => {
