@@ -9,6 +9,7 @@ import { questionKindRefusal } from './question-kind.mjs';
 import { orderFromHeader, orderInputName, renderOrderProblems } from '../order-schema.mjs';
 import { orderOptions } from './order-options.mjs';
 import { repositoryRefusal, resolveOrderRepository } from './order-repository.mjs';
+import { decisionsLedgerRefusal } from './decisions-ledger.mjs';
 import { orderRuleMessage, orderLabelReason } from '../order-rules.mjs';
 import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
 
@@ -48,6 +49,14 @@ export function settleTaskInput(opts) {
       ...repository.values, violation: violations[repository.violation],
       context: 'task-input', label: orderInputName('repository'),
     }), { action: 'usage' });
+  }
+  if (normalized.options.decisions !== null) {
+    const reason = decisionsLedgerRefusal(repository.repo, normalized.options.decisions);
+    if (reason) {
+      die(orderRuleMessage('decisions-path', {
+        context: 'task-input', label: orderInputName('decisions'), reason,
+      }), { action: 'usage' });
+    }
   }
   Object.assign(opts, normalized.options);
   opts.repo = repository.repo;

@@ -88,6 +88,18 @@ test('order renders the shell list in the source array order', async (t) => {
   assert.equal(/Forbidden shell sequences are (.*?)\./.exec(text)?.[1], codeList(SHELL_UNSAFE_SEQUENCES));
 });
 
+test('order guidance advertises decisions only for advisor and explains the ledger', async (t) => {
+  const text = await renderGuidance(readTopic('order'), { root: installedHome(t), topic: 'order' });
+  const rows = text.split('\n').filter((line) => /^\| codex-/.test(line));
+  assert.equal(rows.find((line) => line.startsWith('| codex-advisor |')),
+    '| codex-advisor | `order id`, `phase` | `continue`, `retry`, `resume` | `repository`, `slug`, `effort`, `decisions` |');
+  for (const row of rows.filter((line) => !line.startsWith('| codex-advisor |'))) {
+    assert.doesNotMatch(row, /`decisions`/);
+  }
+  assert.ok(text.includes('`decisions` names one repository-relative decision-ledger file of the owning plan '
+    + 'so the advise answer reports whether the question is already decided there; omit it when there is no ledger.'));
+});
+
 test('records renders both required review field arrays from the schema', async (t) => {
   const text = await renderGuidance(readTopic('records'), { root: installedHome(t), topic: 'records' });
   const review = SCHEMAS['codex-review'];

@@ -74,6 +74,50 @@ export const RULES = Object.freeze({
       throw new Error(`unknown repository-path violation: ${violation}`);
     },
   }),
+  'decisions-path': Object.freeze({
+    data: Object.freeze(['violation', 'value', 'context', 'label']),
+    topic: 'order',
+    rule: 'When decisions is present, give one repository-relative path to an existing readable ledger file ' +
+      'inside the repository: no absolute or drive-relative path, `..`, glob, list or line address.',
+    message: ({ violation, value, context, label, reason }) => {
+      if (context === 'task-input') {
+        return `${label} ${reason}\nThe run folder was not created; quota was not spent.`;
+      }
+      if (context !== undefined) throw new Error(`unknown decisions-path context: ${context}`);
+      if (violation === 'absolute') {
+        return `must name exactly one repository-relative file path; absolute paths are not allowed; got ${JSON.stringify(value)}.`;
+      }
+      if (violation === 'drive-relative') {
+        return `must name exactly one repository-relative file path; drive-relative paths are not allowed; got ${JSON.stringify(value)}.`;
+      }
+      if (violation === 'parent-segment') {
+        return `must name exactly one repository-relative file path without parent segments (..); got ${JSON.stringify(value)}.`;
+      }
+      if (violation === 'glob') {
+        return `must name exactly one repository-relative file path without globs; got ${JSON.stringify(value)}.`;
+      }
+      if (violation === 'list') {
+        return `must name exactly one repository-relative file path without lists or whitespace; got ${JSON.stringify(value)}.`;
+      }
+      if (violation === 'line-address') {
+        return `must name exactly one repository-relative file path without line addresses or colons; got ${JSON.stringify(value)}.`;
+      }
+      if (violation === 'shape') {
+        return `must name exactly one repository-relative file path with forward slashes, without parent segments, ` +
+          `globs, lists or line addresses; got ${JSON.stringify(value)}.`;
+      }
+      if (violation === 'not-file') {
+        return `must name a regular readable file; got ${JSON.stringify(value)}.`;
+      }
+      if (violation === 'unreadable') {
+        return `must name an existing regular readable file; got ${JSON.stringify(value)}.`;
+      }
+      if (violation === 'outside-repository') {
+        return `must stay inside the repository, both lexically and after resolving links; got ${JSON.stringify(value)}.`;
+      }
+      throw new Error(`unknown decisions-path violation: ${violation}`);
+    },
+  }),
   'repository-source': Object.freeze({
     data: Object.freeze(['violation', 'taskFile', 'taskFileRoot', 'labelRepo', 'error', 'context', 'label', 'run', 'runRepo']),
     topic: 'order',

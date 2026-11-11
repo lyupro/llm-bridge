@@ -10,7 +10,7 @@ const expectedLabels = {
   'codex-scout': ['order id', 'continue', 'retry', 'resume', 'repository', 'slug', 'effort'],
   'codex-build': ['order id', 'scope', 'continue', 'retry', 'repository', 'scope new', 'slug', 'effort'],
   'codex-review': ['order id', 'continue', 'retry', 'resume', 'repository', 'slug', 'effort', 'changeset'],
-  'codex-advisor': ['order id', 'continue', 'retry', 'resume', 'phase', 'repository', 'slug', 'effort'],
+  'codex-advisor': ['order id', 'continue', 'retry', 'resume', 'phase', 'repository', 'slug', 'effort', 'decisions'],
 };
 const expectedOptionalAgents = {
   repository: ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor'],
@@ -18,6 +18,7 @@ const expectedOptionalAgents = {
   slug: ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor'],
   effort: ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor'],
   changeset: ['codex-review'],
+  decisions: ['codex-advisor'],
 };
 
 test('order schemas own the immutable registry without call labels or runner fields (Plan_63 D9)', () => {
@@ -43,7 +44,7 @@ test('order schemas own the immutable registry without call labels or runner fie
     }
   }
   assert.deepEqual(ALL_ORDER_LABELS, [
-    'changeset', 'continue', 'effort', 'order id', 'phase', 'repository', 'resume', 'retry', 'scope', 'scope new', 'slug',
+    'changeset', 'continue', 'decisions', 'effort', 'order id', 'phase', 'repository', 'resume', 'retry', 'scope', 'scope new', 'slug',
   ]);
   assert.equal(ALL_ORDER_LABELS.includes('task file'), false);
   assert.ok(Object.isFrozen(ALL_ORDER_LABELS));

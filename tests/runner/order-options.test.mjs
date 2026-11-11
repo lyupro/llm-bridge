@@ -107,7 +107,7 @@ test('scope and scope new merge in declaration order without empty patterns', ()
 test('absent effort and phase create no options and an explicit phase is untouched', () => {
   const { options } = normalise([['order id', 'ord-1']]);
   assert.deepEqual(Object.keys(options).sort(),
-    ['changeset', 'orderId', 'scopeNewPatterns', 'scopePatterns', 'slug']);
+    ['changeset', 'decisions', 'orderId', 'scopeNewPatterns', 'scopePatterns', 'slug']);
   assert.deepEqual(options.scopePatterns, []);
   assert.deepEqual(options.scopeNewPatterns, []);
   for (const phase of ['', '  phase one  ']) {

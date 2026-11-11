@@ -149,6 +149,14 @@ test('a handwritten problem reason journals a D6 parameter violation in its own 
       reason: orderRuleMessage('duplicate-order-label', { label: 'retry' }) });
     checkOutgoingRefusal(known, 'header-probe');
     checkOutgoingRefusal(taskHeaderRefusal(parseTaskHeader('continue: TODO\\nadvice:')), 'header-probe');
+    for (const violation of ['absolute', 'drive-relative', 'parent-segment', 'glob', 'list',
+      'line-address', 'shape', 'not-file', 'unreadable', 'outside-repository']) {
+      const reason = orderRuleMessage('decisions-path', { violation, value: 'ledger.md' });
+      checkOutgoingRefusal(reason, 'header-probe');
+      checkOutgoingRefusal(orderRuleMessage('decisions-path', {
+        context: 'task-input', label: '\`decisions:\`', reason,
+      }), 'header-probe');
+    }
     const output = orderProblemLine({ lineNo: 3, line: 'arbitrary source data', reason: 'hand-written header refusal' });
     assert.equal(output, 'line 3: hand-written header refusal: arbitrary source data');
     checkOutgoingRefusal(output, 'header-probe');

@@ -1,9 +1,18 @@
 /** Normalises one order's values into runner options, whatever channel carried them (Plan_63 D5). */
 import { orderRuleMessage } from '../order-rules.mjs';
+import path from 'node:path';
+import { decisionsPathRefusal } from '../order-values.mjs';
 
 export function orderOptions(agentType, order) {
   const options = { orderId: (order.get('order id') ?? '').trim() };
   const problems = [];
+  options.decisions = null;
+  if (order.has('decisions')) {
+    const value = order.get('decisions');
+    const reason = decisionsPathRefusal(value);
+    if (reason) problems.push({ label: 'decisions', reason });
+    else options.decisions = path.posix.normalize(value);
+  }
   // Left unset when absent: the role's configured profile fills the gap, and a default here would always win.
   // Plan_56 step 3 leaves effort support to the live catalogue and Codex at run start.
   if (order.has('effort')) {

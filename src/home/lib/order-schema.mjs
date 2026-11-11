@@ -120,6 +120,12 @@ const OPTIONAL_ORDER_INPUTS = freezeEntries([
     explanation: 'The changes to review: uncommitted, base:<branch>, or commit:<sha>. Name only the ordered changeset.',
     example: 'base:main',
   },
+  {
+    label: 'decisions',
+    agents: Object.freeze(['codex-advisor']),
+    explanation: 'The repository-relative path of one decision-ledger file of the owning plan, where the advise answer reports whether the question is already decided; omit it when there is no ledger.',
+    example: 'docs/plans/open-work.md',
+  },
 ]);
 
 const schemas = new Map(ORDER_AGENTS.map((agentType) => [agentType,

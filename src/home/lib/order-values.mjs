@@ -3,6 +3,7 @@
  * Plan_63 D9: call and header readers share this leaf without importing either registry.
  */
 import path from 'node:path';
+import { orderRuleMessage } from './order-rules.mjs';
 
 const PLACEHOLDER_VALUES = new Set(['todo', 'tbd', 'label', 'none', 'order id', 'scope', 'xxx']);
 
@@ -14,6 +15,34 @@ function cleanValue(value) {
 export function isAbsoluteTaskFilePath(value) {
   const cleaned = cleanValue(value);
   return path.posix.isAbsolute(cleaned) || path.win32.isAbsolute(cleaned);
+}
+
+export function decisionsPathRefusal(value) {
+  if (typeof value !== 'string' || !value) {
+    return orderRuleMessage('decisions-path', { violation: 'shape', value });
+  }
+  if (isAbsoluteTaskFilePath(value)) {
+    return orderRuleMessage('decisions-path', { violation: 'absolute', value });
+  }
+  if (/^[A-Za-z]:/.test(value)) {
+    return orderRuleMessage('decisions-path', { violation: 'drive-relative', value });
+  }
+  if (value.split('/').includes('..')) {
+    return orderRuleMessage('decisions-path', { violation: 'parent-segment', value });
+  }
+  if (/[*?\[\]{}]/.test(value)) {
+    return orderRuleMessage('decisions-path', { violation: 'glob', value });
+  }
+  if (/[,\s]/.test(value)) {
+    return orderRuleMessage('decisions-path', { violation: 'list', value });
+  }
+  if (/:/.test(value)) {
+    return orderRuleMessage('decisions-path', { violation: 'line-address', value });
+  }
+  if (/[\\\x00-\x1f]/.test(value) || value.endsWith('/')) {
+    return orderRuleMessage('decisions-path', { violation: 'shape', value });
+  }
+  return null;
 }
 
 export function isPlaceholder(value) {

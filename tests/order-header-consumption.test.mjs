@@ -83,6 +83,12 @@ for (const agent of ORDER_AGENTS) {
         assert.equal(withLabel.order.get(entry.label), entry.example);
         // Iterate the registry, not a hand-maintained consumer list: a future ignored label must fail.
         assert.notDeepEqual(after.options, before.options, `${entry.label}: has no runner option consumer`);
+        if (entry.label === 'decisions') {
+          assert.equal(agent, 'codex-advisor');
+          assert.equal(before.options.decisions, null);
+          assert.equal(after.options.decisions, entry.example);
+          assert.equal(parsed.grant, null);
+        }
       }
     });
   }

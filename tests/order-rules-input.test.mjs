@@ -9,6 +9,7 @@ import { ORDER_DIAGNOSTICS, orderDiagnosticMessage } from '../src/home/lib/order
 import { parseTaskDocument } from '../src/home/lib/runner/task-file.mjs';
 import { questionKindRefusal, questionsFromTexts } from '../src/home/lib/runner/question-kind.mjs';
 import { repositoryRefusal } from '../src/home/lib/runner/order-repository.mjs';
+import { decisionsPathRefusal } from '../src/home/lib/order-values.mjs';
 import { orderOptions } from '../src/home/lib/runner/order-options.mjs';
 import { ADMISSION_FILES } from './order-guard/admission-files.mjs';
 import { checkRefusalSites } from './order-guard/refusal-checker.mjs';
@@ -105,6 +106,48 @@ for (const [violation, value, segment, expected, fullExpected] of repositoryRefu
   });
 }
 
+const decisionsRefusals = [
+  ['absolute', '/ledger.md',
+    'must name exactly one repository-relative file path; absolute paths are not allowed; got "/ledger.md".'],
+  ['drive-relative', 'C:ledger.md',
+    'must name exactly one repository-relative file path; drive-relative paths are not allowed; got "C:ledger.md".'],
+  ['parent-segment', 'docs/../ledger.md',
+    'must name exactly one repository-relative file path without parent segments (..); got "docs/../ledger.md".'],
+  ['glob', 'docs/*.md',
+    'must name exactly one repository-relative file path without globs; got "docs/*.md".'],
+  ['list', 'a.md,b.md',
+    'must name exactly one repository-relative file path without lists or whitespace; got "a.md,b.md".'],
+  ['line-address', 'ledger.md:12',
+    'must name exactly one repository-relative file path without line addresses or colons; got "ledger.md:12".'],
+  ['shape', 'ledger.md/',
+    'must name exactly one repository-relative file path with forward slashes, without parent segments, ' +
+      'globs, lists or line addresses; got "ledger.md/".'],
+  ['not-file', 'docs', 'must name a regular readable file; got "docs".'],
+  ['unreadable', 'missing.md', 'must name an existing regular readable file; got "missing.md".'],
+  ['outside-repository', 'linked.md',
+    'must stay inside the repository, both lexically and after resolving links; got "linked.md".'],
+];
+for (const [violation, value, expected] of decisionsRefusals) {
+  test(`decisions-path owns the ${violation} reason and admission suffix`, () => {
+    assert.equal(orderRuleMessage('decisions-path', { violation, value }), expected);
+    assert.equal(ORDER_RULES['decisions-path'].message({ violation, value }), expected);
+    if (!['not-file', 'unreadable', 'outside-repository'].includes(violation)) {
+      assert.equal(decisionsPathRefusal(value), expected);
+    }
+    assert.equal(orderRuleMessage('decisions-path', {
+      context: 'task-input', label: '`decisions:`', reason: expected,
+    }), '`decisions:` ' + expected + '\nThe run folder was not created; quota was not spent.');
+  });
+}
+
+test('decisions refusal producers pass the static guard without opt-outs', () => {
+  for (const file of ['src/home/lib/order-values.mjs', 'src/home/lib/runner/decisions-ledger.mjs',
+    'src/home/lib/runner/task-input.mjs']) {
+    const source = fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+    assert.deepEqual(checkRefusalSites(source, file), { violations: [], optOuts: [] });
+  }
+});
+
 test('scout-questions preserves the required sub-question refusal', () => {
   assert.equal(orderRuleMessage('scout-questions', { violation: 'missing' }),
     'a sub-question is required for codex-scout: put one Markdown list item per sub-question ' +
@@ -145,7 +188,7 @@ for (const [grant, expected] of [
 }
 
 test('contextual message functions reject unknown contexts', () => {
-  for (const key of ['repository-path', 'question-context-marker']) {
+  for (const key of ['repository-path', 'decisions-path', 'question-context-marker']) {
     assert.throws(() => orderRuleMessage(key, { context: 'unknown' }), {
       message: `unknown ${key} context: unknown`,
     });
@@ -153,7 +196,7 @@ test('contextual message functions reject unknown contexts', () => {
 });
 
 test('grouped message functions reject unknown violations instead of choosing a refusal silently', () => {
-  for (const key of ['scout-questions', 'verify-line', 'repository-path']) {
+  for (const key of ['scout-questions', 'verify-line', 'repository-path', 'decisions-path']) {
     assert.throws(() => orderRuleMessage(key, { violation: 'unknown' }), {
       message: `unknown ${key} violation: unknown`,
     });
@@ -252,7 +295,10 @@ test('call rules render once and replace the handwritten absolute task-file inst
   const text = await renderGuidance(source, {
     root: fileURLToPath(new URL('../src/home/', import.meta.url)), topic: 'order',
   });
-  for (const key of ['task-file-path', 'task-body-required']) {
+  assert.equal(ORDER_RULES['decisions-path'].rule,
+    'When decisions is present, give one repository-relative path to an existing readable ledger file ' +
+      'inside the repository: no absolute or drive-relative path, `..`, glob, list or line address.');
+  for (const key of ['task-file-path', 'task-body-required', 'decisions-path']) {
     assert.equal(text.split(ORDER_RULES[key].rule).length - 1, 1);
   }
 });
