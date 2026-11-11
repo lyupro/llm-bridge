@@ -104,7 +104,7 @@ test('OK advisor advise reply snapshot', () => {
     strongest_counterargument: 'Stored evidence may be incomplete.', confidence: 'high',
     risk_outcomes: [], open_questions: [], assumptions: [], pre_mortem: [], unlisted_option: 'none',
   } }, 0, 'OK',
-    'OK — recommend A: Keep the stored evidence authoritative.\n'
+    'OK — recommend A: Already decided: legacy result; field absent · Keep the stored evidence authoritative.\n'
     + 'Rejected: B (Recomputing evidence can change its meaning.)\n'
     + 'Counter: Stored evidence may be incomplete.\n'
     + 'Risks: 0 confirmed · 0 refuted · open questions 0 · confidence high\n'

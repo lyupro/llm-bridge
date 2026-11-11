@@ -19,6 +19,7 @@ import { orderInputName } from '../order-schema.mjs';
 import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
 import { unavailableRows } from './unavailable-rows.mjs';
 import { stopRows } from './stop-rows.mjs';
+import { alreadyDecidedRow } from './already-decided-row.mjs';
 
 /** What the run itself changed, and what the tooling around it changed while it worked. */
 const runChanges = (runDir) => {
@@ -157,8 +158,11 @@ function advisorReply(ctx) {
   const outcomes = r.risk_outcomes || [];
   const confirmed = outcomes.filter((o) => o.outcome === 'confirmed').length;
   const rejected = (r.rejected || []).map((o) => `${o.option_id} (${line(o.cost, 60)})`);
+  const prefix = `OK — recommend ${r.recommendation.option_id}: Already decided: ${alreadyDecidedRow(r, ctx.runDir)} · `;
+  // OW-083 R1: a ledger address stays whole even when it leaves only minimal recommendation space.
+  const recommendation = line(r.recommendation.text, Math.max(20, 200 - prefix.length));
   return [
-    `OK — recommend ${r.recommendation.option_id}: ${line(r.recommendation.text, 200)}`,
+    `${prefix}${recommendation}`,
     `Rejected: ${rejected.length ? line(rejected.join('; '), 180) : 'none'}`,
     `Counter: ${line(r.strongest_counterargument, 180)}`,
     `Risks: ${confirmed} confirmed · ${outcomes.length - confirmed} refuted · open questions ${(r.open_questions || []).length} · confidence ${r.confidence}`,
