@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { safeSlice } from './paths.mjs';
+import { webEvidenceOf } from './web-evidence.mjs';
 
 /**
  * Quota exhaustion, and nothing else that merely says "limit". A bare `limit` also appears in
@@ -205,6 +206,7 @@ export function readEvents(runDir) {
     // stream. Only completed items prove execution, including commands with nonzero exits.
     commands_executed: events.filter((event) =>
       event.type === 'item.completed' && event.item?.type === 'command_execution').length,
+    web_searches: webEvidenceOf(events),
     tokens: accounting.tokens,
     usage: accounting.usage,
     session_id: started ? String(started.thread_id) : null,

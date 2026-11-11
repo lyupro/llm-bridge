@@ -86,6 +86,7 @@ export function collect(runDir, agent, exitCode) {
   const exit = exitCode === undefined || exitCode === null ? null : Number(exitCode);
   const events = readEvents(runDir);
   const executionFact = readExecutionFact(runDir, events);
+  const { web, ...commandsExecuted } = executionFact;
   const worker = readJson(path.join(runDir, 'worker.json'));
   const launched = readJson(path.join(runDir, 'status.json')) || {};
 
@@ -166,7 +167,8 @@ export function collect(runDir, agent, exitCode) {
     // Null for runs made before env.json existed: absence is not the same as "both off".
     env: readJson(path.join(runDir, 'env.json')),
     session_id: events.session_id,
-    commands_executed: executionFact,
+    commands_executed: commandsExecuted,
+    web_searches: web,
   };
 
   // Plan_80 A5: diagnostics follow the verdict and use the frozen stop observation.

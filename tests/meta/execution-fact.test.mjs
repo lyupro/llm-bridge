@@ -32,6 +32,10 @@ function makeRun(root, name, { count = 0, thread = 'same-thread', from, stream =
 }
 
 const factOf = (dir) => readExecutionFact(dir, readEvents(dir));
+const assertCommands = (fact, expected) => {
+  const { web, ...commands } = fact;
+  assert.deepEqual(commands, expected);
+};
 const rootOf = () => makeTempTree('execution-fact-');
 const assertGap = (fact, name, why) => {
   assert.equal(fact.chain, null);
@@ -41,12 +45,12 @@ const assertGap = (fact, name, why) => {
 test('ordinary run counts three completed commands', () => {
   const dir = makeRun(rootOf(), 'current', { count: 3 });
   assert.equal(EXECUTION_FACT_VERSION, 1);
-  assert.deepEqual(factOf(dir), { version: 1, run: 3, chain: 3, chain_runs: [], gap: null });
+  assertCommands(factOf(dir), { version: 1, run: 3, chain: 3, chain_runs: [], gap: null });
 });
 
 test('ordinary archived run keeps null counts', () => {
   const dir = makeRun(rootOf(), 'archived', { stream: false });
-  assert.deepEqual(factOf(dir), { version: 1, run: null, chain: null, chain_runs: [], gap: null });
+  assertCommands(factOf(dir), { version: 1, run: null, chain: null, chain_runs: [], gap: null });
 });
 
 test('the supplied current-run events are used without rereading its stream', () => {
@@ -61,7 +65,7 @@ test('a zero-command resume counts eight predecessor commands', () => {
   const root = rootOf();
   makeRun(root, 'previous', { count: 8 });
   const dir = makeRun(root, 'current', { from: 'previous' });
-  assert.deepEqual(factOf(dir), {
+  assertCommands(factOf(dir), {
     version: 1, run: 0, chain: 8, chain_runs: ['previous'], gap: null,
   });
 });
@@ -73,7 +77,7 @@ test('resume of a resume sums own counts nearest first, ignoring stored totals',
     count: 2, from: 'oldest', meta: { commands_executed: { run: 90, chain: 100 } },
   });
   const dir = makeRun(root, 'current', { count: 1, from: 'previous' });
-  assert.deepEqual(factOf(dir), {
+  assertCommands(factOf(dir), {
     version: 1, run: 1, chain: 8, chain_runs: ['previous', 'oldest'], gap: null,
   });
 });
@@ -92,7 +96,7 @@ test('pruned predecessor uses retained session id and its own recorded count', (
   });
   fs.unlinkSync(path.join(pred, 'events.jsonl'));
   const fact = factOf(makeRun(root, 'current', { from: 'previous' }));
-  assert.deepEqual(fact, { version: 1, run: 0, chain: 4, chain_runs: ['previous'], gap: null });
+  assertCommands(fact, { version: 1, run: 0, chain: 4, chain_runs: ['previous'], gap: null });
 });
 
 test('a recorded chain alone cannot replace pruned command evidence', () => {
@@ -138,7 +142,7 @@ test('a self-cycle is rejected before reading predecessor thread evidence', () =
 test('non-bare resumed_from values are ordinary runs', () => {
   for (const from of ['../x', '..\\x', '.', '..', '', '   ', 42, null]) {
     const dir = makeRun(rootOf(), 'current', { from, count: 3 });
-    assert.deepEqual(factOf(dir), { version: 1, run: 3, chain: 3, chain_runs: [], gap: null });
+    assertCommands(factOf(dir), { version: 1, run: 3, chain: 3, chain_runs: [], gap: null });
   }
 });
 
@@ -205,7 +209,7 @@ test('a pruned predecessor needs a known matching recorded thread', () => {
 test('zero-command predecessors and resumes stay zero without a gap', () => {
   const root = rootOf();
   makeRun(root, 'previous');
-  assert.deepEqual(factOf(makeRun(root, 'current', { from: 'previous' })), {
+  assertCommands(factOf(makeRun(root, 'current', { from: 'previous' })), {
     version: 1, run: 0, chain: 0, chain_runs: ['previous'], gap: null,
   });
 });

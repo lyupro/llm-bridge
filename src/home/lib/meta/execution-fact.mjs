@@ -14,6 +14,17 @@ export const EXECUTION_FACT_VERSION = 1;
 const canonicalKey = (value) => process.platform === 'win32' ? value.toLowerCase() : value;
 const threadKnown = (value) => typeof value === 'string' && value.trim().length > 0;
 
+const webValueKnown = (value) => value && Number.isInteger(value.completed) && value.completed >= 0
+  && Number.isInteger(value.with_urls) && value.with_urls >= 0 && value.with_urls <= value.completed
+  && Array.isArray(value.hosts) && value.hosts.every((host) => typeof host === 'string' && host.length > 0)
+  && (value.with_urls === 0 ? value.hosts.length === 0 : value.hosts.length > 0);
+
+const joinWeb = (left, right) => ({
+  completed: left.completed + right.completed,
+  with_urls: left.with_urls + right.with_urls,
+  hosts: [...new Set([...left.hosts, ...right.hosts])].sort(),
+});
+
 export function scoutExecutionGap({ execution, questions }) {
   if (execution.gap) return execution.gap;
   // The 2026-09-16 dead sandbox produced nonempty evidence without reading code. Require an
@@ -29,9 +40,13 @@ export function scoutExecutionGap({ execution, questions }) {
 
 export function readExecutionFact(runDir, eventData) {
   const run = eventData.hasStream ? eventData.commands_executed : null;
+  const webRun = eventData.hasStream ? eventData.web_searches : null;
+  let webTotal = webRun;
+  let webGap = null;
   const chain_runs = [];
   const result = (chain, gap = null) => ({
     version: EXECUTION_FACT_VERSION, run, chain, chain_runs, gap,
+    web: { run: webRun, chain: gap || webGap ? null : webTotal, gap: webGap || gap },
   });
   const failure = (name, why) => result(null, `resume chain: ${line(name, 60)} — ${why}`);
   let name = resumeOrigin(readJson(path.join(runDir, 'status.json')));
@@ -83,6 +98,13 @@ export function readExecutionFact(runDir, eventData) {
       return failure(name, 'no command evidence (stream pruned, no recorded count)');
     }
     total += count;
+    // OW-084 R1: retention may keep only this run's web evidence, never a chain total.
+    const web = events.hasStream ? events.web_searches : meta?.web_searches?.run;
+    if (!webValueKnown(web)) {
+      webGap ||= `resume chain: ${line(name, 60)} — no web evidence (stream pruned, no recorded per-run value)`;
+    } else if (webTotal !== null) {
+      webTotal = joinWeb(webTotal, web);
+    }
     chain_runs.push(name);
     name = resumeOrigin(readJson(path.join(predDir, 'status.json')));
   }

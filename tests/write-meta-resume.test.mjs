@@ -102,6 +102,51 @@ test('collect persists the resume execution chain while status and reason stay u
   assert.equal(persisted.reason, null);
 });
 
+test('collect persists per-run and chain web evidence beside unchanged command facts', () => {
+  const web = (url) => ({ type: 'item.completed', item: { type: 'web_search', action: { type: 'open_page', url } } });
+  const predecessor = makeRun({ events: [
+    { type: 'thread.started', thread_id: 'resume-thread' }, COMPLETED_COMMAND, web('https://WWW.Previous.Example'),
+  ] });
+  collect(predecessor, 'codex-build', 0);
+  const dir = makeRun({
+    status: { resumed_from: path.basename(predecessor) }, result: build([]),
+    events: [{ type: 'thread.started', thread_id: 'resume-thread' }, web('https://current.example')],
+  });
+  const { meta } = collect(dir, 'codex-build', 0);
+  const persisted = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
+  assert.deepEqual(persisted.web_searches, {
+    run: { completed: 1, with_urls: 1, hosts: ['current.example'] },
+    chain: { completed: 2, with_urls: 2, hosts: ['current.example', 'previous.example'] }, gap: null,
+  });
+  assert.deepEqual(persisted.web_searches, meta.web_searches);
+  assert.deepEqual(persisted.commands_executed, {
+    version: 1, run: 0, chain: 1, chain_runs: [path.basename(predecessor)], gap: null,
+  });
+  assert.equal(meta.status, 'OK');
+  assert.equal(meta.reason, null);
+  fs.unlinkSync(path.join(predecessor, 'events.jsonl'));
+  assert.deepEqual(collect(dir, 'codex-build', 0).meta.web_searches, persisted.web_searches);
+});
+
+test('collect reads old pruned metadata with a web gap and unchanged command verdict', () => {
+  const predecessor = makeRun({ events: [{ type: 'thread.started', thread_id: 'resume-thread' }] });
+  fs.writeFileSync(path.join(predecessor, 'meta.json'), JSON.stringify({
+    session_id: 'resume-thread', commands_executed: { version: 1, run: 4, chain: 99 },
+  }));
+  fs.unlinkSync(path.join(predecessor, 'events.jsonl'));
+  const dir = makeRun({
+    status: { resumed_from: path.basename(predecessor) }, result: build([]),
+    events: [{ type: 'thread.started', thread_id: 'resume-thread' }],
+  });
+  const { meta } = collect(dir, 'codex-build', 0);
+  assert.equal(meta.web_searches.chain, null);
+  assert.match(meta.web_searches.gap, /no web evidence/);
+  assert.equal(meta.commands_executed.chain, 4);
+  assert.equal(meta.commands_executed.gap, null);
+  assert.equal(meta.status, 'OK');
+  assert.equal(meta.reason, null);
+});
+
 const noCommandReason = 'scout executed no command, so no answer rests on reading the code; '
   + 'check stderr.log for sandbox refusals before changing the order';
 const scoutResult = {

@@ -136,6 +136,7 @@ this record or reads additional evidence for it, so collecting again preserves t
 | `env` | Contents of `env.json`; may be `null` for an old or early run. |
 | `session_id` | Value of the `session id:` line from the log, or `null`. |
 | `commands_executed` | Execution fact: `version` (`1`), `run` (this stream's completed command count, or `null` without a stream), `chain` (the sum across resumed turns, or `null` when unknown), `chain_runs` (predecessor names, nearest first), and `gap` (first chain failure, or `null`). |
+| `web_searches` | Web evidence: `run` (this stream's `{ completed, with_urls, hosts }`, or `null` without a stream), `chain` (joined evidence across the validated resume chain, or `null` when unknown), and `gap` (first missing web evidence or chain validation failure, or `null`). Absent in older metadata; command execution fact version remains `1` because its recorded shape is unchanged. |
 
 Plan_80 E14 follows bare `status.json#resumed_from` names only, checking in order that each
 predecessor is a directory canonically inside the same project runs folder (case-insensitively
@@ -147,6 +148,14 @@ Each predecessor contributes its stream's completed `command_execution` items, o
 non-negative integer `meta.json#commands_executed.run` and recorded `session_id` when the stream
 is absent: `meta.json` survives retention, so pruned `events.jsonl` does not lose that evidence,
 and stored `chain` totals are never added again.
+OW-084 R1 counts only `item.completed` items of type `web_search`; started items do not count.
+`completed` counts those items; `with_urls` counts items carrying at least one absolute HTTP(S)
+URL parsed by `new URL()` from `item.results[].url` or `item.action.url` (including `open_page`).
+`hosts` is the sorted unique set of URL hostnames, lower-cased with a leading `www.` removed.
+The chain sums both counts and unions hosts, taking each predecessor's stream or, when pruned,
+its own `meta.json#web_searches.run`; stored chain totals are never reused. Missing per-run web
+evidence makes only `web_searches.chain` null with a reason in `web_searches.gap`, preserving
+the command count and command gap. The same path and thread validation applies to both facts.
 A non-resume has `chain = run`, `chain_runs = []`, and `gap = null`; a valid resume sums its own
 count and its predecessors (keeping `chain = null` when `run` is `null`); the scout execution,
 startup-context coordinate, and advisor command-evidence checks now use `chain` (see
