@@ -13,6 +13,7 @@ import { readJson } from '../write-meta.mjs';
 import { workerMayBeAlive } from '../meta/run-liveness.mjs';
 import { readSessionActivity } from '../codex-session-log.mjs';
 import { grantBlockers } from '../meta/stop-assessment.mjs';
+import { consecutiveEmptyResumes } from '../meta/empty-resumes.mjs';
 import { readEvents } from '../meta/events.mjs';
 import { AGENTS } from '../agents.mjs';
 import { threadFreshnessGap } from './thread-freshness.mjs';
@@ -161,6 +162,7 @@ export function resumeRefusal(runsRootPath, chain, orderId, grant, {
   const blockers = grantBlockers({
     status: meta.status, resultOk: meta.result_ok === true, agentWrites: AGENTS[agent].writes,
     threadId: meta.session_id, stop: meta.stop,
+    emptyResumes: consecutiveEmptyResumes({ runsRoot: runsRootPath, run: grant.run }),
     // OW-078: frozen events cover older records whose meta.json has no turn failure fact.
     turnFailed: readEvents(runDir).turn_failed === true,
   });

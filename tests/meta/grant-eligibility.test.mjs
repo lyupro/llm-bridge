@@ -18,10 +18,10 @@ const input = () => ({
   },
 });
 
-test('policy version 2 allows an otherwise eligible silent stall without mutating facts', () => {
+test('policy version 3 allows an otherwise eligible silent stall without mutating facts', () => {
   const args = input();
   const before = structuredClone(args);
-  assert.equal(GRANT_POLICY_VERSION, 2);
+  assert.equal(GRANT_POLICY_VERSION, 3);
   assert.equal(assessStop(args).situation.kind, 'silent-stall-candidate');
   assert.deepEqual(grantBlockers(args), []);
   assert.deepEqual(grantBlockers(args), []);
@@ -29,11 +29,13 @@ test('policy version 2 allows an otherwise eligible silent stall without mutatin
   assert.deepEqual(assessStop(args).continuation_eligibility, {
     version: 3,
     automatic: { allowed: false, blocking_reasons: ['recovery-policy-missing'] },
-    grant: { allowed: true, policy_version: 2, blocking_reasons: [] },
+    grant: { allowed: true, policy_version: 3, blocking_reasons: [] },
   });
 });
 
 const cases = [
+  ['two consecutive empty resumes', (args) => { args.emptyResumes = 2; }, ['empty-resumes-exhausted']],
+  ['more than two consecutive empty resumes', (args) => { args.emptyResumes = 3; }, ['empty-resumes-exhausted']],
   ['usable result', (args) => { args.resultOk = true; }, ['result-present']],
   ['LIMIT status', (args) => { args.status = 'LIMIT'; }, ['limit']],
   ['UNAVAILABLE status', (args) => { args.status = 'UNAVAILABLE'; }, ['unavailable']],
@@ -63,6 +65,17 @@ const cases = [
   }, ['process-tree-stop-unverified']],
 ];
 
+test('OW-066: zero or one empty resume preserves eligibility and existing blockers', () => {
+  for (const emptyResumes of [0, 1]) {
+    const args = { ...input(), emptyResumes };
+    assert.deepEqual(grantBlockers(args), []);
+    assert.equal(assessStop(args).continuation_eligibility.grant.allowed, true);
+    assert.deepEqual(grantBlockers({ ...args, agentWrites: true }), ['writer-role-not-approved']);
+  }
+  assert.deepEqual(grantBlockers({ ...input(), agentWrites: true, emptyResumes: 2 }),
+    ['writer-role-not-approved', 'empty-resumes-exhausted']);
+});
+
 test('output-limit diagnosis without a Codex-failed turn does not block the grant', () => {
   const args = { ...input(), outputLimit: true, turnFailed: false };
   assert.equal(assessStop(args).situation.kind, 'output-limit');
@@ -77,7 +90,7 @@ for (const [name, change, expected] of cases) {
     const before = structuredClone(args);
     assert.deepEqual(grantBlockers(args), expected);
     assert.deepEqual(assessStop(args).continuation_eligibility.grant, {
-      allowed: false, policy_version: 2,
+      allowed: false, policy_version: 3,
       blocking_reasons: expected,
     });
     assert.deepEqual(args, before);

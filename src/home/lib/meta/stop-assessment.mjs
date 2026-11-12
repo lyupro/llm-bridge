@@ -5,13 +5,17 @@
  */
 import { silenceAgeMs } from '../codex-session-log.mjs';
 
-export const GRANT_POLICY_VERSION = 2;
+// OW-066 B2: stored grants now include consecutive empty resume exhaustion.
+export const GRANT_POLICY_VERSION = 3;
+
+// OW-066: one empty resume is inconclusive; two consecutive empty passes exhaust the thread.
+const EMPTY_RESUME_LIMIT = 2;
 
 // One reading of O1's evidence for both paths: two copies of this rule could drift apart.
 const codexProvenGone = (stop) => ['stopped', 'exited'].includes(stop?.tree_stop?.state);
 
 // Plan_80 E13/O2: grants depend on safety, identity and failure evidence, not the diagnosed stall kind.
-export function grantBlockers({ status, resultOk, turnFailed, agentWrites, threadId, stop }) {
+export function grantBlockers({ status, resultOk, turnFailed, agentWrites, threadId, stop, emptyResumes = 0 }) {
   const blockers = [];
   if (resultOk) blockers.push('result-present');
   if (status === 'LIMIT') blockers.push('limit');
@@ -29,10 +33,11 @@ export function grantBlockers({ status, resultOk, turnFailed, agentWrites, threa
     blockers.push(`session-evidence-${stop?.session?.state ?? 'not-observed'}`);
   }
   if (!codexProvenGone(stop)) blockers.push('process-tree-stop-unverified');
+  if (emptyResumes >= EMPTY_RESUME_LIMIT) blockers.push('empty-resumes-exhausted');
   return blockers;
 }
 
-export function assessStop({ status, resultOk, turnFailed, outputLimit, agentWrites, threadId, stop, silencePolicy, recoveryPolicy, resumedFrom }) {
+export function assessStop({ status, resultOk, turnFailed, outputLimit, agentWrites, threadId, stop, silencePolicy, recoveryPolicy, resumedFrom, emptyResumes = 0 }) {
   const cause = stop?.trigger ?? null;
   const sessionState = stop?.session?.state ?? null;
   const commandFacts = stop?.session?.at_reference?.commands;
@@ -82,7 +87,7 @@ export function assessStop({ status, resultOk, turnFailed, outputLimit, agentWri
     }
   }
   if (typeof resumedFrom === 'string' && resumedFrom.length > 0) automatic.push('recovery-attempt-spent');
-  const grant = grantBlockers({ status, resultOk, turnFailed, agentWrites, threadId, stop });
+  const grant = grantBlockers({ status, resultOk, turnFailed, agentWrites, threadId, stop, emptyResumes });
   const factual = [];
   if (resultOk) factual.push('result-present');
   if (status === 'LIMIT') factual.push('limit');

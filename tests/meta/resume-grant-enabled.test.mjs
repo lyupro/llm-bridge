@@ -97,7 +97,7 @@ test('an eligible failed advisor advise run records an allowed grant and prints 
   assert.deepEqual(meta.continuation_eligibility, {
     version: 3,
     automatic: { allowed: false, blocking_reasons: ['recovery-policy-missing'] },
-    grant: { allowed: true, policy_version: 2, blocking_reasons: [] },
+    grant: { allowed: true, policy_version: 3, blocking_reasons: [] },
   });
   const persisted = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
   assert.deepEqual(persisted.continuation_eligibility, meta.continuation_eligibility);
@@ -119,7 +119,7 @@ test('the same failed run for codex-build retains the writer-role blocker', () =
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.result_ok, false);
   assert.deepEqual(meta.continuation_eligibility.grant, {
-    allowed: false, policy_version: 2, blocking_reasons: ['writer-role-not-approved'],
+    allowed: false, policy_version: 3, blocking_reasons: ['writer-role-not-approved'],
   });
   assert.deepEqual(meta.continuation_eligibility.automatic, {
     allowed: false,

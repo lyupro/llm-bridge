@@ -33,6 +33,7 @@ import { webResearchBinding } from './meta/web-research.mjs';
 import { writeStatus } from './meta/run-state.mjs';
 import { resolveStatus } from './meta/verdict.mjs';
 import { assessStop } from './meta/stop-assessment.mjs';
+import { consecutiveEmptyResumes } from './meta/empty-resumes.mjs';
 import { AGENTS, capacityReply, failReply, limitReply, unavailableReply, withProfileRow } from './meta/reply.mjs';
 import { withLaunchRows } from './meta/launch-rows.mjs';
 
@@ -182,6 +183,7 @@ export function collect(runDir, agent, exitCode) {
     turnFailed: events.turn_failed === true, outputLimit: events.transport_error?.output_limit === true,
     stop: meta.stop, silencePolicy: meta.silence_policy,
     recoveryPolicy: meta.recovery_policy, resumedFrom: meta.resumed_from,
+    emptyResumes: consecutiveEmptyResumes({ runsRoot: path.dirname(runDir), run: path.basename(runDir) }),
   }));
 
   // OW-067 / Plan_81 D2: publish the whole verdict before closing status.json.

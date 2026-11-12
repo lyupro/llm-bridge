@@ -120,7 +120,7 @@ test('silence trigger is unknown evidence with automatic and grant eligibility d
     allowed: false, blocking_reasons: ['recovery-policy-missing', 'process-tree-stop-unverified'],
   });
   assert.deepEqual(result.continuation_eligibility.grant, {
-    allowed: false, policy_version: 2, blocking_reasons: ['process-tree-stop-unverified'],
+    allowed: false, policy_version: 3, blocking_reasons: ['process-tree-stop-unverified'],
   });
 });
 
@@ -231,7 +231,7 @@ test('stalled advise has the exact ordered diagnostic-only blockers', () => {
     automatic: { allowed: false, blocking_reasons: [
       'recovery-policy-missing', 'process-tree-stop-unverified',
     ] },
-    grant: { allowed: false, policy_version: 2, blocking_reasons: [
+    grant: { allowed: false, policy_version: 3, blocking_reasons: [
       'process-tree-stop-unverified',
     ] },
   });
@@ -245,7 +245,7 @@ test('build records writer-role and unconfigured-threshold blockers in order', (
       'recovery-policy-missing', 'writer-role-not-approved',
       'threshold-unconfigured', 'process-tree-stop-unverified',
     ] },
-    grant: { allowed: false, policy_version: 2, blocking_reasons: [
+    grant: { allowed: false, policy_version: 3, blocking_reasons: [
       'writer-role-not-approved', 'process-tree-stop-unverified',
     ] },
   });
@@ -268,7 +268,7 @@ test('missing session log is unknown evidence with exact blockers, never a silen
       'recovery-policy-missing', 'session-evidence-missing',
       'command-evidence-unknown', 'process-tree-stop-unverified',
     ] },
-    grant: { allowed: false, policy_version: 2, blocking_reasons: [
+    grant: { allowed: false, policy_version: 3, blocking_reasons: [
       'session-evidence-missing', 'process-tree-stop-unverified',
     ] },
   });
@@ -281,7 +281,7 @@ test('LIMIT without a result has the exact ordered blockers', () => {
       'recovery-policy-missing', 'limit',
       'not-silent-stall', 'process-tree-stop-unverified',
     ] },
-    grant: { allowed: false, policy_version: 2, blocking_reasons: [
+    grant: { allowed: false, policy_version: 3, blocking_reasons: [
       'limit', 'process-tree-stop-unverified',
     ] },
   });
@@ -301,7 +301,7 @@ test('all applicable factual blockers survive result and LIMIT precedence', () =
       'writer-role-not-approved', 'thread-unavailable', 'command-in-flight',
       'threshold-unconfigured', 'not-silent-stall', 'process-tree-stop-unverified',
     ] },
-    grant: { allowed: false, policy_version: 2, blocking_reasons: [
+    grant: { allowed: false, policy_version: 3, blocking_reasons: [
       'result-present', 'limit', 'writer-role-not-approved', 'thread-unavailable',
       'process-tree-stop-unverified',
     ] },
@@ -318,7 +318,7 @@ test('UNAVAILABLE with no session or commands reports absence, not silence', () 
       'session-evidence-not-observed', 'command-evidence-unknown', 'threshold-unconfigured',
       'not-silent-stall', 'process-tree-stop-unverified',
     ] },
-    grant: { allowed: false, policy_version: 2, blocking_reasons: [
+    grant: { allowed: false, policy_version: 3, blocking_reasons: [
       'unavailable', 'stop-record-missing', 'thread-unavailable', 'session-evidence-not-observed', 'process-tree-stop-unverified',
     ] },
   });

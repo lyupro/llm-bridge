@@ -39,7 +39,7 @@ test('OW-078 B2: the measured output-limit failure blocks resume without changin
   assert.equal(meta.situation.kind, 'output-limit');
   assert.deepEqual(meta.treatment, { version: 1, effect: 'diagnostic-only', action: 'narrow-order-or-lower-effort' });
   assert.deepEqual(meta.continuation_eligibility.grant, {
-    allowed: false, policy_version: 2, blocking_reasons: ['codex-turn-failed'],
+    allowed: false, policy_version: 3, blocking_reasons: ['codex-turn-failed'],
   });
   assert.deepEqual(meta.continuation_eligibility.automatic, {
     allowed: false, blocking_reasons: ['codex-turn-failed', 'not-silent-stall'],
@@ -117,7 +117,7 @@ for (const agent of ['codex-advisor', 'codex-build']) {
       automatic: { allowed: false, blocking_reasons: [
         'recovery-policy-missing', ...writer, 'process-tree-stop-unverified',
       ] },
-      grant: { allowed: false, policy_version: 2, blocking_reasons: [
+      grant: { allowed: false, policy_version: 3, blocking_reasons: [
         ...writer, 'process-tree-stop-unverified',
       ] },
     });
@@ -156,7 +156,7 @@ test('collect assesses the frozen policy and denies a second automatic recovery 
     assert.deepEqual(first.meta.continuation_eligibility, {
       version: 3,
       automatic: { allowed: resumedFrom === null, blocking_reasons: resumedFrom ? ['recovery-attempt-spent'] : [] },
-      grant: { allowed: true, policy_version: 2, blocking_reasons: [] },
+      grant: { allowed: true, policy_version: 3, blocking_reasons: [] },
     });
     assert.deepEqual(second.meta.continuation_eligibility, first.meta.continuation_eligibility);
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')).continuation_eligibility,
