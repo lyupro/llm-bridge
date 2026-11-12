@@ -122,6 +122,7 @@ this record or reads additional evidence for it, so collecting again preserves t
 | `exit` | Numeric Codex code; `null` if none exists. |
 | `status` | `OK`, `FAIL`, `LIMIT`, `UNAVAILABLE`, or `CAPACITY`. |
 | `reason` | Reason for `FAIL`/`LIMIT`/`UNAVAILABLE`/`CAPACITY`; `null` for a normal `OK`. |
+| `reason_rule` | Scout answer-rule key that produced `FAIL` (for example `scout-commands-run` or `scout-web-reference`); `null` for every other outcome, including a resume-chain provenance gap and non-scout failures. Always present in a normal collect; absent in older metadata. Copied from the verdict, never inferred from reason text. |
 | `carried_from_earlier_run` | `true` if the claimed work is found in the chain's accumulated diff but not in the current run's delta. Always present in a normal collect. |
 | `environment_changes` | Paths changed between snapshots that matched `env.json.environmentPaths`, plus paths excused by `env.json.environmentNewFilePaths`. They are visible in the audit but excluded from work evaluation. |
 | `result_ok` | The result was read as JSON and contains the agent's primary required content field. |

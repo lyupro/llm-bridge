@@ -88,6 +88,20 @@ the first matching branch determines the status. The order is therefore part of 
     An archived run without a stream is not judged by it. Then multiple extracted questions require
     separate answers, enough substantive text, and at least one evidence link for each question. For a
     single question, the overall `answer` is checked for substance. Finally, each marked question's answer must cite `startup:<source>` evidence or the run is `FAIL`.
+    OW-084 W5 preserves the TradeForge incident as `FAIL`: unmarked external-source questions do not
+    earn the web-research exemption. When the chain completed N > 0 web searches, `scout-commands-run`
+    says “scout executed no command but completed N web searches; questions about outside sources
+    need the orderer's [web-research] marker”. With zero or unknown searches it retains the exact
+    existing reason, including the instruction to check `stderr.log` for sandbox refusals.
+    Every scout answer-rule failure returns its key alongside its reason; `collect()` records that
+    key as `reason_rule`. Other outcomes, including resume-chain provenance gaps, carry `null`.
+    For a filled, readable result, `reason_rule: scout-commands-run` and
+    `web_searches.chain.completed > 0` select Action variant `fail-scout-web-unmarked`.
+    The Action is chosen by `reason_rule`, never by matching the reason text. It offers no `retry:`
+    or `resume:` grant: read the report, and if the questions really concern outside sources, the
+    orderer must mark them `[web-research]` and send a new order under a new order id.
+    Every other FAIL keeps its existing Action; `scout-web-searches` and `scout-web-reference`
+    keep `fail-result` when the result is filled, since a repeat can supply proper evidence.
     With zero executed commands in the chain, any repository `path:line` in answers' evidence or findings' `where`
     also produces `FAIL`: an address cited without reading is invented, so a code question marked by
     mistake still fails. Absolute HTTP(S) URLs in evidence or finding locations are skipped by this

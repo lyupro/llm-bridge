@@ -26,7 +26,7 @@ const cases = [
     'responses to web-research questions without a valid HTTP(S) reference matching the search evidence: Q2, Q3'],
   ['scout-unread-coordinate', { coordinate: 'src/file.mjs:12' },
     'scout cited src/file.mjs:12 without executing a command: an address nobody read'],
-  ['scout-commands-run', {},
+  ['scout-commands-run', { searches: 0 },
     'scout executed no command, so no answer rests on reading the code; check stderr.log for sandbox refusals before changing the order'],
 ];
 

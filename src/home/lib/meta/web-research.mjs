@@ -1,8 +1,7 @@
 /** OW-084 R1: bind web-research answers to the searches in their proven resume chain. */
 import { QUESTION_KIND } from '../runner/question-kind.mjs';
-import { answerRuleMessage } from '../answer-rules.mjs';
+import { scoutAnswerRuleGap as scoutReason } from './answer-rule-gap.mjs';
 
-const scoutReason = (key, values) => answerRuleMessage('codex-scout', key, values);
 const webQuestions = (questions) => (Array.isArray(questions) ? questions : [])
   .filter((question) => question?.kind === QUESTION_KIND.WEB_RESEARCH);
 const questionId = (value) => String(value || '').trim().toUpperCase();

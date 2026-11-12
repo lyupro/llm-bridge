@@ -4,9 +4,7 @@
  * dead sandbox; a marker must never excuse invented addresses or an unsourced answer.
  */
 import { QUESTION_KIND } from '../runner/question-kind.mjs';
-import { answerRuleMessage } from '../answer-rules.mjs';
-
-const scoutReason = (key, values = {}) => answerRuleMessage('codex-scout', key, values);
+import { scoutAnswerRuleGap as scoutReason } from './answer-rule-gap.mjs';
 
 export function allStartupContext(questions) {
   return Array.isArray(questions) && questions.length > 0

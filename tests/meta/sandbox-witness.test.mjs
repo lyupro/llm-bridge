@@ -51,7 +51,7 @@ for (const witness of [{ state: 'absent' }, { state: 'not-observed' }, undefined
     }
     assert.equal(sandboxWitnessGap(dir), null);
     assert.deepEqual(resolveStatus({ resultOk: false, exit: 0, agent: 'codex-build', result: null, runDir: dir }),
-      { status: 'FAIL', reason: 'result is empty, exit=0' });
+      { status: 'FAIL', reason: 'result is empty, exit=0', rule: null });
   });
 }
 

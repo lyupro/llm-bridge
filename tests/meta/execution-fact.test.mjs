@@ -254,7 +254,7 @@ test('scout execution provenance gap wins over counts and startup context', () =
   const gap = 'resume chain: missing — run folder not found';
   for (const chain of [0, null, 8]) {
     for (const questions of [[], startupQuestions]) {
-      assert.equal(scoutExecutionGap({ execution: { chain, gap }, questions }), gap);
+      assert.deepEqual(scoutExecutionGap({ execution: { chain, gap }, questions }), { key: null, reason: gap });
     }
   }
 });
@@ -262,7 +262,8 @@ test('scout execution provenance gap wins over counts and startup context', () =
 test('scout zero-command chain without all startup questions keeps the exact old reason', () => {
   for (const questions of [[], [{ id: 'Q1', kind: QUESTION_KIND.CODE_REQUIRED }],
     [...startupQuestions, { id: 'Q2', kind: QUESTION_KIND.CODE_REQUIRED }]]) {
-    assert.equal(scoutExecutionGap({ execution: { chain: 0, gap: null }, questions }), noCommandReason);
+    assert.deepEqual(scoutExecutionGap({ execution: { chain: 0, gap: null }, questions }),
+      { key: 'scout-commands-run', reason: noCommandReason });
   }
 });
 

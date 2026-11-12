@@ -35,9 +35,9 @@ import { readExecutionFact, scoutExecutionGap } from './execution-fact.mjs';
 import { compareSnapshots } from './snapshot-format.mjs';
 import { readRunSnapshots, snapshotRefusal } from './run-snapshots.mjs';
 import { answerRuleMessage } from '../answer-rules.mjs';
+import { scoutAnswerRuleGap as scoutReason } from './answer-rule-gap.mjs';
 import { MIN_SUBSTANCE_CHARS, MIN_SINGLE_SUBSTANCE_CHARS } from '../answer-rules/scout.mjs';
 
-const scoutReason = (key, values = {}) => answerRuleMessage('codex-scout', key, values);
 const buildReason = (key, values = {}) => answerRuleMessage('codex-build', key, values);
 
 /**
@@ -246,7 +246,11 @@ function branchDuringRun(runDir) {
  * events and silent stderr is abandoned at startup; an empty result with no structured
  * transport error is FAIL, because diagnostic text cannot turn a quoted limit into LIMIT.
  */
-export function resolveStatus({ resultOk, exit, agent, result, runDir, events, execution }) {
+export function resolveStatus(input) {
+  return { rule: null, ...resolveVerdict(input) };
+}
+
+function resolveVerdict({ resultOk, exit, agent, result, runDir, events, execution }) {
   const eventData = events ?? readEvents(runDir);
   execution ??= readExecutionFact(runDir, eventData);
   // First, as the empty raw.log check was before it: a run that never started cannot be graded
@@ -318,15 +322,15 @@ export function resolveStatus({ resultOk, exit, agent, result, runDir, events, e
   if (agent === 'codex-scout') {
     const questions = questionsOf(runDir);
     const executionGap = scoutExecutionGap({ execution, questions });
-    if (executionGap) return { status: 'FAIL', reason: executionGap };
+    if (executionGap) return { status: 'FAIL', reason: executionGap.reason, rule: executionGap.key };
     const gap = scoutCoverageGap(questions, result);
-    if (gap) return { status: 'FAIL', reason: gap };
+    if (gap) return { status: 'FAIL', reason: gap.reason, rule: gap.key };
     const contextGap = contextOnlyGap({
       questions, result, commandsExecuted: execution.chain,
     });
-    if (contextGap) return { status: 'FAIL', reason: contextGap };
+    if (contextGap) return { status: 'FAIL', reason: contextGap.reason, rule: contextGap.key };
     const webGap = webResearchGap({ questions, result, web: execution.web });
-    if (webGap) return { status: 'FAIL', reason: webGap };
+    if (webGap) return { status: 'FAIL', reason: webGap.reason, rule: webGap.key };
   }
   // Plan_59 D3/D4/D5/D10: a schema-valid agreement still needs evidence and decision checks.
   // Place the advisor judge before the build-only scope check, alongside the other agent contracts.

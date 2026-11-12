@@ -26,7 +26,7 @@ test('a build with a new letter as its only stray passes the scope check', () =>
     before, after, result, scope: 'src/**', envNewFilePaths: ['letters/**'],
   });
   assert.deepEqual(readRunSnapshots(runDir), { before, after });
-  assert.deepEqual(resolve(runDir, result), { status: 'OK', reason: null });
+  assert.deepEqual(resolve(runDir, result), { status: 'OK', reason: null, rule: null });
 });
 
 test('a build with only a new environmental letter agrees with an empty report', () => {
@@ -35,7 +35,7 @@ test('a build with only a new environmental letter agrees with an empty report',
     before: empty, after: encodeSnapshot([letterRow]), result,
     scope: 'src/**', envNewFilePaths: ['letters/**'],
   });
-  assert.deepEqual(resolve(runDir, result), { status: 'OK', reason: null });
+  assert.deepEqual(resolve(runDir, result), { status: 'OK', reason: null, rule: null });
 });
 
 test('editing an existing letter outside scope still fails as out-of-scope', () => {
@@ -58,7 +58,7 @@ test('a scoped new letter named as the only report change remains work', () => {
     scope: letter, envNewFilePaths: ['letters/**'],
   });
   assert.deepEqual(reportVersusWork(runDir, result), { ok: true, carried: false, reason: null });
-  assert.deepEqual(resolve(runDir, result), { status: 'OK', reason: null });
+  assert.deepEqual(resolve(runDir, result), { status: 'OK', reason: null, rule: null });
 });
 
 test('a chain excuses a letter from an earlier pass using the accumulated comparison pair', () => {

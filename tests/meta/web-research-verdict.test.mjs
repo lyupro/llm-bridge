@@ -107,10 +107,10 @@ test('R1 CLI shape softening accepts any absolute HTTP(S) URL and persists unava
 
 test('R1 unavailable binding still requires a valid absolute HTTP(S) URL per web answer', () => {
   for (const evidence of [['plain evidence'], ['ftp://example.com/docs'], ['/relative'], []]) {
-    assert.equal(webResearchGap({
+    assert.deepEqual(webResearchGap({
       questions, result: resultOf(evidence),
       web: { chain: { completed: 1, with_urls: 0, hosts: [] }, gap: null },
-    }), referenceReason());
+    }), { key: 'scout-web-reference', reason: referenceReason() });
   }
   const meta = verdict({ events: [thread, webItem([])], result: resultOf(['plain evidence']) });
   assert.equal(meta.status, 'FAIL');
@@ -159,7 +159,7 @@ test('mixed repository and web questions require commands, then accept their own
   result.answers[0].evidence = ['src/example.mjs:12'];
   const failed = verdict({ questions: mixed, result });
   assert.equal(failed.status, 'FAIL');
-  assert.equal(failed.reason, reason('scout-commands-run'));
+  assert.equal(failed.reason, reason('scout-commands-run', { searches: 1 }));
   assert.equal(verdict({ questions: mixed, result, events: [thread, COMPLETED_COMMAND, webItem()] }).status, 'OK');
 });
 
@@ -186,9 +186,9 @@ test('URL ports in both evidence and finding locations are not unread repository
 test('unknown, missing and empty question lists fail closed on commands', () => {
   for (const ordered of [undefined, [], [{ id: 'Q1' }], [{ id: 'Q1', kind: 'future-kind' }],
     [questions[0], { id: 'Q2', kind: 'future-kind' }]]) {
-    assert.equal(scoutExecutionGap({ execution: { chain: 0, gap: null }, questions: ordered }),
-      reason('scout-commands-run'));
-    assert.equal(verdict({ questions: ordered }).reason, reason('scout-commands-run'));
+    assert.deepEqual(scoutExecutionGap({ execution: { chain: 0, gap: null }, questions: ordered }),
+      { key: 'scout-commands-run', reason: reason('scout-commands-run', { searches: 0 }) });
+    assert.equal(verdict({ questions: ordered }).reason, reason('scout-commands-run', { searches: 1 }));
   }
   assert.equal(allStartupContext(questions), false);
   assert.equal(allStartupContext([{ id: 'Q1', kind: 'startup-context' }]), true);
@@ -199,8 +199,10 @@ test('binding is null without web questions or known evidence; unknown evidence 
   assert.equal(webResearchBinding(questions, { chain: null, gap: 'unknown' }), null);
   // The marker postdates `--json`: no stream, no gap and no web fact prove no search, unlike
   // the archived-run exemption that the command count keeps.
-  assert.equal(webResearchGap({ questions, result: resultOf(), web: { chain: null, gap: null } }), searchesReason());
-  assert.equal(webResearchGap({ questions, result: resultOf(), web: undefined }), searchesReason());
+  assert.deepEqual(webResearchGap({ questions, result: resultOf(), web: { chain: null, gap: null } }),
+    { key: 'scout-web-searches', reason: searchesReason() });
+  assert.deepEqual(webResearchGap({ questions, result: resultOf(), web: undefined }),
+    { key: 'scout-web-searches', reason: searchesReason() });
   assert.equal(webResearchGap({ questions: [], result: resultOf(), web: { chain: null, gap: 'unknown' } }), null);
   assert.equal(verdict({ questions: questions.map((q) => ({ ...q, kind: 'code-required' })),
     events: [thread, COMPLETED_COMMAND, webItem()] }).web_searches.binding, null);
@@ -211,5 +213,6 @@ test('the web judge matches trimmed question ids without case and keeps the firs
   result.answers[0].question_id = ' q1 ';
   assert.equal(webResearchGap({ questions, result, web }), null);
   result.answers.unshift({ question_id: 'Q1', answer: prose, evidence: ['https://wrong.example'] });
-  assert.equal(webResearchGap({ questions, result, web }), referenceReason('Q1'));
+  assert.deepEqual(webResearchGap({ questions, result, web }),
+    { key: 'scout-web-reference', reason: referenceReason('Q1') });
 });

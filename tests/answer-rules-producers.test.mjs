@@ -99,7 +99,8 @@ function scoutProducerProblems(files, catalogKeys) {
         end += 1;
       }
       const expression = body.slice(start, end);
-      if (expression.join(' ') === 'null' || expression.join(' ') === 'execution . gap') continue;
+      if (expression.join(' ') === 'null'
+        || expression.join(' ') === '{ key : null , reason : execution . gap }') continue;
       const key = /^(['"])([^'"\\]+)\1$/.exec(expression[2] ?? '')?.[2];
       if (expression[0] !== 'scoutReason' || expression[1] !== '(' || !key
         || ![',', ')'].includes(expression[3]) || closingToken(expression, 1) !== expression.length - 1) {
@@ -254,7 +255,7 @@ test('scout producer guard rejects a handwritten coordinate reason in contextOnl
 });
 
 test('scout producer guard rejects a catalog rule removed from the judges', () => {
-  const edited = mutatedScout('execution-fact.mjs', "return scoutReason('scout-commands-run');", 'return null;');
+  const edited = mutatedScout('execution-fact.mjs', "return scoutReason('scout-commands-run', {", "return scoutReason('scout-answer-substance', {");
   assert.ok(scout.check(edited, scout.catalogKeys).includes('missing producer: scout-commands-run'));
 });
 

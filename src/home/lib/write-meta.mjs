@@ -96,7 +96,7 @@ export function collect(runDir, agent, exitCode) {
     const index = args.indexOf(flag);
     return index >= 0 && typeof args[index + 1] === 'string' ? args[index + 1] : null;
   };
-  const { status, reason, carried } = resolveStatus({
+  const { status, reason, rule, carried } = resolveStatus({
     resultOk,
     exit,
     agent,
@@ -135,6 +135,7 @@ export function collect(runDir, agent, exitCode) {
     exit,
     status,
     reason,
+    reason_rule: rule,
     // Plan_80 A4: preserve the runner's observation; an older run was never observed.
     stop: launched.stop ?? null,
     // An OK earned by an earlier pass of the same task reads differently from an OK earned

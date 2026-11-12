@@ -199,6 +199,9 @@ export function withProfileRow(rows, meta) {
 
 // OW-078: both FAIL producers share the selector so output-limit guidance cannot drift.
 export function failActionVariant(meta) {
+  // OW-084 W5: the TradeForge web-only answer needs a marked new order, not a paid repeat.
+  if (meta.result_ok && meta.reason_rule === 'scout-commands-run'
+    && meta.web_searches?.chain?.completed > 0) return 'fail-scout-web-unmarked';
   if (meta.result_ok) return 'fail-result';
   return meta.situation?.kind === 'output-limit' ? 'fail-output-limit' : 'fail-no-result';
 }

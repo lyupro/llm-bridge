@@ -162,8 +162,10 @@ test('startup reference matching ignores id case and whitespace, and the first a
   };
   assert.equal(contextOnlyGap({ questions, result, commandsExecuted: 0 }), null);
   result.answers.reverse();
-  assert.equal(contextOnlyGap({ questions, result, commandsExecuted: 0 }),
-    'responses to startup-context questions without a startup:<source> reference: Q1');
+  assert.deepEqual(contextOnlyGap({ questions, result, commandsExecuted: 0 }), {
+    key: 'scout-startup-reference',
+    reason: 'responses to startup-context questions without a startup:<source> reference: Q1',
+  });
 });
 
 test('empty startup sources fail and multiple unsourced question ids retain question order', () => {
@@ -172,8 +174,10 @@ test('empty startup sources fail and multiple unsourced question ids retain ques
     { question_id: 'Q1', evidence: ['startup:   '] },
     { question_id: 'Q3', evidence: ['A source is required.'] },
   ] };
-  assert.equal(contextOnlyGap({ questions: ordered, result, commandsExecuted: 1 }),
-    'responses to startup-context questions without a startup:<source> reference: Q1, Q3');
+  assert.deepEqual(contextOnlyGap({ questions: ordered, result, commandsExecuted: 1 }), {
+    key: 'scout-startup-reference',
+    reason: 'responses to startup-context questions without a startup:<source> reference: Q1, Q3',
+  });
 });
 
 test('every answer is checked for unread coordinates, including duplicate answers', () => {
@@ -199,6 +203,8 @@ test('unknown command counts skip coordinate checking and long coordinates are b
   for (const commandsExecuted of [null, undefined]) {
     assert.equal(contextOnlyGap({ questions, result, commandsExecuted }), null);
   }
-  assert.equal(contextOnlyGap({ questions, result, commandsExecuted: 0 }),
-    `scout cited ${coordinate.slice(0, 60)} without executing a command: an address nobody read`);
+  assert.deepEqual(contextOnlyGap({ questions, result, commandsExecuted: 0 }), {
+    key: 'scout-unread-coordinate',
+    reason: `scout cited ${coordinate.slice(0, 60)} without executing a command: an address nobody read`,
+  });
 });

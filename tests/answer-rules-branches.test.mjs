@@ -77,7 +77,7 @@ function catalogReason(expression, bindings, judge) {
 
 // Plan_80 E21: host transport failures stay outside this agent-only boundary.
 function branchProblems(verdictSource, table, rules) {
-  const body = functionBody(tokensOf(verdictSource), 'resolveStatus');
+  const body = functionBody(tokensOf(verdictSource), 'resolveVerdict');
   const problems = [];
   const branches = [];
   const literalUses = new Set();
@@ -269,7 +269,7 @@ test('branch guard accepts literal inline emitters and rejects dynamic keys or a
 
 test('branch guard rejects static template text and permits only a judge reason as its first interpolation', () => {
   for (const reason of ['`prefix ${gap}`', '`${gap} suffix`', '`${hooks}${gap}`', '`${gap.other}${hooks}`']) {
-    const anchor = "if (gap) return { status: 'FAIL', reason: gap };\n    const contextGap";
+    const anchor = "if (gap) return { status: 'FAIL', reason: gap.reason, rule: gap.key };\n    const contextGap";
     const edited = mutated(anchor, `if (gap) return { status: 'FAIL', reason: ${reason} };\n    const contextGap`);
     assert.ok(problemsOf(edited).includes(`branch reason bypasses catalog: codex-scout: ${reason}`));
   }

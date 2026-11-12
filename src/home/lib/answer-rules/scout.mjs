@@ -71,7 +71,9 @@ export const RULES = Object.freeze({
     phases: DEFAULT,
     when: 'always',
     rule: 'Base answers on commands run against the repository, except when the question list is non-empty and every question asks about handed startup context or web research.',
-    message: () => 'scout executed no command, so no answer rests on reading the code; check stderr.log for sandbox refusals before changing the order',
-    data: Object.freeze([]),
+    message: ({ searches }) => searches > 0
+      ? `scout executed no command but completed ${searches} web searches; questions about outside sources need the orderer's [web-research] marker`
+      : 'scout executed no command, so no answer rests on reading the code; check stderr.log for sandbox refusals before changing the order',
+    data: Object.freeze(['searches']),
   }),
 });

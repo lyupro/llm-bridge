@@ -5,9 +5,7 @@ import { readEvents } from './events.mjs';
 import { line, readJson } from './paths.mjs';
 import { resumeOrigin } from './sandbox-witness.mjs';
 import { QUESTION_KIND } from '../runner/question-kind.mjs';
-import { answerRuleMessage } from '../answer-rules.mjs';
-
-const scoutReason = (key, values = {}) => answerRuleMessage('codex-scout', key, values);
+import { scoutAnswerRuleGap as scoutReason } from './answer-rule-gap.mjs';
 
 export const EXECUTION_FACT_VERSION = 1;
 
@@ -26,7 +24,7 @@ const joinWeb = (left, right) => ({
 });
 
 export function scoutExecutionGap({ execution, questions }) {
-  if (execution.gap) return execution.gap;
+  if (execution.gap) return { key: null, reason: execution.gap };
   // The 2026-09-16 dead sandbox produced nonempty evidence without reading code. Require an
   // execution fact first: checking whether evidence paths existed falsely rejected 64/151 runs.
   // Only a run that left a stream can prove it (`chain` is null without one): an archived run from
@@ -36,7 +34,9 @@ export function scoutExecutionGap({ execution, questions }) {
     && questions.every((question) => question?.kind === QUESTION_KIND.STARTUP_CONTEXT
       || question?.kind === QUESTION_KIND.WEB_RESEARCH);
   if (execution.chain === 0 && !exempt) {
-    return scoutReason('scout-commands-run');
+    return scoutReason('scout-commands-run', {
+      searches: execution.web?.chain?.completed ?? 0,
+    });
   }
   return null;
 }

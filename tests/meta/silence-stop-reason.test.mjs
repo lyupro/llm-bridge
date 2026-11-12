@@ -49,7 +49,7 @@ for (const [label, status] of [
 
   test(`Plan_80 E28: ${label} without other evidence produces no silence reason`, () => {
     const baseline = verdictOf(makeRun({}));
-    assert.deepEqual(baseline, { status: 'FAIL', reason: 'result is empty, exit=1' });
+    assert.deepEqual(baseline, { status: 'FAIL', reason: 'result is empty, exit=1', rule: null });
     const dir = makeRun(status);
     assert.equal(deadline.deadlineReason(dir), null);
     assert.deepEqual(verdictOf(dir), baseline);
@@ -68,7 +68,7 @@ for (const [label, events] of [
       for (const status of [{}, retiredFlag, retiredWatchdog]) {
         const dir = makeRun({ ...status, stopped_on_deadline: true, ...elapsed }, events);
         assert.equal(deadline.deadlineReason(dir), reason);
-        assert.deepEqual(verdictOf(dir), { status: 'FAIL', reason });
+        assert.deepEqual(verdictOf(dir), { status: 'FAIL', reason, rule: null });
       }
     });
   }
