@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-12
+
 ### Changed
 
 - To give the package one name across hosts, `@lyupro/codex-bridge` is now `@lyupro/llm-bridge`,
