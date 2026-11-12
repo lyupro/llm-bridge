@@ -313,6 +313,18 @@ test('global help includes every public usage and action and the per-command hin
   assert.ok(io.output[0].includes('Run llm-bridge <command> -h for one command.'));
 });
 
+test('global help usage lines are unique', () => {
+  const usage = HELP.split('Usage:\n')[1].split('\n\n')[0].split('\n');
+  assert.deepEqual(usage, unique(usage), 'Global help must list each usage line only once.');
+  // The two commands whose only action repeats the command's usage; read from the registry, not retyped.
+  const shared = COMMANDS.filter((entry) => ['settings', 'runs'].includes(entry.name))
+    .flatMap((entry) => entry.usage.map((line) => `  ${line}`));
+  assert.equal(shared.length, 2);
+  for (const line of shared) {
+    assert.equal(usage.filter((candidate) => candidate === line).length, 1, line);
+  }
+});
+
 test('every registry entry and action has well-formed help usage', () => {
   for (const entry of COMMANDS) {
     assert.doesNotThrow(() => renderCommandHelp(entry));

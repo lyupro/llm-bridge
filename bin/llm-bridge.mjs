@@ -15,8 +15,9 @@ export const HELP = [
   `${CLI_NAME} — Claude Code dispatchers for Codex`,
   '',
   'Usage:',
-  ...publicCommands.flatMap((entry) => [entry, ...Object.values(entry.actions ?? {})]
-    .flatMap((section) => section.usage.map((line) => `  ${line}`))),
+  // OW-062: a command and its only action can share a usage line.
+  ...new Set(publicCommands.flatMap((entry) => [entry, ...Object.values(entry.actions ?? {})]
+    .flatMap((section) => section.usage.map((line) => `  ${line}`)))),
   ...CLI_NAMES.slice(1).map((alias) => `  ${alias} <same command forms as ${CLI_NAME}>`),
   `  ${CLI_NAME} --help`,
   `  ${CLI_NAME} --version`,
