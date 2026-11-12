@@ -1,4 +1,33 @@
 {
-  "rationale": "Plan_82 D4: rename to llm-bridge; each slice lowers its files to lock in every removal.",
-  "files": {}
+  "rationale": "Plan_82 D11 extends the D4 rename ratchet to every tracked file; each kept spelling needs a reason and every removal lowers its baseline.",
+  "files": {
+    "CHANGELOG.md": {
+      "count": 91,
+      "reason": "Released history preserves the former package name and its rename record."
+    },
+    "tests/package-name-literals.test.mjs": {
+      "count": 15,
+      "reason": "The guard's own matching pattern and spelling probes must name the spellings they detect."
+    },
+    ".claude/context/architecture.md": {
+      "count": 1,
+      "reason": "The architecture explicitly states that the short alias was removed in Plan_82 D3."
+    },
+    "tests/brand-home.test.mjs": {
+      "count": 1,
+      "reason": "A refusal sample verifies that the legacy home environment key is rejected."
+    },
+    "tests/cli/commands.test.mjs": {
+      "count": 1,
+      "reason": "The help-output check includes the removed alias to detect an obsolete command spelling."
+    },
+    "tests/cli/hook-recognizer.test.mjs": {
+      "count": 1,
+      "reason": "A not-recognized command sample verifies that the removed short alias is rejected."
+    },
+    "tests/package-identity.test.mjs": {
+      "count": 1,
+      "reason": "A refusal sample verifies that immutable package identity rejects assignment of the legacy home key."
+    }
+  }
 }

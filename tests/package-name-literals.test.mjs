@@ -9,34 +9,33 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const SCANNED = ['bin', 'cli', 'src', 'scripts'];
 
 // Keep the counter pure so examples can prove which spellings a later slice must remove.
 export function countPackageNameLiterals(source) {
   return [...source.matchAll(/codex-bridge|\bcodexb\b|CODEX_BRIDGE_|CODEX_RUNS_ROOT/g)].length;
 }
 
-function sourceFiles(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const file = path.join(directory, entry.name);
-    if (entry.isDirectory()) return sourceFiles(file);
-    // Messages in non-module files are part of the rename too; do not filter by extension.
-    return entry.isFile() ? [file] : [];
-  }).sort();
+function trackedFileCounts(files, readFile) {
+  const counts = {};
+  for (const file of files) {
+    const content = readFile(file);
+    // D11 covers every tracked text file; NUL marks binary, while invalid text must fail loudly.
+    if (content.includes(0)) continue;
+    const source = new TextDecoder('utf-8', { fatal: true }).decode(content);
+    counts[file] = countPackageNameLiterals(source);
+  }
+  return counts;
 }
 
 function repositoryCounts() {
-  const counts = {};
-  for (const directory of SCANNED) {
-    for (const file of sourceFiles(path.join(ROOT, directory))) {
-      const relative = path.relative(ROOT, file).split(path.sep).join('/');
-      counts[relative] = countPackageNameLiterals(fs.readFileSync(file, 'utf8'));
-    }
-  }
-  return counts;
+  // D11 includes docs, prompts and tests, but excludes untracked working folders.
+  const files = execFileSync('git', ['ls-files', '-z'], { cwd: ROOT, encoding: 'utf8' })
+    .split('\0').filter(Boolean);
+  return trackedFileCounts(files, (file) => fs.readFileSync(path.join(ROOT, file)));
 }
 
 function baselineFailures(counts, baseline) {
@@ -44,8 +43,13 @@ function baselineFailures(counts, baseline) {
   const files = [...new Set([...Object.keys(counts), ...Object.keys(baseline)])].sort();
   for (const file of files) {
     const actual = counts[file] ?? 0;
-    const expected = baseline[file] ?? 0;
+    const entry = baseline[file];
+    const expected = entry?.count ?? 0;
     const detail = `${file}: actual ${actual}, baseline ${expected}`;
+    if (Object.hasOwn(baseline, file) &&
+        (typeof entry?.reason !== 'string' || entry.reason.trim() === '')) {
+      failures.push(`${file}: baseline entry requires a non-empty reason for keeping the spelling.`);
+    }
     if (Object.hasOwn(baseline, file) && !Object.hasOwn(counts, file)) {
       failures.push(`${detail}; file no longer exists in the scan; delete its baseline entry.`);
     } else if (actual > expected) {
@@ -57,7 +61,7 @@ function baselineFailures(counts, baseline) {
   return failures;
 }
 
-test('Plan_82 D4 ratchets old package-name literals across package files', () => {
+test('Plan_82 D11 ratchets old package-name literals across all tracked files', () => {
   const baseline = JSON.parse(fs.readFileSync(path.join(ROOT, '.package-name-literals.json'), 'utf8'));
   const failures = baselineFailures(repositoryCounts(), baseline.files);
   assert.deepEqual(failures, [], failures.join('\n'));
@@ -80,17 +84,19 @@ test('the package-name counter and ratchet detect old spellings and baseline dri
     assert.equal(countPackageNameLiterals(source), expected, source);
   }
 
-  assert.deepEqual(baselineFailures({ 'src/a.mjs': 2, 'bin/clean': 0 }, { 'src/a.mjs': 2 }), []);
+  assert.deepEqual(baselineFailures({ 'src/a.mjs': 2, 'bin/clean': 0 }, {
+    'src/a.mjs': { count: 2, reason: 'Counter fixture.' },
+  }), []);
   const failures = baselineFailures({
     'src/increased.mjs': 3,
     'src/new.txt': 1,
     'src/reduced.mjs': 1,
     'src/cleared.mjs': 0,
   }, {
-    'src/increased.mjs': 2,
-    'src/reduced.mjs': 2,
-    'src/cleared.mjs': 1,
-    'src/deleted.mjs': 2,
+    'src/increased.mjs': { count: 2, reason: 'Increase fixture.' },
+    'src/reduced.mjs': { count: 2, reason: 'Reduction fixture.' },
+    'src/cleared.mjs': { count: 1, reason: 'Removal fixture.' },
+    'src/deleted.mjs': { count: 2, reason: 'Deleted-file fixture.' },
   });
   assert.equal(failures.length, 5);
   assert.match(failures[0], /src\/cleared\.mjs: actual 0, baseline 1; lower or delete/);
@@ -98,4 +104,29 @@ test('the package-name counter and ratchet detect old spellings and baseline dri
   assert.match(failures[2], /src\/increased\.mjs: actual 3, baseline 2; .*increased/);
   assert.match(failures[3], /src\/new\.txt: actual 1, baseline 0; .*increased/);
   assert.match(failures[4], /src\/reduced\.mjs: actual 1, baseline 2; lower or delete/);
+});
+
+test('every baseline entry requires a non-empty reason', () => {
+  for (const reason of [undefined, null, '', '   ', 42]) {
+    const failures = baselineFailures({ 'README.md': 1 }, {
+      'README.md': { count: 1, ...(reason === undefined ? {} : { reason }) },
+    });
+    assert.equal(failures.length, 1);
+    assert.match(failures[0], /README\.md: .*requires a non-empty reason/);
+  }
+});
+
+test('tracked text has no directory or extension filter and only binary content is skipped', () => {
+  const files = ['README.md', 'docs/a.md', 'prompts/a', 'tests/a.mjs', 'assets/a.bin'];
+  const read = [];
+  const counts = trackedFileCounts(files, (file) => {
+    read.push(file);
+    return file.endsWith('.bin') ? Buffer.from([0xff, 0]) : Buffer.from('plain text');
+  });
+  assert.deepEqual(read, files);
+  assert.deepEqual(counts, { 'README.md': 0, 'docs/a.md': 0, 'prompts/a': 0, 'tests/a.mjs': 0 });
+  assert.throws(() => trackedFileCounts(['invalid.txt'], () => Buffer.from([0xff])),
+    /encoded data was not valid/);
+  assert.throws(() => trackedFileCounts(['missing.txt'], () => { throw new Error('read failed'); }),
+    /read failed/);
 });
