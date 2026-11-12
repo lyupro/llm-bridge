@@ -15,8 +15,9 @@ export const JUDGED_AGENTS = [
       { file: 'verdict.mjs', functionName: 'scoutCoverageGap' },
       { file: 'context-only.mjs', functionName: 'contextOnlyGap' },
       { file: 'execution-fact.mjs', functionName: 'scoutExecutionGap' },
+      { file: 'web-research.mjs', functionName: 'webResearchGap' },
     ],
-    entries: ['scoutExecutionGap', 'scoutCoverageGap', 'contextOnlyGap'],
+    entries: ['scoutExecutionGap', 'scoutCoverageGap', 'contextOnlyGap', 'webResearchGap'],
     emitter: 'scoutReason',
   },
   {

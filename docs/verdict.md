@@ -72,11 +72,12 @@ the first matching branch determines the status. The order is therefore part of 
 12. **Scout coverage.** First, the execution fact counts this run plus its proven resume ancestry in
     the same Codex thread (`meta.commands_executed.chain`; see [artifact formats](artifact-formats.md)).
     An unprovable ancestry fails with its provenance reason; a chain that executed nothing still
-    fails under the same startup-context exemption, preserving the 2026-09-16 dead sandbox protection.
+    fails unless all questions are startup-context or web-research, preserving the 2026-09-16 dead sandbox protection for repository questions.
     A run that left an events stream must therefore show at least one executed command in that chain:
     an `item.completed` event whose item is a `command_execution`, with any status and exit code (a grep
-    that finds nothing still read the code). Without one the run is `FAIL` unless every question in
-    `questions.json` is `startup-context`; mixed runs and archived questions without `kind` keep the
+    that finds nothing still read the code). Without one the run is `FAIL` unless `questions.json`
+    contains a non-empty list consisting entirely of `startup-context` or `web-research` (including a mix of those two).
+    Any `code-required` question, unknown or absent kind, empty list, or absent list keeps the
     no-command rule. On 2026-09-22 two honest scouts fully answered questions about their own startup
     context and were failed with “scout executed no command.” The orderer's `[context-only]` marker
     permits that answer without weakening the rule for code questions: no answer can rest on reading
@@ -89,7 +90,17 @@ the first matching branch determines the status. The order is therefore part of 
     single question, the overall `answer` is checked for substance. Finally, each marked question's answer must cite `startup:<source>` evidence or the run is `FAIL`.
     With zero executed commands in the chain, any repository `path:line` in answers' evidence or findings' `where`
     also produces `FAIL`: an address cited without reading is invented, so a code question marked by
-    mistake still fails.
+    mistake still fails. Absolute HTTP(S) URLs in evidence or finding locations are skipped by this
+    coordinate guard, including URLs with ports. After the context check, `scout-web-searches` fails
+    web-research answers with no completed search in the resume chain, or unknown web evidence with a
+    gap (the reason names that gap). `scout-web-reference` requires each web answer to cite an absolute
+    HTTP(S) URL whose hostname, lower-cased with leading `www.` removed, appears in the chain's returned
+    hosts. R1 deliberately softens only the host check when completed searches expose no URLs:
+    `web_searches.binding` is `unavailable` and any valid absolute HTTP(S) URL suffices. With returned
+    URLs the binding is `host`; without web questions or known search evidence it is `null`.
+    Mixed orders retain each kind's own check: commands for repository questions, `startup:<source>`
+    for startup questions, and web binding for web questions. A question needing both repository and
+    external research stays unmarked and requires commands.
 13. **Advisor contract.** After scout checks and before the build-only scope check, the advisor judge
     validates the result against `advisor-task.json` and the phase context. Command evidence uses the
     execution fact for this run plus its proven resume ancestry in the same Codex thread

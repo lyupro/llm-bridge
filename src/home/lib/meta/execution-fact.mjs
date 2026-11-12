@@ -4,7 +4,7 @@ import path from 'node:path';
 import { readEvents } from './events.mjs';
 import { line, readJson } from './paths.mjs';
 import { resumeOrigin } from './sandbox-witness.mjs';
-import { allStartupContext } from './context-only.mjs';
+import { QUESTION_KIND } from '../runner/question-kind.mjs';
 import { answerRuleMessage } from '../answer-rules.mjs';
 
 const scoutReason = (key, values = {}) => answerRuleMessage('codex-scout', key, values);
@@ -30,9 +30,12 @@ export function scoutExecutionGap({ execution, questions }) {
   // The 2026-09-16 dead sandbox produced nonempty evidence without reading code. Require an
   // execution fact first: checking whether evidence paths existed falsely rejected 64/151 runs.
   // Only a run that left a stream can prove it (`chain` is null without one): an archived run from
-  // before `--json` is judged by the contract of its day. Plan_60 D1 exempts only orders whose every
-  // question asks about handed startup context; E14 counts the proven resume chain of the thread.
-  if (execution.chain === 0 && !allStartupContext(questions)) {
+  // before `--json` is judged by the contract of its day. OW-084 R1 extends the Plan_60 D1
+  // exemption to web research; empty, legacy and unknown kinds still require commands.
+  const exempt = Array.isArray(questions) && questions.length > 0
+    && questions.every((question) => question?.kind === QUESTION_KIND.STARTUP_CONTEXT
+      || question?.kind === QUESTION_KIND.WEB_RESEARCH);
+  if (execution.chain === 0 && !exempt) {
     return scoutReason('scout-commands-run');
   }
   return null;

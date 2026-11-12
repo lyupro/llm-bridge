@@ -29,6 +29,7 @@ import { changedPaths, readJson, readText, size } from './meta/paths.mjs';
 import { splitRunChanges } from './meta/environment.mjs';
 import { readEvents } from './meta/events.mjs';
 import { readExecutionFact } from './meta/execution-fact.mjs';
+import { webResearchBinding } from './meta/web-research.mjs';
 import { writeStatus } from './meta/run-state.mjs';
 import { resolveStatus } from './meta/verdict.mjs';
 import { assessStop } from './meta/stop-assessment.mjs';
@@ -168,7 +169,9 @@ export function collect(runDir, agent, exitCode) {
     env: readJson(path.join(runDir, 'env.json')),
     session_id: events.session_id,
     commands_executed: commandsExecuted,
-    web_searches: web,
+    web_searches: {
+      ...web, binding: webResearchBinding(readJson(path.join(runDir, 'questions.json')), web),
+    },
   };
 
   // Plan_80 A5: diagnostics follow the verdict and use the frozen stop observation.

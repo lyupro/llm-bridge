@@ -30,6 +30,7 @@ import { sandboxWitnessGap } from './sandbox-witness.mjs';
 import { reasonFrom } from './reason.mjs';
 import { adviceGap } from './advice-status.mjs';
 import { contextOnlyGap } from './context-only.mjs';
+import { webResearchGap } from './web-research.mjs';
 import { readExecutionFact, scoutExecutionGap } from './execution-fact.mjs';
 import { compareSnapshots } from './snapshot-format.mjs';
 import { readRunSnapshots, snapshotRefusal } from './run-snapshots.mjs';
@@ -324,6 +325,8 @@ export function resolveStatus({ resultOk, exit, agent, result, runDir, events, e
       questions, result, commandsExecuted: execution.chain,
     });
     if (contextGap) return { status: 'FAIL', reason: contextGap };
+    const webGap = webResearchGap({ questions, result, web: execution.web });
+    if (webGap) return { status: 'FAIL', reason: webGap };
   }
   // Plan_59 D3/D4/D5/D10: a schema-valid agreement still needs evidence and decision checks.
   // Place the advisor judge before the build-only scope check, alongside the other agent contracts.

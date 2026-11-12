@@ -37,6 +37,11 @@ export function contextOnlyGap({ questions, result, commandsExecuted }) {
   for (const reference of references) {
     const text = String(reference ?? '');
     if (text.startsWith('startup:')) continue;
+    // OW-084 R1: a URL's port is not an unread repository line coordinate.
+    try {
+      const url = new URL(text);
+      if (url.protocol === 'http:' || url.protocol === 'https:') continue;
+    } catch { /* Non-URLs still pass through the existing coordinate guard. */ }
     const coordinate = text.match(/\S*\.[A-Za-z0-9]+:\d+/)?.[0];
     if (coordinate) {
       return scoutReason('scout-unread-coordinate', { coordinate: coordinate.slice(0, 60) });

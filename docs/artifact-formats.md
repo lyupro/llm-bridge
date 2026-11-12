@@ -136,7 +136,7 @@ this record or reads additional evidence for it, so collecting again preserves t
 | `env` | Contents of `env.json`; may be `null` for an old or early run. |
 | `session_id` | Value of the `session id:` line from the log, or `null`. |
 | `commands_executed` | Execution fact: `version` (`1`), `run` (this stream's completed command count, or `null` without a stream), `chain` (the sum across resumed turns, or `null` when unknown), `chain_runs` (predecessor names, nearest first), and `gap` (first chain failure, or `null`). |
-| `web_searches` | Web evidence: `run` (this stream's `{ completed, with_urls, hosts }`, or `null` without a stream), `chain` (joined evidence across the validated resume chain, or `null` when unknown), and `gap` (first missing web evidence or chain validation failure, or `null`). Absent in older metadata; command execution fact version remains `1` because its recorded shape is unchanged. |
+| `web_searches` | Web evidence: `run` (this stream's `{ completed, with_urls, hosts }`, or `null` without a stream), `chain` (joined evidence across the validated resume chain, or `null` when unknown), `gap` (first missing web evidence or chain validation failure, or `null`), and `binding` (`host`, `unavailable`, or `null`; see below). Absent in older metadata; command execution fact version remains `1` because its recorded shape is unchanged. |
 
 Plan_80 E14 follows bare `status.json#resumed_from` names only, checking in order that each
 predecessor is a directory canonically inside the same project runs folder (case-insensitively
@@ -156,6 +156,14 @@ The chain sums both counts and unions hosts, taking each predecessor's stream or
 its own `meta.json#web_searches.run`; stored chain totals are never reused. Missing per-run web
 evidence makes only `web_searches.chain` null with a reason in `web_searches.gap`, preserving
 the command count and command gap. The same path and thread validation applies to both facts.
+OW-084 R1 records `binding: host` for an order containing web-research questions when
+`chain.with_urls > 0`: each such answer must cite an absolute HTTP(S) URL whose normalized
+hostname is in `chain.hosts`. When `chain.completed > 0` but `chain.with_urls === 0`,
+`binding: unavailable` records the deliberate CLI-shape softening: any valid absolute HTTP(S)
+URL satisfies the reference check, but a URL is still required for each web answer.
+The binding is `null` without web-research questions, with unknown evidence, or with no
+completed searches; zero searches and unknown evidence (with or without a gap) fail the
+web-search check.
 A non-resume has `chain = run`, `chain_runs = []`, and `gap = null`; a valid resume sums its own
 count and its predecessors (keeping `chain = null` when `run` is `null`); the scout execution,
 startup-context coordinate, and advisor command-evidence checks now use `chain` (see

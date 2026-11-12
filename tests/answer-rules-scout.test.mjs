@@ -20,6 +20,10 @@ const cases = [
     'response without analysis: 19 substantive characters, minimum 200 (coordinates and paths excluded)'],
   ['scout-startup-reference', { questions: 'Q1, Q4' },
     'responses to startup-context questions without a startup:<source> reference: Q1, Q4'],
+  ['scout-web-searches', { questions: 'Q2, Q3', gap: null },
+    'responses to web-research questions without proven completed web searches: Q2, Q3'],
+  ['scout-web-reference', { questions: 'Q2, Q3' },
+    'responses to web-research questions without a valid HTTP(S) reference matching the search evidence: Q2, Q3'],
   ['scout-unread-coordinate', { coordinate: 'src/file.mjs:12' },
     'scout cited src/file.mjs:12 without executing a command: an address nobody read'],
   ['scout-commands-run', {},
@@ -27,7 +31,7 @@ const cases = [
 ];
 
 test('every scout rule has an independently written, byte-exact judge reason', () => {
-  assert.equal(cases.length, 7);
+  assert.equal(cases.length, 9);
   assert.deepEqual(cases.map(([key]) => key), Object.keys(rules));
   for (const [key, values, expected] of cases) {
     assert.equal(answerRuleMessage(AGENT, key, values), expected, key);
@@ -58,7 +62,7 @@ test('the startup reference rule is stated only when a question asks about start
   assert.ok(!unmarked.includes(startup.rule));
   assert.ok(!unmarked.includes('startup:'));
   assert.deepEqual(answerRuleStatements(AGENT, 'default', { questions: [{ id: 'Q2', kind: 'startup-context' }] }),
-    Object.values(rules).map((entry) => entry.rule));
+    Object.values(rules).filter((entry) => entry.when !== 'web-research').map((entry) => entry.rule));
 });
 
 test('substance instructions state both thresholds, counted characters and exclusions', () => {
@@ -79,9 +83,25 @@ test('startup and command instructions state their boundaries explicitly', () =>
   assert.match(rules['scout-startup-reference'].rule, /question about handed startup context/);
   assert.match(rules['scout-startup-reference'].rule, /evidence item starting with startup: followed by non-whitespace text/);
   assert.match(rules['scout-commands-run'].rule, /commands run against the repository/);
-  assert.match(rules['scout-commands-run'].rule, /except when every question asks about handed startup context/);
+  assert.match(rules['scout-commands-run'].rule, /except when the question list is non-empty and every question asks about handed startup context or web research/);
   assert.match(rules['scout-unread-coordinate'].rule, /no command has been executed/);
   assert.match(rules['scout-unread-coordinate'].rule, /answer evidence or finding locations; references to handed startup context are exempt/);
+});
+
+test('web rules render only for web-research questions and carry the evidence gap', () => {
+  for (const questions of [[], [{ id: 'Q1', kind: 'startup-context' }],
+    [{ id: 'Q1', kind: 'unknown' }], [{ id: 'Q1', kind: 'web-research' }]]) {
+    const prompt = INSTRUCTIONS[AGENT]({}, undefined, questions);
+    const expected = questions.some((question) => question.kind === 'web-research');
+    for (const key of ['scout-web-searches', 'scout-web-reference']) {
+      assert.equal(prompt.includes(rules[key].rule), expected);
+      assert.doesNotMatch(rules[key].rule, /\bcode\b/i);
+      assert.doesNotMatch(answerRuleMessage(AGENT, key,
+        key === 'scout-web-searches' ? { questions: 'Q1', gap: null } : { questions: 'Q1' }), /\bcode\b/i);
+    }
+  }
+  assert.equal(answerRuleMessage(AGENT, 'scout-web-searches', { questions: 'Q1', gap: 'missing previous' }),
+    'responses to web-research questions without proven completed web searches: Q1; missing previous');
 });
 
 test('scout entries and their default phase and data are immutable', () => {

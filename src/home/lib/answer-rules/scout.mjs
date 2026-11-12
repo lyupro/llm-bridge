@@ -46,6 +46,20 @@ export const RULES = Object.freeze({
     message: ({ questions }) => `responses to startup-context questions without a startup:<source> reference: ${questions}`,
     data: Object.freeze(['questions']),
   }),
+  'scout-web-searches': Object.freeze({
+    phases: DEFAULT,
+    when: 'web-research',
+    rule: 'For every web-research question, complete at least one web search in this run or its proven resume chain; missing chain evidence cannot establish that a search completed.',
+    message: ({ questions, gap }) => `responses to web-research questions without proven completed web searches: ${questions}${gap ? `; ${gap}` : ''}`,
+    data: Object.freeze(['questions', 'gap']),
+  }),
+  'scout-web-reference': Object.freeze({
+    phases: DEFAULT,
+    when: 'web-research',
+    rule: 'For every web-research question, include an absolute HTTP(S) URL in its evidence whose hostname was returned by the resume chain searches (case-insensitive, ignoring leading www.); if completed searches expose no URLs, any valid absolute HTTP(S) URL is required.',
+    message: ({ questions }) => `responses to web-research questions without a valid HTTP(S) reference matching the search evidence: ${questions}`,
+    data: Object.freeze(['questions']),
+  }),
   'scout-unread-coordinate': Object.freeze({
     phases: DEFAULT,
     when: 'always',
@@ -56,7 +70,7 @@ export const RULES = Object.freeze({
   'scout-commands-run': Object.freeze({
     phases: DEFAULT,
     when: 'always',
-    rule: 'Base answers on commands run against the repository, except when every question asks about handed startup context.',
+    rule: 'Base answers on commands run against the repository, except when the question list is non-empty and every question asks about handed startup context or web research.',
     message: () => 'scout executed no command, so no answer rests on reading the code; check stderr.log for sandbox refusals before changing the order',
     data: Object.freeze([]),
   }),

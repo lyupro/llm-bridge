@@ -11,11 +11,11 @@ const AGENT_PHASES = Object.freeze({
   'codex-scout': Object.freeze(['default']),
   'codex-build': Object.freeze(['default']),
 });
-// When an entry is stated: 'always', or only when the order carries a question about handed startup context
-// (Plan_60 D1 keeps startup instructions out of every other scout prompt).
+// Conditional rules follow the ordered question kind (Plan_60 D1 and OW-084 R1).
 const WHEN = Object.freeze({
   always: () => true,
   'startup-context': ({ questions }) => questions.some((question) => question?.kind === QUESTION_KIND.STARTUP_CONTEXT),
+  'web-research': ({ questions }) => questions.some((question) => question?.kind === QUESTION_KIND.WEB_RESEARCH),
 });
 
 export function validateAnswerRules(rules, agentPhases = AGENT_PHASES) {

@@ -117,6 +117,7 @@ test('collect persists per-run and chain web evidence beside unchanged command f
   assert.deepEqual(persisted.web_searches, {
     run: { completed: 1, with_urls: 1, hosts: ['current.example'] },
     chain: { completed: 2, with_urls: 2, hosts: ['current.example', 'previous.example'] }, gap: null,
+    binding: null,
   });
   assert.deepEqual(persisted.web_searches, meta.web_searches);
   assert.deepEqual(persisted.commands_executed, {
