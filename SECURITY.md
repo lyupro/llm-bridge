@@ -12,7 +12,7 @@ Security fixes are provided for the latest minor release line only.
 
 ## Reporting a vulnerability
 
-Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/lyupro/codex-bridge/security/advisories/new). Do not open a public issue for an undisclosed vulnerability.
+Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/lyupro/llm-bridge/security/advisories/new). Do not open a public issue for an undisclosed vulnerability.
 
 Please include the affected package version, operating system, Codex CLI version, reproduction steps, impact, and any suggested mitigation. Remove secrets and unrelated operator data from logs or run artifacts before attaching them.
 

@@ -15,12 +15,12 @@
   "author": "Lyu Pro <lyupro.dev@gmail.com> (https://lyupro.com)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lyupro/codex-bridge.git"
+    "url": "git+https://github.com/lyupro/llm-bridge.git"
   },
   "bugs": {
-    "url": "https://github.com/lyupro/codex-bridge/issues"
+    "url": "https://github.com/lyupro/llm-bridge/issues"
   },
-  "homepage": "https://github.com/lyupro/codex-bridge#readme",
+  "homepage": "https://github.com/lyupro/llm-bridge#readme",
   "type": "module",
   "bin": {
     "llm-bridge": "bin/llm-bridge.mjs"

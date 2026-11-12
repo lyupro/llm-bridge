@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- To give the package one name across hosts, `@lyupro/codex-bridge` is now `@lyupro/llm-bridge`,
+  invoked as `llm-bridge`, with home `~/.lyupro/.llm-bridge/` and `LLM_BRIDGE_*` environment keys,
+  including `LLM_BRIDGE_HOME` and `LLM_BRIDGE_RUNS_ROOT`. Host commands use `/llm-bridge:*`,
+  host folders use `agents|commands|rules/llm-bridge/`, and the Codex rules file is
+  `~/.codex/rules/llm-bridge.rules`; dispatcher agents remain `codex-*` and `CODEX_HOME` is unchanged.
+  This is a clean break: the new package does not recognize `codex-bridge` or `codexb` as commands
+  or read `CODEX_BRIDGE_*` or `CODEX_RUNS_ROOT`. Existing run records under `~/.claude/codex-runs`
+  remain readable as legacy data and are left untouched (Plan_82 D1-D3).
+- Migration is an operator checklist, with no migration code in the new package: run the old
+  package's `codex-bridge uninstall`, remove it with `npm uninstall -g @lyupro/codex-bridge`,
+  then run `npm install -g @lyupro/llm-bridge` and `llm-bridge install`. Transfer all non-image
+  files from the old home: seeded `config.json`, `conventions.md`, `config.json.bak-*`,
+  `.host-contract.json`, and all of `state/`. Verify the same pins and contracts with
+  `llm-bridge doctor` without a new probe; remove the old home last, only with explicit approval.
+  The old npm package is deprecated in favor of `@lyupro/llm-bridge`. Moving legacy run records
+  is a separate, later `llm-bridge runs move` step (Plan_82 D2-D3).
+- A scout order with no web-research question, completed web searches and no commands now names the `[web-research]`
+  marker instead of `stderr.log`; its Action row offers no paid `retry:` and directs the orderer to
+  mark the questions and use a new order id. Marker refusal is now the general `question-kind-marker`
+  rule, replacing `question-context-marker` (OW-084).
+
 ### Added
 
 - After two consecutive empty resumes, failed replies offer a ready `retry:` line and ask for
@@ -17,13 +40,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   hosts recorded across the resume chain in `meta.json#web_searches`. Each web answer must cite an
   HTTP(S) URL on a returned host; when search results carry no URLs, `binding: unavailable` permits
   any absolute HTTP(S) URL (OW-084).
-
-### Changed
-
-- A scout order with no web-research question, completed web searches and no commands now names the `[web-research]`
-  marker instead of `stderr.log`; its Action row offers no paid `retry:` and directs the orderer to
-  mark the questions and use a new order id. Marker refusal is now the general `question-kind-marker`
-  rule, replacing `question-context-marker` (OW-084).
 
 ## [0.6.26] - 2026-11-04
 

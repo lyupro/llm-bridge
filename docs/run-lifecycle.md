@@ -481,8 +481,8 @@ record, the report prints its age, silence duration, and identity verdict of
 `alive` / `dead` / `foreign` / `unverified`. A second invocation changes nothing, and the command deletes
 neither directories nor transport files.
 
-The old name `llm-bridge sweep` is recognized as a rename and responds with a refusal suggesting
-`llm-bridge unlock`; it is not treated as an unknown command.
+The removed command `llm-bridge sweep` exits with code `2` and `unknown command "sweep"`.
+Use `llm-bridge unlock` instead.
 
 Unlike `stop`, `unlock` does not snapshot the worktree, so the `abandoned_reason` of runs it closes has
 no file list. This is deliberate: `stop` closes one named run and knows its repository, while traversing

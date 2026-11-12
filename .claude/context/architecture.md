@@ -7,8 +7,8 @@
 
 Two independent halves share the repository:
 
-**Package/installer** — `bin/llm-bridge.mjs` (argument dispatch only), reachable as both
-`llm-bridge` and the short `codexb`, over `cli/`:
+**Package/installer** — `bin/llm-bridge.mjs` (argument dispatch only), reachable as
+`llm-bridge` (the short `codexb` was removed with the rename, Plan_82 D3), over `cli/`:
 `manifest.mjs` owns the install table, the seeded-file list and the `.llm-bridge-install.json`
 record schema; `install/update/uninstall/doctor.mjs` are one command each, as are the run-store
 commands `read` (renders one run), `projects` (inventory over `runs-inventory`/`table`), `prune`

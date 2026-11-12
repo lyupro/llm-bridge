@@ -40,7 +40,7 @@ Only npm's `package.json` is copied into that root from outside the image.
 
 Before every `settings.json` write, the existing file is backed up. Existing settings and foreign hooks are preserved. `--dry-run` prints the plan without writing.
 
-If a global install and a clone coexist, you have two package copies. `llm-bridge update`, `codexb update`, and the clone entry point copy files from whichever copy launched the command; using the wrong one can replace a newer host installation with older files.
+If a global install and a clone coexist, you have two package copies. `llm-bridge update` and the clone entry point copy files from whichever copy launched the command; using the wrong one can replace a newer host installation with older files.
 
 Run records in `~/.lyupro/.llm-bridge/runs/` (or `~/.claude/codex-runs/` before the move) are user data. Uninstall, including `--purge`, never removes either folder.
 
@@ -155,14 +155,14 @@ Transport files from runs at least **30 days** old are pruned automatically when
 | `read <run>` | Render a run's structured event stream. |
 | `stop <run>` | Stop a run and record a `FAIL` verdict. |
 
-Both `llm-bridge` and `codexb` invoke the same command. Run `llm-bridge --help` for exact forms, or `-h` after
+The command is `llm-bridge`. Run `llm-bridge --help` for exact forms, or `-h` after
 any command or action for its own usage (`llm-bridge model -h`, `llm-bridge model set -h`); a refusal of an unknown
 option or an extra argument ends with that pointer.
 
 ### Development
 
 ```bash
-git clone https://github.com/lyupro/codex-bridge.git
+git clone https://github.com/lyupro/llm-bridge.git
 cd llm-bridge
 git config core.hooksPath .githooks
 npm test

@@ -755,7 +755,7 @@ handback timestamps include refused attempts and never clear a cause.
 
 A stop with `agent_id` but no `agent_type` alarms only with evidence tied to that stop: healthy gate
 state stamped with a registered dispatcher type and actual gate activity, or an assistant Bash
-tool call whose command is a standalone `llm-bridge run` (or `codexb run`) for a registered role.
+tool call whose command is a standalone `llm-bridge run` for a registered role.
 Prose, tool results and command substrings are not evidence; `--agent` does not supply the missing
 host type. Without evidence the observation is undetermined and clears nothing. A later recognized
 dispatcher stop with both ids on the same host clears the missing-type cause. The 13 older untyped
@@ -958,7 +958,7 @@ survived to the end. The same host run measures the four dispatcher contracts;
 
 ## Installation into another Claude Code configuration
 
-The installer lays out the files—`codexb install` (or `npm run dev:install` from a clone). There
+The installer lays out the files—`llm-bridge install` (or `npm run dev:install` from a clone). There
 is no longer anything to copy by hand. The repository's `src/home/` is copied one-to-one into
 `~/.lyupro/.llm-bridge/`, so every path below `hooks/` and `lib/` is identical in source and on
 the host. `package.json`, required by npm outside that image, is the one documented exception.
