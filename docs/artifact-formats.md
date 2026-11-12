@@ -127,6 +127,7 @@ this record or reads additional evidence for it, so collecting again preserves t
 | `environment_changes` | Paths changed between snapshots that matched `env.json.environmentPaths`, plus paths excused by `env.json.environmentNewFilePaths`. They are visible in the audit but excluded from work evaluation. |
 | `result_ok` | The result was read as JSON and contains the agent's primary required content field. |
 | `events_bytes` | Size of `events.jsonl` in bytes. |
+| `pass_output` | `{ state, reason }` derived only from this run folder's raw `events.jsonl`, always written by `collect()`. States are `present`, `absent`, and `unknown`; see below. |
 | `stderr_bytes` | Size of `stderr.log` in bytes. Normally it is **not** zero: a live probe on 2026-08-05 found hundreds of bytes of execpolicy refusals there for a completely healthy run. |
 | `usage` | The `usage` object from `turn.completed`, exactly as sent by the CLI, with all numeric values; for multiple turns they are summed. |
 | `tokens` | `input_tokens + output_tokens` from events; `null` if no turn reported usage. |
@@ -169,6 +170,23 @@ A non-resume has `chain = run`, `chain_runs = []`, and `gap = null`; a valid res
 count and its predecessors (keeping `chain = null` when `run` is `null`); the scout execution,
 startup-context coordinate, and advisor command-evidence checks now use `chain` (see
 [verdict checks 12–13](verdict.md#resolvestatus-order)).
+
+### Per-pass model output
+
+OW-066 B1 records `pass_output` independently of verdicts, grants, replies and Action rows.
+It describes this run folder only, never an earlier pass of the resumed thread.
+
+| State | Evidence and reason |
+| --- | --- |
+| `present` | After the first `turn.started`, an `item.completed` has item type `agent_message` or `reasoning` with non-empty text (`model-output`). A malformed final line after that turn also counts when it mentions `"item.completed"` together with `"agent_message"` or `"reasoning"` (`truncated-output-item`), because a kill can cut an output item. |
+| `absent` | The file exists, contains `turn.started`, every non-final line parses, and no qualifying output exists (`no-model-output`). A malformed final line without output markers is ignored. CLI warnings before the first turn do not count as model output. |
+| `unknown` | No file (`missing-events`), an empty or whitespace-only file (`empty-events`), no `turn.started` (`missing-turn-started`), or any malformed non-final line (`malformed-line:N`, one-based line number). Non-final damage takes precedence even when another line contains output. |
+
+The last newline terminates a line rather than creating another record. Interior blank lines
+are malformed. Unknown evidence cannot prove an empty pass: the legacy event reader silently
+drops malformed lines, and session-log record counts cover the entire thread rather than this
+pass. The raw stream and legacy event facts share one file read; existing `readEvents()` results
+are unchanged. Counting consecutive empty resumes and changing grants belong to OW-066 B2.
 
 ### Stop assessments
 

@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { safeSlice } from './paths.mjs';
 import { webEvidenceOf } from './web-evidence.mjs';
+import { passOutputOf } from './pass-output.mjs';
 
 /**
  * Quota exhaustion, and nothing else that merely says "limit". A bare `limit` also appears in
@@ -55,25 +56,35 @@ const compact = (value, max = 300) =>
  * run "predates the change" sends them looking for the wrong thing entirely.
  */
 function readLines(runDir) {
-  if (!runDir) return { exists: false, events: [] };
+  if (!runDir) return { exists: false, events: [], lines: null };
   let text;
   try {
     text = fs.readFileSync(path.join(runDir, 'events.jsonl'), 'utf8');
   } catch {
-    return { exists: false, events: [] };
+    return { exists: false, events: [], lines: null };
   }
-  const events = [];
-  for (const raw of text.split(/\r?\n/)) {
+  const lines = eventLines(text);
+  const events = lines.filter((line) => !line.malformed && record(line.event)).map((line) => line.event);
+  return { exists: true, events, lines };
+}
+
+/**
+ * The one parse of a stream's lines. OW-066 keeps malformed lines visible: pass-output must know
+ * where damage sits, while every other reader only sees the parsed records.
+ */
+export function eventLines(text) {
+  const lines = [];
+  for (const raw of String(text ?? '').split(/\r?\n/)) {
     const source = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
     if (!source.trim()) continue;
     try {
-      const event = JSON.parse(source);
-      if (record(event)) events.push(event);
+      lines.push({ raw: source, event: JSON.parse(source), malformed: false });
     } catch {
       // A line cut short by MAX_LOG or a killed process is not a transport verdict.
+      lines.push({ raw: source, event: null, malformed: true });
     }
   }
-  return { exists: true, events };
+  return lines;
 }
 
 function usageOf(events) {
@@ -179,8 +190,7 @@ function transportErrorOf(event) {
  * Numeric usage fields are summed across turns; with one turn this preserves the CLI object
  * and its fields exactly, while tokens intentionally count input plus output only.
  */
-export function readEvents(runDir) {
-  const { exists, events } = readLines(runDir);
+function eventsFromLines({ exists, events }) {
   const accounting = usageOf(events);
   const started = events.find((event) => event.type === 'thread.started' && event.thread_id);
   const errors = events.map(transportErrorOf).filter(Boolean);
@@ -214,4 +224,14 @@ export function readEvents(runDir) {
     transport_error,
     turn_failed,
   };
+}
+
+export function readEvents(runDir) {
+  return eventsFromLines(readLines(runDir));
+}
+
+/** OW-066: share one file read while preserving readEvents()'s existing facts and shape. */
+export function readEventsWithPassOutput(runDir) {
+  const lines = readLines(runDir);
+  return { events: eventsFromLines(lines), passOutput: passOutputOf(lines.lines) };
 }

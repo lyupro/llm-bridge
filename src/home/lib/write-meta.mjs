@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { readJsonFileSync } from './json-file.mjs';
 import { changedPaths, readJson, readText, size } from './meta/paths.mjs';
 import { splitRunChanges } from './meta/environment.mjs';
-import { readEvents } from './meta/events.mjs';
+import { readEventsWithPassOutput } from './meta/events.mjs';
 import { readExecutionFact } from './meta/execution-fact.mjs';
 import { webResearchBinding } from './meta/web-research.mjs';
 import { writeStatus } from './meta/run-state.mjs';
@@ -85,7 +85,7 @@ export function collect(runDir, agent, exitCode) {
   const result = readJson(resultPath);
   const resultOk = Boolean(result) && cfg.filled(result);
   const exit = exitCode === undefined || exitCode === null ? null : Number(exitCode);
-  const events = readEvents(runDir);
+  const { events, passOutput } = readEventsWithPassOutput(runDir);
   const executionFact = readExecutionFact(runDir, events);
   const { web, ...commandsExecuted } = executionFact;
   const worker = readJson(path.join(runDir, 'worker.json'));
@@ -152,6 +152,7 @@ export function collect(runDir, agent, exitCode) {
     ).environment,
     result_ok: resultOk,
     events_bytes: eventsBytes,
+    pass_output: passOutput,
     stderr_bytes: stderrBytes,
     tokens: events.tokens,
     tokens_reported: events.tokens !== null,
