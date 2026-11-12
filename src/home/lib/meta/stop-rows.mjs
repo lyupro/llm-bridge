@@ -13,11 +13,21 @@ export function stopRows(meta, runDir) {
   const { automatic, grant } = meta.continuation_eligibility;
   const eligibility = (assessment) =>
     assessment.allowed ? 'allowed' : `blocked (${assessment.blocking_reasons.join(', ')})`;
-  const orderId = grant.allowed === true ? readJson(path.join(runDir, 'status.json'))?.order_id : null;
+  const retryEmptyResumes = grant.allowed === false && grant.blocking_reasons.length === 1 &&
+    grant.blocking_reasons[0] === 'empty-resumes-exhausted';
+  const orderId = grant.allowed === true || retryEmptyResumes
+    ? readJson(path.join(runDir, 'status.json'))?.order_id : null;
   return [
     `Situation: ${kind} · silence=${silence === null ? 'unknown' : `${silence} ms`} · threshold=${threshold === null ? 'unconfigured' : `${threshold} ms`} · command=${commands.state === null ? 'unknown' : commands.state}`,
     `Continuation: automatic ${eligibility(automatic)} · grant ${eligibility(grant)}`,
-    ...(typeof orderId === 'string' && orderId.trim() ? [orderRuleMessage('ready-grant-line', {
+    ...(typeof orderId === 'string' && orderId.trim() ? retryEmptyResumes ? [
+      'The last two resume passes of this thread produced no model output, so resume: is no longer offered; ' +
+        'repeat the pass on a fresh thread by sending the original order file again with the ready retry line ' +
+        '(same question, options, paths and decisions:; the original rendered task is kept in task-original.md).',
+      orderRuleMessage('ready-grant-line', {
+        variant: 'retry', run: path.basename(runDir), reason: 'repeat after two empty resumes', orderId,
+      }),
+    ] : [orderRuleMessage('ready-grant-line', {
       variant: 'resume', run: path.basename(runDir), reason: `continue after ${kind}`, orderId,
     })] : []),
     `Treatment: ${meta.treatment.action} · diagnostic only, nothing runs it`,

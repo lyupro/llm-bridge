@@ -14,6 +14,8 @@ Never continue a successful scope as another scope: that would consume the conti
 
 Use `resume:` only when the run meets the `resume-grant-usable` rule: it is the last run of the chain, has a finished non-OK verdict with its worker stopped, is eligible by its recorded stop facts, and its Codex thread has not advanced since it stopped. A failed reply prints a ready grant line when one applies; copy that line instead of composing one.
 
+After two consecutive resume passes with `pass_output.state: absent`, only `retry:` remains; `unknown` never counts and model output resets the count. Send the original order file again with the ready retry line (same question, options, paths and `decisions:`; the rendered task is kept in `task-original.md`), because retry starts a fresh thread using the new order file's body and current settings.
+
 Neither `retry:` nor `resume:` authorizes the next phase; advise still needs `continue:` naming the successful scope run. A changed question needs a new scope pass.
 
 ## Task-file bodies

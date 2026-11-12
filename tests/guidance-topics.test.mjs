@@ -113,6 +113,16 @@ test('advisor guidance explains ledger states and the operator decision boundary
     'a repeat with another ledger needs a new order id']) assert.ok(text.includes(required), required);
 });
 
+test('advisor guidance explains the empty-resume limit and resubmitting the original retry order', () => {
+  const text = readTopic('advisor');
+  for (const required of ['two consecutive resume passes', '`pass_output.state: absent`',
+    'only `retry:` remains', '`unknown` never counts', 'model output resets the count',
+    'original order file again with the ready retry line', 'same question, options, paths and `decisions:`',
+    '`task-original.md`', "new order file's body and current settings"]) {
+    assert.ok(text.includes(required), required);
+  }
+});
+
 test('records renders both required review field arrays from the schema', async (t) => {
   const text = await renderGuidance(readTopic('records'), { root: installedHome(t), topic: 'records' });
   const review = SCHEMAS['codex-review'];

@@ -186,7 +186,8 @@ The last newline terminates a line rather than creating another record. Interior
 are malformed. Unknown evidence cannot prove an empty pass: the legacy event reader silently
 drops malformed lines, and session-log record counts cover the entire thread rather than this
 pass. The raw stream and legacy event facts share one file read; existing `readEvents()` results
-are unchanged. Counting consecutive empty resumes and changing grants belong to OW-066 B2.
+are unchanged. OW-066 B2 counts consecutive empty resumes for the grant predicate; `unknown`
+never counts and `present` resets the count.
 
 ### Stop assessments
 
@@ -195,10 +196,12 @@ treatment. After `resolveStatus`, `collect()` records `situation`,
 `continuation_eligibility` and `treatment`. These fields do not change the verdict or status.
 Only a `FAIL` reply with `result_ok: false` renders the three diagnostic rows below.
 Automatic eligibility uses the frozen recovery policy and prior-attempt fact. The `resume:` grant is decided by `grantBlockers`
-(policy version 2); an allowed grant prints a ready `resume:` line when an order id is recorded.
+(policy version 3); an allowed grant prints a ready `resume:` line when an order id is recorded.
+If `empty-resumes-exhausted` is the sole grant blocker and an order id is recorded, the reply
+instead explains how to resubmit the original order and prints a ready `retry:` line.
 Collecting the same unchanged folder twice produces identical assessments.
 
-`assessStop({ status, resultOk, turnFailed, outputLimit, agentWrites, threadId, stop, silencePolicy, recoveryPolicy, resumedFrom })` is pure.
+`assessStop({ status, resultOk, turnFailed, outputLimit, agentWrites, threadId, stop, silencePolicy, recoveryPolicy, resumedFrom, emptyResumes })` is pure.
 It receives the resolved status, result usability, event facts, registry `writes`, the recorded thread
 id, and frozen `meta.stop`, `meta.silence_policy`, `meta.recovery_policy` and
 `meta.resumed_from`; it reads no files. Recollection
@@ -242,15 +245,15 @@ Kind precedence is fixed:
 Unknown evidence never becomes silence. A null threshold never becomes stalled or recent.
 
 Plan_80 E15/O4 records `continuation_eligibility` as `{ version: 3,
-automatic: { allowed, blocking_reasons }, grant: { allowed, policy_version: 2,
+automatic: { allowed, blocking_reasons }, grant: { allowed, policy_version: 3,
 blocking_reasons } }`. Automatic `allowed` requires kind `silent-stall-candidate` and no
 blocking reasons; grant `allowed` requires no grant blockers. The grant list
 is exactly the result of the pure exported
-`grantBlockers({ status, resultOk, turnFailed, agentWrites, threadId, stop })` from
-`meta/stop-assessment.mjs`. Its exported `GRANT_POLICY_VERSION = 2` is stored as
+`grantBlockers({ status, resultOk, turnFailed, agentWrites, threadId, stop, emptyResumes })` from
+`meta/stop-assessment.mjs`. Its exported `GRANT_POLICY_VERSION = 3` is stored as
 `grant.policy_version`, so the recorded assessment and the later grant gate share the
 same versioned predicate. An empty list records
-`grant: { allowed: true, policy_version: 2, blocking_reasons: [] }`.
+`grant: { allowed: true, policy_version: 3, blocking_reasons: [] }`.
 `situation` and `treatment` remain version 1.
 
 The grant predicate returns every applicable safety, identity and failure blocker in this fixed order:
@@ -267,6 +270,14 @@ The grant predicate returns every applicable safety, identity and failure blocke
    `session-evidence-not-observed` when absent.
 9. `process-tree-stop-unverified` unless `stop.tree_stop.state` is `stopped` or `exited`.
    A version-1 stop without `tree_stop` remains unverified.
+10. `empty-resumes-exhausted` after two consecutive resume passes with
+    `pass_output.state: absent`; unknown evidence never counts and model output resets the count.
+
+Policy version 3 adds OW-066's empty-resume limit. The reply offers a ready `retry:` line only
+when that is the sole grant blocker and the run has an order id; other blocked combinations
+keep their existing rows. Retry uses the new order file's body and current settings, so the
+orderer must resubmit the original question, options, paths and `decisions:` rather than a resume
+note; `task-original.md` keeps the original rendered task.
 
 Policy version 2 follows the OW-078 evidence across 5229 recorded runs: resumes after the
 runner's own deadline stops succeeded 4/4, while resumes after Codex-failed turns succeeded

@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- After two consecutive empty resumes, failed replies offer a ready `retry:` line and ask for
+  the original order file again to repeat the pass on a fresh thread (OW-066).
 - Advisor orders can name the plan's decision ledger with `decisions:`; the `already_decided`
   answer field and first-row `Already decided:` state show whether the question was decided.
   Resume keeps the frozen ledger, and attach refuses a different ledger (OW-083).

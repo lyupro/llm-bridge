@@ -121,6 +121,60 @@ test('the ready resume reason uses the recorded situation kind', () => {
     `Ready resume line: resume: ${path.basename(dir)} — continue after recent-activity (continues that pass's Codex thread under order ow066-o7).`);
 });
 
+test('only exhausted empty resumes offer the original order on a fresh thread with a ready retry line', () => {
+  const dir = makeRun({ status: { order_id: 'ow066-b3' } });
+  const meta = storedMeta();
+  meta.continuation_eligibility.grant = {
+    allowed: false, policy_version: 3, blocking_reasons: ['empty-resumes-exhausted'],
+  };
+  const before = structuredClone(meta);
+  const rows = stopRows(meta, dir);
+  assert.deepEqual(rows, [
+    'Situation: silent-stall-candidate · silence=12345 ms · threshold=996000 ms · command=none',
+    'Continuation: automatic blocked (recovery-policy-missing) · grant blocked (empty-resumes-exhausted)',
+    'The last two resume passes of this thread produced no model output, so resume: is no longer offered; ' +
+      'repeat the pass on a fresh thread by sending the original order file again with the ready retry line ' +
+      '(same question, options, paths and decisions:; the original rendered task is kept in task-original.md).',
+    `Ready retry line: retry: ${path.basename(dir)} — repeat after two empty resumes (repeats that pass under order ow066-b3).`,
+    'Treatment: retain-stop-facts · diagnostic only, nothing runs it',
+  ]);
+  assert.deepEqual(meta, before);
+  const reply = failReply({ runDir: dir, agent: 'codex-advisor', resultPath: path.join(dir, 'result.json') }, {
+    ...meta, reason: 'result is empty, exit=1', events_bytes: 0, stderr_bytes: 0, result_ok: false, exit: 1,
+  });
+  const index = reply.findIndex((row) => row.startsWith('Situation:'));
+  assert.deepEqual(reply.slice(index, index + rows.length), rows);
+  assert.deepEqual(reply.filter((row) => row.startsWith('Action:')), [
+    'Action: the run left no usable result; read the log and git status before deciding; repeat only through a grant this reply offers or the operator approves, never take over the task yourself',
+  ]);
+});
+
+test('empty resumes combined with another blocker preserve exactly the existing three rows', () => {
+  const dir = makeRun({ status: { order_id: 'ow066-b3' } });
+  for (const blocking_reasons of [
+    ['empty-resumes-exhausted', 'codex-turn-failed'],
+    ['writer-role-not-approved', 'empty-resumes-exhausted'],
+  ]) {
+    const meta = storedMeta();
+    meta.continuation_eligibility.grant.blocking_reasons = blocking_reasons;
+    assert.deepEqual(stopRows(meta, dir), [
+      'Situation: silent-stall-candidate · silence=12345 ms · threshold=996000 ms · command=none',
+      `Continuation: automatic blocked (recovery-policy-missing) · grant blocked (${blocking_reasons.join(', ')})`,
+      'Treatment: retain-stop-facts · diagnostic only, nothing runs it',
+    ]);
+  }
+});
+
+test('exhausted empty resumes without a usable order id add no explanation or ready retry line', () => {
+  const meta = storedMeta();
+  meta.continuation_eligibility.grant.blocking_reasons = ['empty-resumes-exhausted'];
+  for (const order_id of [undefined, null, '', '   ', 42]) {
+    const rows = stopRows(meta, makeRun({ status: { order_id } }));
+    assert.equal(rows.length, 3);
+    assert.equal(rows.some((row) => /Ready|fresh thread/.test(row)), false);
+  }
+});
+
 test('the ready resume line requires grant.allowed to be exactly true', () => {
   const dir = makeRun({ status: { order_id: 'ow066-o7' } });
   for (const allowed of [false, undefined, null, 0, 1, 'true']) {

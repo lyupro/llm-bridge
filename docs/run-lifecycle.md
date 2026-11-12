@@ -415,6 +415,15 @@ and applies `codex-turn-failed` with a refusal naming `retry:`, covering records
 0.6.24 and earlier without migration so OW-078's failed turn cannot be replayed through an
 older allowed grant.
 
+OW-066 allows up to two consecutive resume passes with `meta.json#pass_output.state: absent`.
+Unknown output evidence never counts as an empty pass, and model output (`present`) resets the count.
+After two empty resumes, `empty-resumes-exhausted` blocks another `resume:`; only `retry:` remains
+for repeating the failed pass on a fresh thread. When this is the sole grant blocker and an order id
+is recorded, the reply supplies a ready retry line and asks for the original order file again,
+preserving its question, options, paths and `decisions:`. The original rendered task is kept in
+`task-original.md`; retry takes its task from the **new order file's body** and current settings,
+not from that frozen task or a resume note. Other retry safety checks still apply.
+
 Under `resume:`, the task body is a plain note for the record, saved as written (surrounding blank lines trimmed) as `resume-note.md` in the new run folder and never read by the resumed run, which reuses the frozen questions, options, paths and verification of the named run.
 Questions, Options, Paths and Verify headings in that body are refused before start; a changed task needs `retry:` or a new order id.
 
