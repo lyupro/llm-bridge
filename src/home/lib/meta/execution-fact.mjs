@@ -35,7 +35,8 @@ export function scoutExecutionGap({ execution, questions }) {
       || question?.kind === QUESTION_KIND.WEB_RESEARCH);
   if (execution.chain === 0 && !exempt) {
     return scoutReason('scout-commands-run', {
-      searches: execution.web?.chain?.completed ?? 0,
+      searches: Array.isArray(questions) && questions.some((question) => question?.kind === QUESTION_KIND.WEB_RESEARCH)
+        ? 0 : execution.web?.chain?.completed ?? 0,
     });
   }
   return null;

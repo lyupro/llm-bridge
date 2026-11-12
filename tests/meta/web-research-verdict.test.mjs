@@ -159,7 +159,8 @@ test('mixed repository and web questions require commands, then accept their own
   result.answers[0].evidence = ['src/example.mjs:12'];
   const failed = verdict({ questions: mixed, result });
   assert.equal(failed.status, 'FAIL');
-  assert.equal(failed.reason, reason('scout-commands-run', { searches: 1 }));
+  // OW-084 W6b: the order already marks its web question, so the unmarked one is about code on purpose.
+  assert.equal(failed.reason, reason('scout-commands-run', { searches: 0 }));
   assert.equal(verdict({ questions: mixed, result, events: [thread, COMPLETED_COMMAND, webItem()] }).status, 'OK');
 });
 
@@ -188,7 +189,9 @@ test('unknown, missing and empty question lists fail closed on commands', () => 
     [questions[0], { id: 'Q2', kind: 'future-kind' }]]) {
     assert.deepEqual(scoutExecutionGap({ execution: { chain: 0, gap: null }, questions: ordered }),
       { key: 'scout-commands-run', reason: reason('scout-commands-run', { searches: 0 }) });
-    assert.equal(verdict({ questions: ordered }).reason, reason('scout-commands-run', { searches: 1 }));
+    const marksWeb = ordered?.some((question) => question.kind === 'web-research');
+    assert.equal(verdict({ questions: ordered }).reason,
+      reason('scout-commands-run', { searches: marksWeb ? 0 : 1 }));
   }
   assert.equal(allStartupContext(questions), false);
   assert.equal(allStartupContext([{ id: 'Q1', kind: 'startup-context' }]), true);

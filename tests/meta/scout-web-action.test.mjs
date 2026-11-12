@@ -6,6 +6,8 @@ import path from 'node:path';
 import { AGENTS, collect, renderReply } from '../../src/home/lib/write-meta.mjs';
 import { resolveStatus } from '../../src/home/lib/meta/verdict.mjs';
 import { failActionVariant, postRunActionVariant } from '../../src/home/lib/meta/reply.mjs';
+import { scoutExecutionGap } from '../../src/home/lib/meta/execution-fact.mjs';
+import { webResearchBinding } from '../../src/home/lib/meta/web-research.mjs';
 import { orderDiagnosticMessage } from '../../src/home/lib/order-diagnostics.mjs';
 import { buildResult, COMPLETED_COMMAND, makeRun, makeChainRoot } from './test-fixtures.mjs';
 
@@ -77,6 +79,28 @@ test('zero completed searches retain the exact sandbox reason and generic filled
   assert.equal(meta.reason_rule, 'scout-commands-run');
   assert.equal(meta.reason, oldReason);
   assertAction(reply, 'fail-result');
+});
+
+test('mixed web and repository questions retain the no-command reason and retry Action for either binding', () => {
+  const mixed = [{ ...questions[0], kind: 'web-research' }, {
+    id: 'Q2', text: 'Where is the repository authentication check implemented?',
+  }];
+  for (const [binding, chain] of [
+    ['host', { completed: 2, with_urls: 2, hosts: ['example.com'] }],
+    ['unavailable', { completed: 2, with_urls: 0, hosts: [] }],
+  ]) {
+    const execution = { chain: 0, gap: null, web: { chain } };
+    const gap = scoutExecutionGap({ execution, questions: mixed });
+    assert.deepEqual(gap, { key: 'scout-commands-run', reason: oldReason });
+    const meta = {
+      status: 'FAIL', result_ok: true, reason_rule: gap.key, reason: gap.reason,
+      web_searches: { chain, binding: webResearchBinding(mixed, execution.web) },
+    };
+    assert.equal(meta.web_searches.binding, binding);
+    assert.equal(failActionVariant(meta), 'fail-result');
+    assert.equal(postRunActionVariant(meta), 'fail-result');
+    assert.match(orderDiagnosticMessage('next-action', { variant: failActionVariant(meta) }), /retry:/);
+  }
 });
 
 test('the action uses the rule key even when diagnostic prose is replaced', () => {

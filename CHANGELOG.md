@@ -11,6 +11,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Advisor orders can name the plan's decision ledger with `decisions:`; the `already_decided`
   answer field and first-row `Already decided:` state show whether the question was decided.
   Resume keeps the frozen ledger, and attach refuses a different ledger (OW-083).
+- Scout questions can use the orderer's `[web-research]` marker, with completed searches and returned
+  hosts recorded across the resume chain in `meta.json#web_searches`. Each web answer must cite an
+  HTTP(S) URL on a returned host; when search results carry no URLs, `binding: unavailable` permits
+  any absolute HTTP(S) URL (OW-084).
+
+### Changed
+
+- A scout order with no web-research question, completed web searches and no commands now names the `[web-research]`
+  marker instead of `stderr.log`; its Action row offers no paid `retry:` and directs the orderer to
+  mark the questions and use a new order id. Marker refusal is now the general `question-kind-marker`
+  rule, replacing `question-context-marker` (OW-084).
 
 ## [0.6.26] - 2026-11-04
 

@@ -29,6 +29,19 @@ The runner checks accepted `effort` values. `changeset` is `uncommitted`, `base:
 Forbidden shell sequences are {{shell-unsafe-sequences}}.
 `phase: scope` and `effort: none` are real values, not placeholders.
 
+## Scout question kinds
+
+In `## Questions`, a question may start with exactly one orderer marker followed by a space and question text.
+`[context-only]` asks about the startup context; no command is needed.
+`[web-research]` asks about web sources; the run must complete at least one web search, and each marked answer
+must cite at least one absolute HTTP(S) URL whose host the searches returned across the resume chain.
+If completed searches expose no URLs, any absolute HTTP(S) URL suffices (`binding: unavailable`).
+Unmarked questions require repository commands; a question about both code and the web stays unmarked.
+Only the orderer marks questions; the scout cannot. Misspelled or misplaced markers (`[Web-Research]`,
+`[web research]`, not at the start, no space or no text after it) are refused before start without quota.
+After a FAIL whose Action says questions were not marked, mark them and send a new order under a new order id;
+an unchanged retry fails the same way.
+
 ## File boundary
 
 `scope`: Comma-separated globs relative to the repository root, listing every file the run may touch — including each caller of what changes, not only the file being edited. Anything outside the list fails the run.

@@ -70,16 +70,23 @@ One line, absolute path, no free text. The sub-questions live inside that file, 
 heading, one Markdown list item each — a host stops applying a permission rule the moment an
 argument carries prose with a metacharacter in it.
 
-Only the orderer may start a question with exactly `[context-only]` followed by a space and the
-question, in `## Questions` in the task body, to ask about the startup task, instructions,
-schema or environment rather than the repository; the scout cannot set it. Two honest scouts were
-failed on 2026-09-22 for answering that context without a command. `[Context-Only]`, `[context only]`,
-`[context_only]`, a marker anywhere but the start, no space after it, or nothing after it is refused
-before any probe, run folder or quota. For example:
+Only the orderer may start a question in `## Questions` with exactly one marker followed by a space
+and question text; the scout cannot set it. `[context-only]` asks about the startup task, instructions,
+schema or environment without needing a command. Two honest scouts were failed on 2026-09-22 for
+answering that context without a command. `[web-research]` asks about web sources: the run must complete
+at least one web search across its resume chain, and each marked answer must cite at least one absolute
+HTTP(S) URL whose host those searches returned. If completed searches expose no URLs, any absolute
+HTTP(S) URL suffices (`binding: unavailable`). Unmarked questions require repository commands; a question
+about both code and the web stays unmarked. Misspelled markers such as `[Context-Only]`, `[context only]`,
+`[context_only]`, `[Web-Research]` or `[web research]`, a marker anywhere but the start, no space after it,
+or nothing after it is refused before any probe, run folder or quota. After a FAIL whose Action says the
+questions were not marked, mark them and send a new order under a new order id; an unchanged retry fails
+the same way. For example:
 
 ```markdown
 ## Questions
 - [context-only] What instructions were supplied at startup?
+- [web-research] What limitations do the published API terms describe?
 - Where is the authentication check implemented?
 ```
 

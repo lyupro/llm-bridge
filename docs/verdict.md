@@ -88,6 +88,7 @@ the first matching branch determines the status. The order is therefore part of 
     An archived run without a stream is not judged by it. Then multiple extracted questions require
     separate answers, enough substantive text, and at least one evidence link for each question. For a
     single question, the overall `answer` is checked for substance. Finally, each marked question's answer must cite `startup:<source>` evidence or the run is `FAIL`.
+    The incident-specific reason and Action below apply only when no question in the order is marked `[web-research]`; mixed orders retain the existing no-command reason and `fail-result` Action.
     OW-084 W5 preserves the TradeForge incident as `FAIL`: unmarked external-source questions do not
     earn the web-research exemption. When the chain completed N > 0 web searches, `scout-commands-run`
     says “scout executed no command but completed N web searches; questions about outside sources
