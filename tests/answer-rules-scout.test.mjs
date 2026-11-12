@@ -15,7 +15,7 @@ const cases = [
   ['scout-answer-substance', { questions: 'Q1, Q3' },
     'response to Q1, Q3 contains coordinates without analysis'],
   ['scout-answer-evidence', { questions: 'Q2, Q3' },
-    'responses without a single code reference: Q2, Q3'],
+    'responses without a single evidence reference: Q2, Q3'],
   ['scout-single-answer-substance', { chars: 19 },
     'response without analysis: 19 substantive characters, minimum 200 (coordinates and paths excluded)'],
   ['scout-startup-reference', { questions: 'Q1, Q4' },

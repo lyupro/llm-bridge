@@ -206,7 +206,7 @@ test('an answer with no evidence at all fails, even with real prose', () => {
   });
   const { meta } = collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
-  assert.match(meta.reason, /responses without a single code reference/);
+  assert.match(meta.reason, /responses without a single evidence reference/);
 });
 
 test('an unanswered explicit question fails the run', () => {

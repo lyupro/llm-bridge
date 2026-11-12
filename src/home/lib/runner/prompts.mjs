@@ -140,10 +140,16 @@ ${questions.some((question) => question?.kind === QUESTION_KIND.STARTUP_CONTEXT)
     ? `- A sub-question marked ${questionMarker(QUESTION_KIND.STARTUP_CONTEXT)} asks about what this run was handed at startup
   (task, instructions, schema, environment), not about the repository. Answer it from that context,
   cite evidence as \`startup:<source>\`, and never cite a repository \`path:line\` you did not read
-  with a command — that fails the run.\n` : ''}- If facts are missing, list them in unknowns; do not make them up.
+  with a command — that fails the run.\n` : ''}${questions.some((question) => question?.kind === QUESTION_KIND.WEB_RESEARCH)
+    ? `- A sub-question marked ${questionMarker(QUESTION_KIND.WEB_RESEARCH)} asks about sources outside the repository.
+  Answer it from web searches made in this run. In its evidence, cite the absolute HTTP(S) URL
+  of each page a fact comes from, taken from what those searches returned.
+  A URL from memory whose site no search returned fails the run.
+  Never cite a repository \`path:line\` for it unless a command read that file.\n` : ''}- If facts are missing, list them in unknowns; do not make them up.
 - report_markdown is a full markdown report with sections: “Response” (2-4 sentences),
   “How it works” (required: prose analysis ${questions.length ? 'for each sub-question' : 'of the mechanism'},
-  grounded in the code), “Findings” (fact / location / confidence table), “Missing information”.`,
+  grounded in the code${questions.some((question) => question?.kind === QUESTION_KIND.WEB_RESEARCH)
+    ? ', or for web-research sub-questions in the cited pages' : ''}), “Findings” (fact / location / confidence table), “Missing information”.`,
   'codex-build': (opts) => `Definition of done: exactly as stated in the task above.
 
 Working rules:

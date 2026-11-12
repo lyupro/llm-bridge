@@ -29,7 +29,7 @@ export const RULES = Object.freeze({
     phases: DEFAULT,
     when: 'always',
     rule: 'For every ordered sub-question, include at least one non-empty reference in its evidence array.',
-    message: ({ questions }) => `responses without a single code reference: ${questions}`,
+    message: ({ questions }) => `responses without a single evidence reference: ${questions}`,
     data: Object.freeze(['questions']),
   }),
   'scout-single-answer-substance': Object.freeze({

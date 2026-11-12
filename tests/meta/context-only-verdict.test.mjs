@@ -149,7 +149,7 @@ test('coverage still precedes startup source and coordinate checks', () => {
   });
   assert.equal(thin.reason, 'response to Q1, Q2 contains coordinates without analysis');
   const empty = verdict({ result: withEvidence([]) });
-  assert.equal(empty.reason, 'responses without a single code reference: Q1');
+  assert.equal(empty.reason, 'responses without a single evidence reference: Q1');
 });
 
 test('startup reference matching ignores id case and whitespace, and the first answer wins', () => {
