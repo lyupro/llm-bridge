@@ -3,11 +3,13 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { resolveCommandOnPath } from '../../src/home/lib/command-path.mjs';
 import { parseHostVersion } from '../../cli/host-contract.mjs';
+import { discoverVsCodeExecutable } from './vscode-discovery.mjs';
 
 export const REQUIRED_FLAGS = Object.freeze(['--setting-sources', '--strict-mcp-config', '--tools']);
 const PREFLIGHT_TIMEOUT_MS = 5000;
 
-export function resolveTargets({ env, vscodeExecutable, resolveOnPath = resolveCommandOnPath, exists = existsSync }) {
+export function resolveTargets({ env, vscodeExecutable, extensionsDir, discover = discoverVsCodeExecutable,
+  resolveOnPath = resolveCommandOnPath, exists = existsSync }) {
   let cli;
   try {
     const executable = resolveOnPath('claude', env);
@@ -19,21 +21,28 @@ export function resolveTargets({ env, vscodeExecutable, resolveOnPath = resolveC
   }
 
   let vscode;
+  let selection;
   try {
     const fromFlag = vscodeExecutable !== undefined;
     const candidate = fromFlag ? vscodeExecutable : env.CLAUDE_CODE_EXECPATH;
     const extensionPath = typeof candidate === 'string'
       && candidate.replaceAll('\\', '/').toLowerCase().includes('/extensions/anthropic.claude-code-');
-    if (typeof candidate !== 'string' || !candidate.trim() || (!fromFlag && !extensionPath)) {
-      vscode = { role: 'vscode', error: 'Provide --vscode-executable: no extension-session executable is available.' };
+    if (!fromFlag && (typeof candidate !== 'string' || !candidate.trim() || !extensionPath)) {
+      selection = { source: 'discovery' };
+      vscode = { role: 'vscode', source: 'discovery', ...discover({ env, extensionsDir }) };
     } else {
-      const executable = path.resolve(candidate);
-      vscode = exists(executable)
-        ? { role: 'vscode', executable, source: fromFlag ? 'flag' : 'extension-session' }
-        : { role: 'vscode', error: `The --vscode-executable target does not exist: ${executable}` };
+      selection = { source: fromFlag ? 'flag' : 'extension-session' };
+      if (typeof candidate !== 'string' || !candidate.trim()) {
+        vscode = { role: 'vscode', error: 'Provide --vscode-executable: no extension-session executable is available.', selection };
+      } else {
+        const executable = path.resolve(candidate);
+        vscode = exists(executable)
+          ? { role: 'vscode', executable, source: selection.source, selection }
+          : { role: 'vscode', error: `The --vscode-executable target does not exist: ${executable}`, selection };
+      }
     }
   } catch (error) {
-    vscode = { role: 'vscode', error: `Cannot resolve --vscode-executable: ${error.message}` };
+    vscode = { role: 'vscode', error: `Cannot resolve --vscode-executable: ${error.message}`, selection };
   }
   return { cli, vscode };
 }

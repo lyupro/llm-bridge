@@ -14,6 +14,8 @@ function resolve(overrides = {}) {
     env: { CLAUDE_CODE_EXECPATH: extensionExecutable },
     resolveOnPath: () => cliExecutable,
     exists: () => true,
+    discover: () => ({ error: 'Provide --vscode-executable or --extensions-dir: no discovery fixture.',
+      selection: { source: 'discovery' } }),
     ...overrides,
   });
 }
@@ -32,7 +34,8 @@ test('resolves CLI from PATH and extension from its session independently', () =
   assert.deepEqual(calls, [['claude', env]]);
   assert.deepEqual(result, {
     cli: target,
-    vscode: { role: 'vscode', executable: extensionExecutable, source: 'extension-session' },
+    vscode: { role: 'vscode', executable: extensionExecutable, source: 'extension-session',
+      selection: { source: 'extension-session' } },
   });
 });
 
@@ -53,7 +56,7 @@ test('extension-session path recognition accepts backslashes and mixed case', ()
 
 test('explicit flag beats the environment even outside an extension directory', () => {
   const result = resolve({ vscodeExecutable: cliExecutable });
-  assert.deepEqual(result.vscode, { role: 'vscode', executable: cliExecutable, source: 'flag' });
+  assert.deepEqual(result.vscode, { role: 'vscode', executable: cliExecutable, source: 'flag', selection: { source: 'flag' } });
   assert.notStrictEqual(result.cli, result.vscode);
 });
 
@@ -86,6 +89,60 @@ test('missing files and existence-check exceptions produce per-role errors', () 
     assert.equal(typeof result.cli.error, 'string');
     assert.match(result.vscode.error, /--vscode-executable/);
   }
+});
+
+test('explicit and qualifying environment targets never invoke discovery', () => {
+  const discover = () => assert.fail('Discovery must not override an explicit or qualifying session target');
+  assert.equal(resolve({ vscodeExecutable: cliExecutable, discover }).vscode.source, 'flag');
+  assert.equal(resolve({ discover }).vscode.source, 'extension-session');
+});
+
+test('invalid flags stay terminal even when discovery could succeed', () => {
+  let calls = 0;
+  const discover = () => { calls += 1; return { executable: extensionExecutable, selection: { source: 'discovery' } }; };
+  for (const vscodeExecutable of ['', null, 123, cliExecutable]) {
+    const result = resolve({ vscodeExecutable, discover, exists: () => false });
+    assert.match(result.vscode.error, /--vscode-executable/);
+    assert.deepEqual(result.vscode.selection, { source: 'flag' });
+  }
+  assert.equal(calls, 0);
+});
+
+test('a missing qualifying environment executable does not fall back to discovery', () => {
+  const result = resolve({ exists: () => false, discover: () => assert.fail('Session source stays terminal') });
+  assert.match(result.vscode.error, /does not exist/);
+  assert.deepEqual(result.vscode.selection, { source: 'extension-session' });
+});
+
+test('discovery is the third source and receives the original environment and extensionsDir', () => {
+  for (const env of [{}, { CLAUDE_CODE_EXECPATH: cliExecutable }]) {
+    const selection = { source: 'discovery', reason: 'one candidate' };
+    const calls = [];
+    const result = resolve({ env, extensionsDir: 'custom-extensions', discover: (input) => {
+      calls.push(input);
+      return { executable: extensionExecutable, selection };
+    } });
+    assert.deepEqual(calls, [{ env, extensionsDir: 'custom-extensions' }]);
+    assert.strictEqual(calls[0].env, env);
+    assert.deepEqual(result.cli, target);
+    assert.deepEqual(result.vscode, { role: 'vscode', source: 'discovery', executable: extensionExecutable, selection });
+  }
+});
+
+test('discovery errors and selection survive target resolution for an inconclusive preflight', () => {
+  const selection = { source: 'discovery', candidates: ['one', 'two'] };
+  const error = 'Ambiguous discovery: one; two. Use --vscode-executable or --extensions-dir.';
+  const result = resolve({ env: {}, discover: () => ({ error, selection }) });
+  assert.deepEqual(result.vscode, { role: 'vscode', source: 'discovery', error, selection });
+  assert.deepEqual(preflightTarget({ target: result.vscode, run: () => assert.fail('Must not start a binary') }),
+    { ok: false, reason: error });
+});
+
+test('discovery exceptions stay confined to the VS Code role', () => {
+  const result = resolve({ env: {}, discover: () => { throw new Error('Discovery denied'); } });
+  assert.deepEqual(result.cli, target);
+  assert.match(result.vscode.error, /Discovery denied/);
+  assert.deepEqual(result.vscode.selection, { source: 'discovery' });
 });
 
 test('preflight runs only version and help with bounded shell-free options', () => {
