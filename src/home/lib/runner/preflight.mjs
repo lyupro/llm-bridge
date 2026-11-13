@@ -4,7 +4,7 @@
  * only the project runs root and existing holders, never the prospective run's directory.
  */
 import path from 'node:path';
-import fs from 'node:fs';
+import { checkAdvice } from '../advice-check.mjs';
 import { advisorTaskRefusal } from '../meta/advisor-task.mjs';
 import { unavailableRows } from '../meta/unavailable-rows.mjs';
 import { activeRunDetails, readJson } from '../write-meta.mjs';
@@ -42,27 +42,12 @@ export function taskPreflight({ agent, taskText, header, resolution = runsRootRe
   }
   if (agent !== 'codex-build') return { refusal: null };
   const advice = header.advice;
-  if (advice !== null) {
-    if (['mechanical', 'revert', 'docs-only', 'test-only'].includes(advice)) {
-      return { refusal: null, advice };
-    }
-    if (path.isAbsolute(advice)) {
-      // Plan_77 D6: preflight.mjs:46-58 swallowed the old-path read failure as missing advice.
-      // Diagnose before stat/read so neither existing nor absent retired evidence is opened.
-      const retired = retiredPathRefusal(advice, resolution);
-      if (retired) return freeRefusal(retired);
-      try {
-        // Plan_59 D26: only a judged advice authorizes a construction. On 2026-09-24 the gate took
-        // any codex-advisor folder, so a scope run or a FAIL advice would have passed as a second opinion.
-        const meta = fs.statSync(advice).isDirectory() ? readJson(path.join(advice, 'meta.json')) : null;
-        if (meta?.agent === 'codex-advisor' && meta.phase === 'advise' && meta.status === 'OK') {
-          return { refusal: null, advice };
-        }
-      } catch {
-        // Plan_59 D6: missing or unreadable evidence cannot authorize a construction.
-      }
-    }
+  const checked = checkAdvice(advice, { resolution });
+  if (checked.ok === true) return { refusal: null, advice };
+  if (checked.reason === 'retired-root') {
+    return freeRefusal(retiredPathRefusal(advice, resolution));
   }
+  // Plan_59 D6: missing or unreadable evidence cannot authorize a construction.
   return freeRefusal(orderRuleMessage('build-advice-required'));
 }
 
