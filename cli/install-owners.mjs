@@ -1,7 +1,5 @@
-/**
- * Keeps one installation record for a package home that several hosts share: one image part, and
- * one owner per host root (format 2, Plan_65 D5).
- *
+/** Keeps one installation record with a shared image and one owner per host root (Plan_65 D5). */
+/*
  * The format-1 record was written whole by whichever host installed last and named no host at all:
  * `install --host A`, then `install --host B` into one home left B's record alone (reproduced
  * 2026-09-25), and uninstalling either would have removed the image under the other. Owners are
@@ -12,6 +10,7 @@
 import { createHash } from 'node:crypto';
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { isFormat2 } from '../src/home/lib/install-owner-roots.mjs';
+import { otherPendingEntries, validatePending } from './install-pending.mjs';
 import {
   fileEntry,
   INSTALL_METHOD_COPY,
@@ -112,6 +111,9 @@ export function imageRemoval(record2, host) {
   const key = normalizeRepoPath(host.root);
   const isOwner = Object.hasOwn(record2.owners, key);
   const remaining = Object.keys(record2.owners).length - Number(isOwner);
+  // Plan_83 D1/D5: a foreign unfinished host may already use the image without an owner row.
+  const pendingHosts = otherPendingEntries(record2, host).map((entry) => entry.root);
+  if (pendingHosts.length) return { removeImage: false, reason: 'other-pending-hosts', pendingHosts };
   if (remaining > 0) return { removeImage: false, reason: 'other-owners', remaining };
   if (record2.legacy !== undefined || record2.inventory !== 'complete') {
     return { removeImage: false, reason: 'incomplete-inventory' };
@@ -203,6 +205,7 @@ export function validateFormat2(parsed) {
   if (!isObject(parsed) || parsed.format !== 2) {
     throw new Error('installation record format must be 2');
   }
+  validatePending(parsed);
   if (parsed.inventory !== 'complete' && parsed.inventory !== 'incomplete') {
     throw new Error('installation record inventory must be complete or incomplete');
   }

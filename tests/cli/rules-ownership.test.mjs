@@ -7,6 +7,7 @@ import { makeTempTree } from '../temp-tree.mjs';
 import { classifyRulesOwnership, remainingRulesOwnership, rulesOwnerHints } from '../../cli/rules-ownership.mjs';
 import { readRulesIndex } from '../../cli/rules-index.mjs';
 import { withOwner } from '../../cli/install-owners.mjs';
+import { withPending } from '../../cli/install-pending.mjs';
 import { normalizedRulesOwner, rulesRegistryPath } from '../../cli/rules-owners.mjs';
 
 function fixture() {
@@ -65,14 +66,16 @@ for (const [label, change, reason] of [
   ['legacy null present', (f) => ({ ...f.record, legacy: null }), /invalid installation record/],
   ['incomplete inventory', (f) => ({ ...f.record, inventory: 'incomplete' }), /inventory is incomplete/],
   ['missing inventory', (f) => { const { inventory, ...rest } = f.record; return rest; }, /invalid installation record/],
-  ['pending object', (f) => ({ ...f.record, pending: { rules: f.rulesPath } }), /pending/],
-  ['pending false', (f) => ({ ...f.record, pending: false }), /pending/],
-  ['pending null', (f) => ({ ...f.record, pending: null }), /pending/],
+  ['pending hosts', (f) => withPending(withPending(f.record, f.host, 'install', f.old.installedAt), { root: path.join(f.root, 'OtherHost') }, 'update', f.old.installedAt), /pending hosts/],
+  ['pending object', (f) => ({ ...f.record, pending: { rules: f.rulesPath } }), /invalid.*pending/],
+  ['pending false', (f) => ({ ...f.record, pending: false }), /invalid.*pending/],
+  ['pending null', (f) => ({ ...f.record, pending: null }), /invalid.*pending/],
 ]) {
   test(`an indexed record with ${label} is unknown`, async () => {
     const f = fixture();
     await publish(f, change(f));
-    unknown(await classify(f), f.recordPath, reason);
+    const result = await classify(f); unknown(result, f.recordPath, reason);
+    if (label === 'pending hosts') for (const text of [f.host.root + ' (install)', path.join(f.root, 'OtherHost') + ' (update)']) assert.ok(result.unknown[0].reason.includes(text));
   });
 }
 
@@ -167,6 +170,7 @@ for (const extra of [{ inventory: 'incomplete' }, { pending: false }, 'legacy'])
     // B1's legacy exception proves this owner only; it does not attest the entire inventory.
     await publish(f, { ...f.record, ...(extra === 'legacy' ? { legacy: f.old } : extra) });
     f.index = { version: 2, records: [], legacy: [f.key] };
+    if (extra.pending === false) return unknown(await classify(f), f.recordPath, /invalid.*pending/);
     assert.deepEqual(await classify(f), {
       live: [{ recordPath: f.recordPath, owners: [f.key] }], unknown: [], detached: [],
     });
@@ -333,7 +337,7 @@ test('departure preserves no-registry separately from an empty index', async (t)
 
 for (const [label, change, reason] of [
   ['incomplete', (f) => ({ ...f.record, inventory: 'incomplete' }), /inventory is incomplete/],
-  ['pending', (f) => ({ ...f.record, pending: false }), /pending/],
+  ['pending', (f) => ({ ...f.record, pending: false }), /invalid.*pending/],
   ['legacy', (f) => ({ ...f.record, legacy: f.old }), /legacy/],
 ]) {
   test('departure cannot clear its indexed ' + label + ' record uncertainty', async () => {
@@ -364,7 +368,7 @@ test('version-2 hints deduplicate legacy and record owners in index order withou
   const second = { root: path.join(f.root, 'second'), scope: 'host' };
   await publish(f, withOwner(f.record, second, f.old));
   delete other.record.owners[other.key].rules;
-  await publish(other, { ...other.record, inventory: 'incomplete', pending: false });
+  await publish(other, withPending({ ...other.record, inventory: 'incomplete' }, other.host, 'install', other.old.installedAt));
   const index = { version: 2, legacy: ['legacy', f.key, 'legacy'], records: [f.recordPath, other.recordPath, f.recordPath] };
   assert.deepEqual(await rulesOwnerHints({ version: 2, legacy: ['legacy'], records: [f.recordPath] }),
     ['legacy', f.key, normalizedRulesOwner(second)]);

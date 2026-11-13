@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { normalizeRepoPath } from '../../src/home/lib/runner/project-dir.mjs';
 import { isFormat2 } from '../../src/home/lib/install-owner-roots.mjs';
+import { withPending } from '../../cli/install-pending.mjs';
 import { imageFingerprint, imageRemoval, ownerView, ownImageStampCurrent, validateFormat2, withOwner, withoutOwner } from '../../cli/install-owners.mjs';
 
 const brandFiles = [
@@ -274,4 +275,64 @@ test('ownImageStampCurrent requires a format-2 owner verified against a fingerpr
   assert.equal(ownImageStampCurrent(valid, target), false);
   valid.owners[key].imageFingerprint = null;
   assert.equal(ownImageStampCurrent(valid, target), false);
+});
+
+// Plan_83 D1/D5: unfinished foreign installs can already depend on the shared image.
+test('imageRemoval keeps an image for every foreign pending host even without owner rows', () => {
+  const departing = host('/repos/departing/.claude');
+  const foreign = host('/Repos/Foreign/.claude');
+  const other = host('/Repos/Other/.claude');
+  const complete = withOwner(null, departing, record(), { homeHadImage: false });
+  const pending = withPending(complete, foreign, 'install', '2026-11-13T20:15:00Z');
+  assert.deepEqual(imageRemoval(pending, departing), {
+    removeImage: false, reason: 'other-pending-hosts', pendingHosts: [foreign.root],
+  });
+  const both = withPending(withPending(pending, departing, 'update', '2026-11-13T20:15:00Z'),
+    other, 'update', '2026-11-13T20:15:00Z');
+  assert.deepEqual(imageRemoval(both, departing), {
+    removeImage: false, reason: 'other-pending-hosts', pendingHosts: [foreign.root, other.root],
+  });
+  assert.deepEqual(imageRemoval({ ...pending, owners: {}, inventory: 'incomplete' }, departing), {
+    removeImage: false, reason: 'other-pending-hosts', pendingHosts: [foreign.root],
+  });
+});
+
+test('a departing host own pending entry follows all existing image-removal rules', () => {
+  const departing = host('/repos/departing/.claude');
+  const complete = withOwner(null, departing, record(), { homeHadImage: false });
+  const shared = withOwner(complete, host('/repos/other/.claude'), record('other'));
+  for (const original of [complete, shared, { ...complete, inventory: 'incomplete' },
+    { ...complete, legacy: record('old') }, { ...complete, owners: {}, inventory: 'incomplete' }]) {
+    const pending = withPending(original, departing, 'update', '2026-11-13T20:15:00Z');
+    assert.deepEqual(imageRemoval(pending, { root: departing.root + '/./' }), imageRemoval(original, departing));
+  }
+});
+
+test('format-2 readers reject every malformed pending shape and accept an ownerless pending shell', () => {
+  const target = host('/repos/owner/.claude');
+  const valid = withOwner(null, target, record());
+  const key = normalizeRepoPath(target.root);
+  for (const pending of [undefined, false, null, {}, [], 'pending',
+    { [key]: { root: target.root, command: 'uninstall', startedAt: '2026-11-13T20:15:00Z' } },
+    { [key]: { root: '/other', command: 'install', startedAt: '2026-11-13T20:15:00Z' } }]) {
+    const malformed = { ...valid, pending };
+    assert.throws(() => validateFormat2(malformed), /pending field is invalid/);
+    assert.throws(() => imageRemoval(malformed, target), /pending field is invalid/);
+  }
+  const shell = withPending({ ...valid, owners: {} }, target, 'install', '2026-11-13T20:15:00Z');
+  assert.strictEqual(validateFormat2(shell), shell);
+});
+
+test('generic owner publication and removal never clear any host pending evidence', () => {
+  const a = host('/repos/a/.claude');
+  const b = host('/repos/b/.claude');
+  const initial = withOwner(null, a, record());
+  const pending = withPending(withPending(initial, a, 'install', '2026-11-13T20:15:00Z'),
+    b, 'update', '2026-11-13T20:15:00Z');
+  const before = structuredClone(pending);
+  const published = withOwner(pending, b, record('b'));
+  assert.deepEqual(published.pending, before.pending);
+  assert.deepEqual(withOwner(published, a, record('a')).pending, before.pending);
+  assert.deepEqual(withoutOwner(published, a).pending, before.pending);
+  assert.deepEqual(pending, before);
 });

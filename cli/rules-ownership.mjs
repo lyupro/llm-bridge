@@ -1,6 +1,7 @@
 /** Classifies rules ownership from read-only installation-record evidence and unresolved legacy hints. */
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { validateFormat2 } from './install-owners.mjs';
+import { pendingEntries } from './install-pending.mjs';
 import { installRecordPath } from './install-record.mjs';
 import { normalizedRulesOwner, rulesPathIdentity as identity } from './rules-owners.mjs';
 
@@ -33,11 +34,15 @@ export async function rulesOwnerHints(index) {
 }
 
 function incompleteReason(record) {
+  if (Object.hasOwn(record, 'pending')) {
+    // Plan_83 D1/D5: name unresolved hosts without treating their intent as completed ownership.
+    return `installation record has pending hosts: ${pendingEntries(record)
+      .map(({ root, command }) => `${root} (${command})`).join(', ')}`;
+  }
   if (Object.hasOwn(record, 'legacy')) return 'installation record has legacy inventory';
   if (record.inventory !== 'complete') {
     return 'installation record inventory is incomplete; run llm-bridge inventory confirm';
   }
-  if (Object.hasOwn(record, 'pending')) return 'installation record has a pending field';
   return null;
 }
 
