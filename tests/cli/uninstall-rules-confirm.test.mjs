@@ -103,7 +103,10 @@ for (const command of [uninstall, purge]) {
         assert.deepEqual(await snapshot(root), before, 'cancel preserves hooks, settings, record and index');
       } else {
         assert.equal(result.exitCode, 1, result.output);
-        assert.deepEqual(await fs.readFile(registryPath), indexBefore);
+        // Plan_83 D8: refusal keeps foreign references but retires our reference with its baseline.
+        assert.deepEqual(JSON.parse(await fs.readFile(registryPath)), { version: 2,
+          records: JSON.parse(indexBefore).records.filter((file) => file !== own),
+          legacy: JSON.parse(indexBefore).legacy, retained: [record.rules] });
         await fs.access(record.rules.path);
         assert.ok(result.output.includes('Run llm-bridge uninstall --host "' + host.root + '" again in a terminal'));
       }
@@ -112,7 +115,7 @@ for (const command of [uninstall, purge]) {
 }
 
 for (const kind of ['pending', 'unreadable', 'inventory', 'invalid']) {
-  test('blocking ' + kind + ' is never offered and preserves the entire index', async (t) => {
+  test('blocking ' + kind + ' is never offered and preserves foreign references with the baseline', async (t) => {
     const state = await setup(t, { offers: kind === 'pending' });
     const { root, host, index, registryPath, record } = state;
     const other = resolveHost({ host: path.join(root, 'Foreign Pending Root'),
@@ -128,7 +131,8 @@ for (const kind of ['pending', 'unreadable', 'inventory', 'invalid']) {
     const before = await fs.readFile(registryPath);
     const result = await uninstall({ host, isTTY: true, prompt: forbiddenPrompt });
     assert.equal(result.exitCode, 1, result.output);
-    assert.deepEqual(await fs.readFile(registryPath), before);
+    assert.deepEqual(JSON.parse(await fs.readFile(registryPath)), { ...JSON.parse(before),
+      records: index.records.filter((file) => file !== state.own), retained: [record.rules] });
     await fs.access(record.rules.path);
     if (kind === 'pending') {
       assert.ok(result.output.includes(other.root));
@@ -192,7 +196,8 @@ test('last-owner no with offers never asks the rules question', async (t) => {
   let calls = 0;
   const result = await uninstall({ host, isTTY: true, prompt: () => { assert.equal(++calls, 1); return 'no'; } });
   assert.equal(result.exitCode, 1, result.output);
-  assert.deepEqual(await fs.readFile(registryPath), before);
+  // Plan_83 D8: without own-home attestation our record stays unknown; its baseline still survives.
+  assert.deepEqual(JSON.parse(await fs.readFile(registryPath)), { ...JSON.parse(before), retained: [record.rules] });
   await fs.access(record.rules.path);
 });
 
@@ -215,7 +220,8 @@ for (const change of ['add', 'remove', 'record']) {
     } });
     assert.equal(result.exitCode, 1, result.output);
     assert.match(result.output, /references changed; nothing was retired/);
-    assert.deepEqual(await fs.readFile(registryPath), afterQuestion);
+    assert.deepEqual(JSON.parse(await fs.readFile(registryPath)), { ...JSON.parse(afterQuestion),
+      records: index.records.filter((file) => file !== state.own), retained: [record.rules] });
     await fs.access(record.rules.path);
   });
 }
@@ -268,7 +274,8 @@ test('purge inventory consent never resolves a foreign pending reference in its 
     return 'yes';
   } });
   assert.equal(result.exitCode, 1, result.output);
-  assert.deepEqual(await fs.readFile(state.registryPath), before);
+  assert.deepEqual(JSON.parse(await fs.readFile(state.registryPath)),
+    { ...JSON.parse(before), retained: [state.record.rules] });
   assert.ok(result.output.includes(other.root));
   await fs.access(state.record.rules.path);
 });

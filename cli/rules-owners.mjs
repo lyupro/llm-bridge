@@ -7,7 +7,7 @@ import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { withOutsideFileLock } from '../src/home/lib/file-lock.mjs';
 import { createHomeWriter } from '../src/home/lib/home-write.mjs';
-import { installRecordPath } from './install-record.mjs';
+import { installRecordPath, RULES_NAME } from './install-record.mjs';
 import { validateIndex } from './rules-index.mjs';
 export { isLockTaken } from '../src/home/lib/file-lock.mjs';
 
@@ -36,7 +36,8 @@ function validateRegistry(parsed) {
   const index = validateIndex(parsed);
   if (parsed.version === 2) {
     // OW-086: unresolved legacy hints must remain visible to callers not yet using record evidence.
-    return { version: 2, owners: index.legacy, records: index.records };
+    return { version: 2, owners: index.legacy, records: index.records,
+      ...(index.retained ? { retained: index.retained } : {}) };
   }
   return { version: 1, owners: normalizeOwners(index.legacy) };
 }
@@ -58,6 +59,7 @@ async function loadRulesRegistry(host) {
 function hasSameOwners(raw, registry) {
   if (registry.version === 2) {
     return raw.version === 2
+      && JSON.stringify(raw.retained) === JSON.stringify(registry.retained)
       && ['records', 'legacy'].every((field) => raw[field].length === registry[field].length
         && raw[field].every((value, index) => value === registry[field][index]));
   }
@@ -108,6 +110,10 @@ export async function addRulesOwner(host) {
       records,
       legacy: current.legacy.filter((candidate) => candidate !== owner),
     };
+    // Plan_83 D8: registration replaces this file's retained evidence with a live owner's baseline.
+    const retained = current.retained?.filter((entry) => rulesPathIdentity(entry.path)
+      !== rulesPathIdentity(path.join(host.codexRulesDir, RULES_NAME)));
+    if (retained?.length) registry.retained = retained;
     if (!loaded || !hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
     return validateRegistry(registry);
   });
@@ -131,9 +137,10 @@ export async function removeRulesOwner(host, { removeRecord = false } = {}) {
       version: RULES_REGISTRY_VERSION,
       records: current.records.filter((file) => !removeRecord || rulesPathIdentity(file) !== recordKey),
       legacy: current.legacy.filter((owner) => owner !== normalizedRulesOwner(host)),
+      ...(current.retained ? { retained: current.retained } : {}),
     };
     // OW-086 / Plan_83 B3b: without explicit record evidence, departure only clears this host's hint.
-    if (registry.records.length || registry.legacy.length) {
+    if (registry.records.length || registry.legacy.length || registry.retained?.length) {
       if (!hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
     } else {
       await fs.rm(rulesRegistryPath(host), { force: true });
@@ -143,9 +150,10 @@ export async function removeRulesOwner(host, { removeRecord = false } = {}) {
 }
 
 // Plan_83 D7 (3), (5): consent names a whole snapshot; changed evidence retires nothing.
-export async function retireRulesReferences(host, { legacy, records, expectedIndex, verify }) {
+export async function retireRulesReferences(host, { legacy, records, expectedIndex, verify, retained }) {
   if (!Array.isArray(legacy) || !Array.isArray(records) || expectedIndex === undefined
     || typeof verify !== 'function') throw new TypeError('retirement requires named references, an index and verification');
+  if (retained !== undefined && !Array.isArray(retained)) throw new TypeError('retained baselines must be an array');
   const retire = async () => {
     const loaded = await loadRulesRegistry(host);
     const current = loaded ? validateIndex(loaded.raw) : null;
@@ -153,15 +161,19 @@ export async function retireRulesReferences(host, { legacy, records, expectedInd
       || legacy.some((name) => !current?.legacy.includes(name))
       || records.some((file) => !current?.records.includes(file))
       || !await verify(current)) return false;
-    if (!current) return true;
+    if (!current && !retained?.length) return true;
     const registry = { version: RULES_REGISTRY_VERSION,
-      records: current.records.filter((file) => !records.includes(file)),
-      legacy: current.legacy.filter((name) => !legacy.includes(name)) };
-    if (registry.records.length || registry.legacy.length) {
-      if (!hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
+      records: (current?.records ?? []).filter((file) => !records.includes(file)),
+      legacy: (current?.legacy ?? []).filter((name) => !legacy.includes(name)) };
+    // Plan_83 D8: baseline changes and departure references are published as one locked update.
+    const baselines = retained ?? current?.retained;
+    if (baselines?.length) registry.retained = baselines;
+    validateIndex(registry);
+    if (registry.records.length || registry.legacy.length || registry.retained?.length) {
+      if (!loaded || !hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
     } else await fs.rm(rulesRegistryPath(host), { force: true });
     return true;
   };
   // No index means no registry directory is required (the physical rules lock is already held).
-  return await loadRulesRegistry(host) ? withRegistryLock(host, retire) : retire();
+  return await loadRulesRegistry(host) || retained?.length ? withRegistryLock(host, retire) : retire();
 }

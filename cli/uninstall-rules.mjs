@@ -10,7 +10,7 @@ import { readRulesIndex } from './rules-index.mjs';
 import { removeRulesOwner } from './rules-owners.mjs';
 import { remainingRulesOwnership, offerableUnknown } from './rules-ownership.mjs';
 import { pendingRecoveryText } from './install-pending.mjs';
-import { retireRulesPlan, rulesQuestion, rulesRepeatLine } from './rules-retirement.mjs';
+import { retireRulesPlan, rulesQuestion, rulesRepeatLine, matchesRulesFingerprint } from './rules-retirement.mjs';
 
 export function remainingOwnersText(count) {
   return `${count} other owner${count === 1 ? '' : 's'} ${count === 1 ? 'remains' : 'remain'}`;
@@ -19,6 +19,7 @@ export function remainingOwnersText(count) {
 function indexFromRegistry(registry) {
   return registry === null ? null : {
     version: 2, records: registry.records ?? [], legacy: registry.owners,
+    ...(registry.retained ? { retained: registry.retained } : {}),
   };
 }
 
@@ -68,18 +69,19 @@ export async function preflightRulesRemoval(rulesPath, storedFingerprint,
     { rules: { path: rulesPath, fingerprint: storedFingerprint } }, { ownHomeAttested });
   const currentFingerprint = registryError ? null : await fileFingerprint(rulesPath);
   const exists = registryError ? await rulesFilePresent(rulesPath) : currentFingerprint !== null;
+  const unchanged = matchesRulesFingerprint(index, rulesPath, storedFingerprint, currentFingerprint);
   const live = ownership?.live ?? [];
   const unknown = ownership?.unknown ?? [];
   const offerable = unknown.filter(offerableUnknown);
   const blocking = unknown.filter((ref) => !offerableUnknown(ref));
   return { rulesPath, storedFingerprint, index, registryError, ownership, live, offerable, blocking,
-    currentFingerprint, exists, ownHomeAttested,
+    currentFingerprint, exists, unchanged, ownHomeAttested,
     canAsk: !registryError && !live.length && !blocking.length && offerable.length > 0
-      && exists && currentFingerprint === storedFingerprint };
+      && exists && unchanged };
 }
 
 function dispositionLines(plan, dryRun) {
-  const { rulesPath, storedFingerprint, currentFingerprint, ownership, registryError } = plan;
+  const { rulesPath, currentFingerprint, ownership, registryError } = plan;
   const lines = [];
   const verb = dryRun ? 'Would leave' : 'Left';
   const remainingOwners = liveOwnerCount(ownership);
@@ -91,7 +93,7 @@ function dispositionLines(plan, dryRun) {
       lines.push(verb + ' ' + rulesPath + ' because ' + unknownReferencesText(ownership.unknown) + '.');
       lines.push(...unknownRecoveryLines(ownership.unknown));
     }
-  } else if (currentFingerprint === storedFingerprint) {
+  } else if (plan.unchanged) {
     if (dryRun) lines.push('Would remove ' + rulesPath + '; no other owners remain and its fingerprint is unchanged.');
   } else if (currentFingerprint !== null) {
     lines.push(verb + ' ' + rulesPath + ' because its contents changed after installation.');
@@ -130,14 +132,18 @@ export async function removeRulesForHost({ host, record, registry, registryError
   const lines = dispositionLines(plan, false);
   let rulesUnresolved = unresolved(plan);
   if (!plan.registryError) {
-    // Plan_83 D7 (3): a refusal or a mixed unknown set keeps even our own reference byte-identical.
+    // Plan_83 D8: unresolved ownership retains the baseline while retiring only our own references.
     const confirmed = plan.canAsk && answer === 'yes';
-    if (!plan.ownership?.unknown.length || plan.live.length || confirmed) {
+    if (!plan.ownership?.unknown.length || plan.live.length || confirmed || plan.unchanged || !plan.exists) {
       try {
         const result = await retireRulesPlan(host, plan, writer, confirmed);
         if (!result.retired) {
           lines.push('Left ' + plan.rulesPath + ' because rules ownership references changed; nothing was retired.');
           rulesUnresolved = plan.exists;
+          // Plan_83 D8: stale consent authorizes no foreign retirement; refresh only our departure.
+          const fresh = await preflightRulesRemoval(plan.rulesPath, plan.storedFingerprint,
+            { host, ownHomeAttested: plan.ownHomeAttested });
+          if (!fresh.registryError) await retireRulesPlan(host, fresh, writer, false, { keepFile: true });
         } else if (confirmed) {
           lines.length = 0;
           if (result.changed) lines.push('Left ' + plan.rulesPath + ' because its contents changed after installation.');
@@ -150,7 +156,8 @@ export async function removeRulesForHost({ host, record, registry, registryError
         lines.push('Left ' + plan.rulesPath + ' because the rules ownership registry could not be updated: ' + err.message);
         rulesUnresolved = await rulesFilePresent(plan.rulesPath);
       }
-    } else if (plan.canAsk) lines.push(rulesRepeatLine(host));
+    }
+    if (plan.canAsk && !confirmed) lines.push(rulesRepeatLine(host));
   }
   return { lines, registryError: registryError ?? plan.registryError, rulesUnresolved };
 }

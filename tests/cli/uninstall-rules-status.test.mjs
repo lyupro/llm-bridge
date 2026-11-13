@@ -134,9 +134,10 @@ for (const command of [uninstall, purge]) {
         const remaining = JSON.parse(await fs.readFile(registryPath, 'utf8'));
         const original = JSON.parse(registryBefore);
         assert.deepEqual(remaining.legacy, original.legacy);
-        // Plan_83 D7 (3): a mixed set retires nothing, including the departing host reference.
-        assert.deepEqual(remaining.records, original.records, 'no reference may be retired');
-        assert.deepEqual(await fs.readFile(registryPath), registryBefore);
+        // Plan_83 D8: foreign references survive a mixed set; our departed reference does not.
+        assert.deepEqual(remaining.records, original.records.filter((file) => file !== installRecordPath(host)),
+          'only the departing host reference may be retired');
+        assert.deepEqual(remaining, { ...original, records: original.records.slice(1), retained: [record.rules] });
       }
     });
   }

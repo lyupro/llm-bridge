@@ -352,7 +352,7 @@ for (const condition of ['incomplete', 'pending', 'legacy', 'unreadable', 'missi
       registry: await readRulesRegistry(host), registryError: null });
     assert.equal(result.registryError, null);
     assert.match(result.lines.join('\n'), /cannot be verified/);
-    assert.deepEqual(await readRulesRegistry(host), { version: 2, records: [file], owners: [] });
+    assert.deepEqual(await readRulesRegistry(host), { version: 2, records: [file], owners: [], retained: [rules] });
     await fs.access(rules.path);
   });
 }

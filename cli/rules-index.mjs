@@ -24,7 +24,25 @@ export function validateIndex(parsed) {
   if (records.some((file) => !path.isAbsolute(file) || path.basename(file) !== INSTALL_RECORD_NAME)) {
     throw new Error(`rules ownership registry records must be absolute paths to ${INSTALL_RECORD_NAME}`);
   }
-  return { version: 2, records, legacy: stringList(parsed.legacy, 'legacy') };
+  const index = { version: 2, records, legacy: stringList(parsed.legacy, 'legacy') };
+  // Plan_83 D8: retained entries prove installation history, never ownership or today's contents.
+  if (Object.hasOwn(parsed, 'retained')) {
+    const seen = new Set();
+    if (!Array.isArray(parsed.retained) || !parsed.retained.length) {
+      throw new Error('rules ownership registry retained must be a non-empty list');
+    }
+    index.retained = parsed.retained.map((entry) => {
+      if (!entry || typeof entry.path !== 'string' || !path.isAbsolute(entry.path)
+        || typeof entry.fingerprint !== 'string' || !/^[a-fA-F0-9]{64}$/.test(entry.fingerprint)) {
+        throw new Error('rules ownership registry retained requires absolute paths and SHA-256 fingerprints');
+      }
+      const key = JSON.stringify([entry.path, entry.fingerprint]);
+      if (seen.has(key)) throw new Error('rules ownership registry retained contains a duplicate pair');
+      seen.add(key);
+      return { path: entry.path, fingerprint: entry.fingerprint };
+    });
+  }
+  return index;
 }
 
 export async function readRulesIndex(host) {
