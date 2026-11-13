@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { resolveHost } from '../../cli/hosts.mjs';
 import { install } from '../../cli/install.mjs';
+import { acquireRulesDirLock } from '../../cli/rules-dir-lock.mjs';
 import {
   buildInstallPlan,
   HOOK_DEFINITIONS,
@@ -273,6 +274,7 @@ test('dry-run reports actions without creating the host, files, directories, or 
   assert.doesNotMatch(result.output, /permission rules are already in place|Granted \d/);
   await assert.rejects(() => fs.access(host.root), { code: 'ENOENT' });
   await assert.rejects(() => fs.access(host.brandRoot), { code: 'ENOENT' });
+  await assert.rejects(() => fs.access(host.codexRulesDir), { code: 'ENOENT' });
   await assert.rejects(() => fs.access(installRecordPath(host)), { code: 'ENOENT' });
 });
 
@@ -376,4 +378,22 @@ test('uninstall takes back exactly what install granted', async (t) => {
   const { settings } = await inspectPermissions(host.settingsPath);
   const granted = settings.permissions?.allow ?? [];
   for (const rule of PERMISSION_RULES.allow) assert.ok(!granted.includes(rule), rule);
+});
+// Plan_83 D2 / OW-086: the short index lock must not leave later publications unprotected.
+test('install holds the rules lock through rules, settings and record publication', async (t) => {
+  const { host } = await fixture(t);
+  const watched = new Set([path.join(host.codexRulesDir, 'llm-bridge.rules'), host.settingsPath, installRecordPath(host)]);
+  const seen = new Set(), rename = fs.rename;
+  t.mock.method(fs, 'rename', async (source, target) => {
+    if (!watched.has(target)) return rename(source, target);
+    await assert.rejects(acquireRulesDirLock(host.codexRulesDir, {
+      command: 'contender', hostRoot: host.root, homeRoot: `${host.brandRoot}-other`, waitMs: 0,
+    }), /rules directory lock busy/);
+    seen.add(target);
+    return rename(source, target);
+  });
+  assert.equal((await install({ host })).exitCode, 0);
+  assert.deepEqual(seen, watched);
+  const next = await acquireRulesDirLock(host.codexRulesDir, { command: 'after', hostRoot: host.root, homeRoot: host.brandRoot, waitMs: 0 });
+  await next.release();
 });

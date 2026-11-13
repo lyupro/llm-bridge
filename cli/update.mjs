@@ -27,6 +27,7 @@ import {
   withSettingsRun,
 } from './settings-merge.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
+import { withRulesDirLock } from './rules-dir-lock.mjs';
 import { addRulesOwner, readRulesRegistry } from './rules-owners.mjs';
 import { recordHomeWriter, removeRecordedFile } from './record-removal.mjs';
 import { askTransition, detectTransition, transitionOutcome } from './inventory-transition.mjs';
@@ -142,6 +143,7 @@ async function updateInRun({
   packageRoot,
   env = process.env,
   lifecycleTicket,
+  rulesTicket,
   isTTY,
   prompt,
   stdin,
@@ -165,6 +167,7 @@ async function updateInRun({
       packageRoot,
       env,
       lifecycleTicket,
+      rulesTicket,
       isTTY,
       prompt,
       stdin,
@@ -301,6 +304,7 @@ async function updateInRun({
     packageRoot,
     env,
     lifecycleTicket,
+    rulesTicket,
     isTTY,
     prompt,
     stdin,
@@ -323,10 +327,13 @@ export async function update(options = {}) {
   if (!host?.settingsPath) return updateInRun(options);
   // A dry run only reads; like install's, it must not wait on or create anything.
   if (options.dryRun === true) return withSettingsRun(host.settingsPath, () => updateInRun(options));
+  // Plan_83 D2 / OW-086, risk r2: home before rules, reverse release; no other home's lock inside.
   return withLifecycle(
     host,
     'update',
-    (ticket) => withSettingsRun(host.settingsPath, () => updateInRun({ ...options, lifecycleTicket: ticket })),
+    (ticket) => withRulesDirLock(host, 'update', (rulesTicket) =>
+      withSettingsRun(host.settingsPath, () => updateInRun({ ...options, lifecycleTicket: ticket, rulesTicket })),
+    { ticket: options.rulesTicket }),
     { ticket: options.lifecycleTicket, waitMs: options.lifecycleWaitMs },
   );
 }

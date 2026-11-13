@@ -27,6 +27,7 @@ import {
   withSettingsRun,
 } from './settings-merge.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
+import { withRulesDirLock } from './rules-dir-lock.mjs';
 import { addRulesOwner, readRulesRegistry } from './rules-owners.mjs';
 import { addPermissionRules, inspectPermissions } from './permissions.mjs';
 import { contractStatus, readHostContract } from './host-contract.mjs';
@@ -274,10 +275,13 @@ export async function install(options = {}) {
   const host = options?.host;
   if (!host?.settingsPath) return installInRun(options);
   if (options.dryRun === true) return withSettingsRun(host.settingsPath, () => installInRun(options));
+  // Plan_83 D2 / OW-086, risk r2: home before rules; never take another home's lock inside.
   return withLifecycle(
     host,
     'install',
-    () => withSettingsRun(host.settingsPath, () => installInRun(options)),
+    () => withRulesDirLock(host, 'install',
+      () => withSettingsRun(host.settingsPath, () => installInRun(options)),
+      { ticket: options.rulesTicket }),
     { ticket: options.lifecycleTicket, waitMs: options.lifecycleWaitMs, createHome: true },
   );
 }

@@ -14,6 +14,8 @@ import {
 } from '../../cli/manifest.mjs';
 import { targetMatches } from '../../cli/copy.mjs';
 import { update } from '../../cli/update.mjs';
+import { acquireRulesDirLock } from '../../cli/rules-dir-lock.mjs';
+import { acquireLifecycleLock } from '../../cli/lifecycle-lock.mjs';
 
 import { fixture, installOutdated, PACKAGE, packageFixture, ROOT, SOURCE } from './update-fixtures.mjs';
 import { formatOneRecord } from './host-fixture.mjs';
@@ -212,3 +214,94 @@ test('update names the checkout the operator is standing in when it is not the c
   assert.match(result.output, /Run from 0\.5\.4; the checkout at .* is 9\.9\.9\./);
   assert.match(result.output, /npm i -g @lyupro\/llm-bridge@9\.9\.9/);
 });
+
+// Plan_83 D2 / OW-086: update must exclude other homes before cleanup, through nested install.
+test('update holds both locks through orphan cleanup and nested install publication', { timeout: 10_000 }, async (t) => {
+  const { root, host } = await fixture(t);
+  const oldPackage = await packageFixture(root, 'old-lock-package', { extraFile: 'obsolete.txt' });
+  await install({ host, packageRoot: oldPackage });
+  const record = await readInstallRecord(host);
+  const orphan = recordTarget(host, record.files.find((file) => file.path.endsWith('obsolete.txt')));
+  const seen = new Set(), unlink = fs.unlink, rename = fs.rename;
+  const checkHeld = async (stage) => {
+    await assert.rejects(acquireRulesDirLock(host.codexRulesDir, {
+      command: 'other-home', hostRoot: host.root, homeRoot: `${host.brandRoot}-other`, waitMs: 0,
+    }), /rules directory lock busy.*held by update/);
+    await assert.rejects(acquireLifecycleLock(host.brandRoot, {
+      command: 'contender', hostRoot: host.root, waitMs: 0,
+    }), /lifecycle lock busy/);
+    seen.add(stage);
+  };
+  t.mock.method(fs, 'unlink', async (target) => {
+    if (target === orphan) await checkHeld('cleanup');
+    return unlink(target);
+  });
+  t.mock.method(fs, 'rename', async (source, target) => {
+    if (target === installRecordPath(host)) await checkHeld('nested publication');
+    return rename(source, target);
+  });
+  assert.equal((await update({ host })).exitCode, 0);
+  assert.deepEqual(seen, new Set(['cleanup', 'nested publication']));
+  await assert.rejects(fs.access(orphan), { code: 'ENOENT' });
+  const next = await acquireRulesDirLock(host.codexRulesDir, {
+    command: 'after', hostRoot: host.root, homeRoot: host.brandRoot, waitMs: 0,
+  });
+  await next.release();
+});
+
+test('update without a record reuses the rules ticket in its recovery install', { timeout: 10_000 }, async (t) => {
+  const { host } = await fixture(t);
+  await install({ host });
+  await fs.rename(installRecordPath(host), `${installRecordPath(host)}.saved`);
+  const result = await update({ host, isTTY: false });
+  assert.equal(result.exitCode, 0);
+  assert.match(result.output, /recording what is installed/);
+  assert.ok(await readInstallRecord(host));
+});
+
+test('update dry run creates neither a rules directory nor a lock', async (t) => {
+  const { host } = await fixture(t);
+  const result = await update({ host, dryRun: true, rulesTicket: {} });
+  assert.equal(result.exitCode, 1);
+  assert.match(result.output, /not installed/);
+  for (const target of [host.brandRoot, host.codexRulesDir]) {
+    await assert.rejects(fs.access(target), { code: 'ENOENT' });
+  }
+});
+
+// Plan_83 D2, risk r2: acquiring the rules lock must already be protected by this home's lock.
+for (const command of [install, update]) {
+  test(`${command.name} takes its home lock before preparing the rules directory`, async (t) => {
+    const { host } = await fixture(t);
+    await install({ host });
+    const mkdir = fs.mkdir;
+    let checked = false;
+    t.mock.method(fs, 'mkdir', async (target, options) => {
+      if (target === host.codexRulesDir && !checked) {
+        checked = true;
+        await assert.rejects(acquireLifecycleLock(host.brandRoot, {
+          command: 'order-probe', hostRoot: host.root, waitMs: 0,
+        }), /lifecycle lock busy/);
+      }
+      return mkdir(target, options);
+    });
+    assert.equal((await command({ host })).exitCode, 0);
+    assert.equal(checked, true);
+  });
+  test(`${command.name} rejects foreign and stale rules tickets before creating a rules directory`, async (t) => {
+    const { root, host } = await fixture(t);
+    const other = path.join(root, 'other-rules');
+    await fs.mkdir(other);
+    const held = await acquireRulesDirLock(other, {
+      command: 'other', hostRoot: host.root, homeRoot: host.brandRoot,
+    });
+    try {
+      await assert.rejects(command({ host, rulesTicket: held.ticket }), /different physical directory/);
+      await assert.rejects(fs.access(host.codexRulesDir), { code: 'ENOENT' });
+    } finally {
+      await held.release();
+    }
+    await assert.rejects(command({ host, rulesTicket: held.ticket }), /no longer active/);
+    await assert.rejects(fs.access(host.codexRulesDir), { code: 'ENOENT' });
+  });
+}

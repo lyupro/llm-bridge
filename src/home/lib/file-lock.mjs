@@ -42,6 +42,12 @@ export function isLockTaken(err) {
   return LOCK_TAKEN_CODES.has(err?.code);
 }
 
+/** Plan_83 D2 / Plan_65 A5: a paused writer must keep its lock regardless of age. */
+export function openOutsideFileLock(writer, lockPath) {
+  writer.assertOutside(lockPath);
+  return fs.open(lockPath, 'wx');
+}
+
 async function acquireFileLock(lockPath, { retries, delayMs, staleMs, description }, operations) {
   await operations.mkdir(path.dirname(lockPath), { recursive: true });
   let lastTaken;
