@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { makeTempTree } from '../temp-tree.mjs';
-import { classifyRulesOwnership, remainingRulesOwnership } from '../../cli/rules-ownership.mjs';
+import { classifyRulesOwnership, remainingRulesOwnership, rulesOwnerHints } from '../../cli/rules-ownership.mjs';
 import { readRulesIndex } from '../../cli/rules-index.mjs';
 import { withOwner } from '../../cli/install-owners.mjs';
 import { normalizedRulesOwner, rulesRegistryPath } from '../../cli/rules-owners.mjs';
@@ -254,6 +254,7 @@ test('an absent index has no references and does not read a record', async (t) =
 test('required rules and current-record paths never silently default', async () => {
   const f = fixture();
   await assert.rejects(classifyRulesOwnership(undefined, f.rulesPath, f.recordPath), /rules index is required/);
+  await assert.rejects(rulesOwnerHints(undefined), /rules index is required/);
   await assert.rejects(classifyRulesOwnership(f.index, undefined, f.recordPath), /rules path is required/);
   await assert.rejects(classifyRulesOwnership(f.index, f.rulesPath), /current installation-record path is required/);
 });
@@ -347,3 +348,48 @@ for (const [label, change, reason] of [
     assert.match(result.unknown[0].reason, reason);
   });
 }
+
+// OW-086 / Plan_83 B3a: hints retain legacy order and every host named by readable records.
+test('version-1 hint strings remain unchanged through the index reader', async () => {
+  const f = fixture();
+  const owners = ['legacy-first', 'legacy-second'];
+  await fs.mkdir(f.host.codexRulesDir);
+  await fs.writeFile(rulesRegistryPath(f.host), JSON.stringify({ version: 1, owners }));
+  assert.deepEqual(await rulesOwnerHints(await readRulesIndex(f.host)), owners);
+});
+
+test('version-2 hints deduplicate legacy and record owners in index order without changing evidence', async () => {
+  const f = fixture();
+  const other = fixture();
+  const second = { root: path.join(f.root, 'second'), scope: 'host' };
+  await publish(f, withOwner(f.record, second, f.old));
+  delete other.record.owners[other.key].rules;
+  await publish(other, { ...other.record, inventory: 'incomplete', pending: false });
+  const index = { version: 2, legacy: ['legacy', f.key, 'legacy'], records: [f.recordPath, other.recordPath, f.recordPath] };
+  assert.deepEqual(await rulesOwnerHints({ version: 2, legacy: ['legacy'], records: [f.recordPath] }),
+    ['legacy', f.key, normalizedRulesOwner(second)]);
+  const before = structuredClone(index);
+  const bytes = await fs.readFile(f.recordPath);
+  assert.deepEqual(await rulesOwnerHints(index), ['legacy', f.key, normalizedRulesOwner(second), other.key]);
+  assert.deepEqual(index, before);
+  assert.deepEqual(await fs.readFile(f.recordPath), bytes);
+});
+
+for (const kind of ['missing', 'malformed', 'invalid', 'format 1', 'directory', 'permission']) {
+  test(`hint records that are ${kind} contribute no host keys`, async (t) => {
+    const f = fixture();
+    if (kind === 'malformed') await fs.writeFile(f.recordPath, '{');
+    if (kind === 'invalid') await publish(f, { ...f.record, owners: [] });
+    if (kind === 'format 1') await publish(f, f.old);
+    if (kind === 'directory') await fs.mkdir(f.recordPath);
+    if (kind === 'permission') t.mock.method(fs, 'readFile', async () => {
+      throw Object.assign(new Error('record access refused'), { code: 'EACCES' });
+    });
+    assert.deepEqual(await rulesOwnerHints({ ...f.index, legacy: ['legacy'] }), ['legacy']);
+  });
+}
+
+test('an absent hint index returns no hosts and reads no record', async (t) => {
+  t.mock.method(fs, 'readFile', () => { throw new Error('unexpected record read'); });
+  assert.deepEqual(await rulesOwnerHints(null), []);
+});

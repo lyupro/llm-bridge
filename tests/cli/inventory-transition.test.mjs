@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { detectTransition, askTransition, registryHintLines } from '../../cli/inventory-transition.mjs';
 import { installRecordPath } from '../../cli/install-record.mjs';
+import { withOwner } from '../../cli/install-owners.mjs';
 import { resolveHost } from '../../cli/hosts.mjs';
 import {
   normalizedRulesOwner,
@@ -130,4 +131,38 @@ test('marks registry hints whose folders do not exist', async (t) => {
   assert.deepEqual(registryHintLines(host, [missingRoot]).slice(1), [
     `  ${missingRoot} (folder does not exist)`,
   ]);
+});
+
+// OW-086 / Plan_83 B3a: transition hints must survive the next slice's version-2 writer.
+test('transition renders a version-2 record-only host and honors explicit candidates', async (t) => {
+  const { root, host } = await fixture(t);
+  const hintHost = resolveHost({ host: path.join(root, 'record-only-host'),
+    brandRoot: path.join(root, 'other-home'), codexHome: host.codexHome });
+  const legacy = { name: '@lyupro/llm-bridge', version: '0.1.0',
+    installedAt: '2026-08-10T20:00:00.000Z', mode: 'copy',
+    files: [{ root: 'brand', path: 'hooks/reply-guard.mjs' }],
+    hooks: [{ event: 'SubagentStop', root: 'brand', path: 'hooks/reply-guard.mjs',
+      command: 'llm-bridge hook reply-guard' }] };
+  await writeRawRecord(hintHost, withOwner(null, hintHost, legacy));
+  await fs.mkdir(host.codexRulesDir, { recursive: true });
+  await fs.writeFile(rulesRegistryPath(host), JSON.stringify({
+    version: 2, records: [installRecordPath(hintHost)], legacy: [],
+  }));
+  for (const candidates of [undefined, []]) {
+    let question;
+    assert.equal(await askTransition(host, { isTTY: true, candidates,
+      prompt: async (value) => { question = value; return 'no'; } }), 'incomplete');
+    const line = `  ${normalizedRulesOwner(hintHost)} (folder does not exist)`;
+    assert.equal(question.split('\n').includes(line), candidates === undefined);
+    if (candidates) assert.ok(question.split('\n').includes('  none found'));
+  }
+});
+
+test('transition propagates invalid registries unless explicit candidates bypass the read', async (t) => {
+  const { host } = await fixture(t);
+  await fs.mkdir(host.codexRulesDir, { recursive: true });
+  await fs.writeFile(rulesRegistryPath(host), '{');
+  await assert.rejects(askTransition(host, { isTTY: true,
+    prompt: () => assert.fail('invalid registry must precede prompting') }), /invalid rules ownership registry JSON/);
+  assert.equal(await askTransition(host, { isTTY: true, candidates: [], prompt: async () => 'no' }), 'incomplete');
 });

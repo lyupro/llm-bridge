@@ -376,3 +376,23 @@ for (const scenario of ['live', 'detached', 'snapshot', 'mixed', 'unknown']) {
       ? { version: 1, owners: refs } : { version: 2, owners: scenario === 'mixed' ? ['vanished'] : [], records: refs });
   });
 }
+
+// OW-086 / Plan_83 B3a: orphan uninstall must pass record-only host hints to its question.
+test('orphan uninstall shows indexed hints, preserves overrides and catches invalid registries', async (t) => {
+  const { root, host } = await fixture(t);
+  await install({ host });
+  const raw = JSON.parse(await fs.readFile(installRecordPath(host), 'utf8'));
+  const hint = normalizeRepoPath(path.join(root, 'record-only-host'));
+  const otherRecord = path.join(root, '.installed.json');
+  await fs.writeFile(otherRecord, JSON.stringify({ ...raw,
+    owners: { [hint]: { ...Object.values(raw.owners)[0], root: hint } } }));
+  await fs.writeFile(installRecordPath(host), JSON.stringify({ ...raw, owners: {}, inventory: 'incomplete' }));
+  for (const [candidates, invalid] of [[undefined, false], [[], false], [undefined, true]]) {
+    await fs.writeFile(rulesRegistryPath(host), invalid ? '{' : JSON.stringify({ version: 2, records: [otherRecord], legacy: [] }));
+    let question;
+    const result = await uninstall({ host, candidates, isTTY: true,
+      prompt: async (value) => { question = value; return 'cancel'; } });
+    assert.equal(result.exitCode, 130);
+    assert.equal(question.split('\n').includes(`  ${hint} (folder does not exist)`), !invalid && candidates === undefined);
+  }
+});

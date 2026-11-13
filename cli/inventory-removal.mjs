@@ -8,7 +8,8 @@
  * come back to the question.
  */
 import { askYesNo, isInteractive } from './terminal-question.mjs';
-import { readRulesRegistry } from './rules-owners.mjs';
+import { readRulesIndex } from './rules-index.mjs';
+import { rulesOwnerHints } from './rules-ownership.mjs';
 import { registryHintLines } from './inventory-transition.mjs';
 
 const KEPT_DATA = 'config.json, conventions.md and run data stay.';
@@ -38,7 +39,7 @@ export async function askRemoval(host, kind, options) {
   const question = QUESTIONS[kind];
   if (!question) throw new TypeError(`Unknown inventory removal kind: ${kind}`);
   if (!isInteractive(options)) return 'keep';
-  const candidates = options.candidates ?? (await readRulesRegistry(host))?.owners ?? [];
+  const candidates = options.candidates ?? await rulesOwnerHints(await readRulesIndex(host));
   const answer = await askYesNo(question(host, candidates), options);
   if (answer === 'yes') return 'remove';
   if (answer === 'no') return 'keep';
@@ -73,7 +74,7 @@ export async function askPurgeConsent(host, kind, options, detail = []) {
   if (kind !== 'inventory' && kind !== 'data') throw new TypeError(`Unknown purge consent: ${kind}`);
   if (!isInteractive(options)) return 'no';
   const question = kind === 'inventory'
-    ? purgeInventoryQuestion(host, options.candidates ?? (await readRulesRegistry(host))?.owners ?? [])
+    ? purgeInventoryQuestion(host, options.candidates ?? await rulesOwnerHints(await readRulesIndex(host)))
     : purgeDataQuestion(host, detail);
   return askYesNo(question, options);
 }

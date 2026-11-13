@@ -27,6 +27,17 @@ async function readRecord(recordPath) {
   return { record };
 }
 
+export async function rulesOwnerHints(index) {
+  if (index === undefined) throw new Error('rules index is required; use null for an absent index');
+  const hints = new Set(index?.legacy ?? []);
+  // OW-086 / Plan_83 B3a: hints name hosts, even when their readable record cannot prove live ownership.
+  for (const recordPath of index?.records ?? []) {
+    const { record } = await readRecord(recordPath);
+    if (record) for (const key of Object.keys(record.owners)) hints.add(key);
+  }
+  return [...hints];
+}
+
 function incompleteReason(record) {
   if (Object.hasOwn(record, 'legacy')) return 'installation record has legacy inventory';
   if (record.inventory !== 'complete') {

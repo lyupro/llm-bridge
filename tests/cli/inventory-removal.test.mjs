@@ -8,6 +8,8 @@ import {
 } from '../../cli/inventory-removal.mjs';
 import { normalizedRulesOwner, RULES_REGISTRY_VERSION, rulesRegistryPath } from '../../cli/rules-owners.mjs';
 import { resolveHost } from '../../cli/hosts.mjs';
+import { installRecordPath } from '../../cli/install-record.mjs';
+import { withOwner } from '../../cli/install-owners.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
 const KINDS = ['last-owner', 'orphan'];
@@ -147,4 +149,36 @@ test('purge consent answers yes, no and cancel, and refuses without a terminal',
     assert.equal(silent.calls, 0);
   }
   await assert.rejects(askPurgeConsent(host, 'everything', { isTTY: true }), /Unknown purge consent: everything/);
+});
+
+// OW-086 / Plan_83 B3a: both removal questions and purge consent need the record-backed hints.
+test('removal and purge questions show record-only hosts and preserve candidate overrides', async (t) => {
+  const { host, ownRoot, otherRoot } = await fixture(t);
+  const hintHost = { ...host, root: otherRoot };
+  const legacy = { name: '@lyupro/llm-bridge', version: '0.1.0',
+    installedAt: '2026-08-10T20:00:00.000Z', mode: 'copy',
+    files: [{ root: 'brand', path: 'hooks/reply-guard.mjs' }],
+    hooks: [{ event: 'SubagentStop', root: 'brand', path: 'hooks/reply-guard.mjs',
+      command: 'llm-bridge hook reply-guard' }] };
+  await fs.mkdir(host.brandRoot, { recursive: true });
+  await fs.writeFile(installRecordPath(host), JSON.stringify(withOwner(null, hintHost, legacy)));
+  await fs.mkdir(host.codexRulesDir, { recursive: true });
+  await fs.writeFile(rulesRegistryPath(host), JSON.stringify({
+    version: 2, records: [installRecordPath(host)], legacy: [],
+  }));
+  const askers = KINDS.map((kind) => (options) => askRemoval(host, kind, options));
+  askers.push((options) => askPurgeConsent(host, 'inventory', options));
+  for (const ask of askers) {
+    const prompt = countingPrompt('no');
+    await ask({ isTTY: true, prompt });
+    assertHintShowsOnly(prompt.question, otherRoot, ownRoot);
+    await ask({ isTTY: true, candidates: [], prompt });
+    assert.ok(prompt.question.split('\n').includes('  none found'));
+  }
+  await fs.writeFile(rulesRegistryPath(host), '{');
+  for (const ask of askers) {
+    await assert.rejects(ask({ isTTY: true, prompt: () => assert.fail('must not prompt') }),
+      /invalid rules ownership registry JSON/);
+    await ask({ isTTY: true, candidates: [], prompt: countingPrompt('no') });
+  }
 });

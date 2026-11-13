@@ -6,7 +6,8 @@ import { publishInstallRecordOnly, readInstallRecordFile } from './install-recor
 import { validateFormat2 } from './install-owners.mjs';
 import { registryHintLines } from './inventory-transition.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
-import { readRulesRegistry } from './rules-owners.mjs';
+import { readRulesIndex } from './rules-index.mjs';
+import { rulesOwnerHints } from './rules-ownership.mjs';
 import { askYesNo, isInteractive } from './terminal-question.mjs';
 
 export const INVENTORY_CONFIRM_COMMAND = 'llm-bridge inventory confirm';
@@ -37,7 +38,7 @@ async function confirmInRun(host, dryRun, questionOptions) {
     `Home: ${host.brandRoot}`,
     'Recorded hosts:',
     ...owners.map((owner) => `  ${owner.root}`),
-    ...registryHintLines(host, (await readRulesRegistry(host))?.owners ?? []),
+    ...registryHintLines(host, await rulesOwnerHints(await readRulesIndex(host))),
     "Confirming lets the last recorded host's uninstall remove the shared image. "
       + 'A host that uses this home but is not listed must be enrolled first: '
       + 'llm-bridge install --host "<path>".',

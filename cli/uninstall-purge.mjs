@@ -12,6 +12,8 @@ import { removeHostSide } from './host-removal.mjs';
 import { withSettingsRun } from './settings-merge.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
 import { readRulesRegistry } from './rules-owners.mjs';
+import { readRulesIndex } from './rules-index.mjs';
+import { rulesOwnerHints } from './rules-ownership.mjs';
 import { rulesDryRunLines, removeRulesForHost } from './uninstall-rules.mjs';
 import { removeEmpty } from './remove-layout.mjs';
 import { recordHomeWriter } from './record-removal.mjs';
@@ -46,15 +48,17 @@ async function purgeInRun(options, ticket) {
   const { host } = options;
   let registry = null;
   let registryError = null;
+  let candidates = [];
   try {
     registry = await readRulesRegistry(host);
+    candidates = options.candidates ?? await rulesOwnerHints(await readRulesIndex(host));
   } catch (err) {
     registryError = err;
   }
   const preflight = await runPurgePreflight({
     host, ticket, packageRoot: options.packageRoot,
     ...(options.liveRunCheck !== undefined ? { liveRunCheck: options.liveRunCheck } : {}),
-    options: { ...options, candidates: options.candidates ?? registry?.owners ?? [] },
+    options: { ...options, candidates: options.candidates ?? candidates },
   });
   if (preflight.verdict === 'refused') {
     return { exitCode: 1, output: ['Purge refused; nothing was changed.', ...preflight.lines].join('\n') };

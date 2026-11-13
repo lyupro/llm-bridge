@@ -12,6 +12,7 @@ import { findOwnHooks } from '../../cli/hook-recognizer.mjs';
 import { installRecordPath, readInstallRecord, recordTarget } from '../../cli/manifest.mjs';
 import { purge, appearedLines } from '../../cli/uninstall-purge.mjs';
 import { uninstall } from '../../cli/uninstall.mjs';
+import { rulesRegistryPath } from '../../cli/rules-owners.mjs';
 import { commandOptions, COMMANDS } from '../../cli/command-registry.mjs';
 import { normalizeRepoPath } from '../../src/home/lib/runner/project-dir.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
@@ -280,4 +281,33 @@ test('D12 item 7: the re-check names a registry file present after purge unless 
   for (const result of ['kept', 'blocked', 'failed']) {
     assert.deepEqual(appearedLines(host, plan, [{ kind: 'file', relative: 'config.json', result }]), []);
   }
+});
+
+// OW-086 / Plan_83 B3a: preflight must receive indexed host keys, not the legacy-only registry view.
+test('purge preflight shows record-only hints and honors explicit candidates', async (t) => {
+  const { root, host } = await installedHome(t);
+  const other = resolveHost({ host: path.join(root, 'other-host'), brandRoot: path.join(root, 'other-home'),
+    codexHome: path.dirname(host.codexRulesDir) });
+  const raw = JSON.parse(await fs.readFile(installRecordPath(host), 'utf8'));
+  raw.owners = { [normalizeRepoPath(other.root)]: { ...Object.values(raw.owners)[0], root: other.root } };
+  await fs.mkdir(other.brandRoot);
+  await fs.writeFile(installRecordPath(other), JSON.stringify(raw));
+  await fs.writeFile(rulesRegistryPath(host), JSON.stringify({
+    version: 2, records: [installRecordPath(other)], legacy: [],
+  }));
+  const verifyUnchanged = await unchanged(host);
+  for (const candidates of [undefined, []]) {
+    const { options, questions } = consent(['no'], { candidates });
+    const result = await purge({ host, packageRoot, ...options, liveRunCheck: clear });
+    assert.equal(result.exitCode, 1);
+    assert.equal(questions.length, 1);
+    const line = `  ${normalizeRepoPath(other.root)} (folder does not exist)`;
+    assert.equal(questions[0].split('\n').includes(line), candidates === undefined);
+    await verifyUnchanged();
+  }
+  await fs.writeFile(rulesRegistryPath(host), '{');
+  const { options, questions } = consent(['no']);
+  assert.equal((await purge({ host, packageRoot, ...options, liveRunCheck: clear })).exitCode, 1);
+  assert.ok(questions[0].split('\n').includes('  none found'));
+  await verifyUnchanged();
 });

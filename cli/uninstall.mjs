@@ -13,6 +13,8 @@ import { askRemoval, removalHint } from './inventory-removal.mjs';
 import { withSettingsRun } from './settings-merge.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
 import { readRulesRegistry } from './rules-owners.mjs';
+import { readRulesIndex } from './rules-index.mjs';
+import { rulesOwnerHints } from './rules-ownership.mjs';
 import { rulesDryRunLines, removeRulesForHost, remainingOwnersText } from './uninstall-rules.mjs';
 import { removeEmpty } from './remove-layout.mjs';
 import { recordHomeWriter } from './record-removal.mjs';
@@ -75,9 +77,9 @@ the installation inventory is incomplete: other installations may use this home.
 // of ANY host of the home promised a question and printed "not installed" instead. The branch decides from
 // the raw record and the inspection only — `legacy` is nobody's host view (D10 item 5) — removes the named
 // host's side either way, and removes the image only on "yes" for a detached host.
-async function uninstallOrphan(options, inspection, registry) {
+async function uninstallOrphan(options, inspection, candidates) {
   const { host, dryRun = false } = options;
-  const promptOptions = { ...options, candidates: options.candidates ?? registry?.owners ?? [] };
+  const promptOptions = { ...options, candidates: options.candidates ?? candidates };
   if (dryRun) {
     const permissionLine = await removePermissions(host, inspection, true);
     const hostSide = await removeHostSide(host, inspection, { owner: null, dryRun: true });
@@ -138,8 +140,10 @@ async function uninstallInRun(options = {}) {
   // Preflight before removing the hook: package removal on a broken registry left the host without its watchdog.
   let registry = null;
   let registryError = null;
+  let candidates = [];
   try {
     registry = await readRulesRegistry(host);
+    candidates = options.candidates ?? await rulesOwnerHints(await readRulesIndex(host));
   } catch (err) {
     registryError = err;
   }
@@ -152,7 +156,7 @@ async function uninstallInRun(options = {}) {
   const owner = format2?.owners[ownerKey] ?? null;
   // Plan_65 D10: inspect marks and content before permission edits or any other host mutation.
   const inspection = await inspectHost(host, { owner });
-  if (orphaned) return uninstallOrphan(options, inspection, registry);
+  if (orphaned) return uninstallOrphan(options, inspection, candidates);
 
   const record = await readInstallRecord(host);
   let decision = rawRecord === null

@@ -281,3 +281,32 @@ test('invalid JSON names update without asking or writing', async (t) => {
   assert.match(result.output, /llm-bridge update/);
   assert.deepEqual(await recordSnapshot(host), before);
 });
+
+// OW-086 / Plan_83 B3a: a host named only by an indexed record must reach the hint screen.
+test('confirmation renders a version-2 record-only host among the hints', async (t) => {
+  const { root, host, record } = await fixture(t);
+  const hintHost = resolveHost({ host: path.join(root, 'record-only-host'),
+    brandRoot: path.join(root, 'other-home'), codexHome: host.codexHome });
+  await writeRawRecord(hintHost, withOwner(null, hintHost, record.legacy));
+  await fs.mkdir(host.codexRulesDir, { recursive: true });
+  await fs.writeFile(rulesRegistryPath(host), JSON.stringify({
+    version: 2, records: [installRecordPath(hintHost)], legacy: [],
+  }));
+  const before = await recordSnapshot(host);
+  let question;
+  const result = await inventoryConfirm({ host, isTTY: true,
+    prompt: async (value) => { question = value; return false; } });
+  assert.equal(result.exitCode, 1);
+  const hints = question.split('Codex rules registry host roots are a hint only;')[1];
+  assert.ok(hints.split('\n').includes(`  ${normalizedRulesOwner(hintHost)} (folder does not exist)`));
+  assert.deepEqual(await recordSnapshot(host), before);
+});
+
+test('confirmation still propagates an invalid registry before prompting', async (t) => {
+  const { host } = await fixture(t);
+  await fs.mkdir(host.codexRulesDir, { recursive: true });
+  await fs.writeFile(rulesRegistryPath(host), '{');
+  const before = await recordSnapshot(host);
+  await assert.rejects(inventoryConfirm({ host, isTTY: true, prompt: noPrompt }), /invalid rules ownership registry JSON/);
+  assert.deepEqual(await recordSnapshot(host), before);
+});

@@ -8,7 +8,9 @@ import path from 'node:path';
 import { askYesNo, isInteractive } from './terminal-question.mjs';
 import { isFormat2 } from '../src/home/lib/install-owner-roots.mjs';
 import { readInstallRecordFile } from './install-record.mjs';
-import { normalizedRulesOwner, readRulesRegistry } from './rules-owners.mjs';
+import { normalizedRulesOwner } from './rules-owners.mjs';
+import { readRulesIndex } from './rules-index.mjs';
+import { rulesOwnerHints } from './rules-ownership.mjs';
 
 async function exists(target) {
   try {
@@ -54,7 +56,7 @@ export function transitionQuestion(host, candidates) {
 
 export async function askTransition(host, options) {
   if (!isInteractive(options)) return 'incomplete';
-  const candidates = options.candidates ?? (await readRulesRegistry(host))?.owners ?? [];
+  const candidates = options.candidates ?? await rulesOwnerHints(await readRulesIndex(host));
   const answer = await askYesNo(transitionQuestion(host, candidates), options);
   if (answer === 'yes') return 'complete';
   if (answer === 'no') return 'incomplete';
