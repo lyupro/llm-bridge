@@ -196,7 +196,7 @@ test('uninstall completes with a corrupt registry and preserves shared rules', a
   await fs.writeFile(rulesRegistryPath(host), '{"version":1,"owners":[');
 
   const result = await uninstall({ host });
-  assert.equal(result.exitCode, 0);
+  assert.equal(result.exitCode, 1);
   assert.match(result.output, /Left .*rules ownership registry is invalid.*ownership is unknown/i);
   assert.deepEqual(await fs.readFile(record.rules.path), await fs.readFile('src/codex/rules/llm-bridge.rules'));
   for (const file of record.files) {
@@ -344,11 +344,11 @@ for (const scenario of ['live', 'detached', 'snapshot', 'mixed', 'unknown']) {
     const before = await fs.readFile(registryPath);
     const beforeRecord = await fs.readFile(installRecordPath(host));
     const dry = await uninstall({ host, dryRun: true });
-    assert.equal(dry.exitCode, 0);
+    assert.equal(dry.exitCode, scenario === 'snapshot' || scenario === 'unknown' ? 1 : 0);
     assert.deepEqual(await fs.readFile(registryPath), before);
     assert.deepEqual(await fs.readFile(installRecordPath(host)), beforeRecord);
     const result = await uninstall({ host });
-    assert.equal(result.exitCode, 0);
+    assert.equal(result.exitCode, scenario === 'snapshot' || scenario === 'unknown' ? 1 : 0);
     for (const output of [dry.output, result.output]) {
       if (scenario === 'live' || scenario === 'mixed') assert.match(output, /because 1 other owner remains/);
       if (scenario === 'unknown') {

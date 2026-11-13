@@ -61,6 +61,12 @@ export function pendingEntries(record) {
   return Object.entries(record.pending ?? {}).map(([hostKey, entry]) => ({ ...entry, hostKey }));
 }
 
+// Plan_83 D7 / D5 pre-mortem 5: doctor and rules recovery must preserve the same stored root.
+export function pendingRecoveryText({ root, command }) {
+  return `complete it: llm-bridge ${command} --host "${root}";`
+    + ` or remove it: llm-bridge uninstall --host "${root}".`;
+}
+
 export function otherPendingEntries(record, host) {
   const key = normalizeRepoPath(host.root);
   return pendingEntries(record).filter((entry) => entry.hostKey !== key);

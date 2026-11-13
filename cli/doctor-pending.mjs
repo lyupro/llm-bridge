@@ -2,7 +2,7 @@
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { check } from './doctor-format.mjs';
 import { readInstallRecordFile } from './install-record.mjs';
-import { pendingEntries } from './install-pending.mjs';
+import { pendingEntries, pendingRecoveryText } from './install-pending.mjs';
 
 export async function pendingInstallChecks(host) {
   let record;
@@ -24,6 +24,5 @@ export async function pendingInstallChecks(host) {
   // Plan_83 D5 pre-mortem 5: recovery commands use the stored root, never the normalized key.
   return entries.map(({ hostKey, root, command, startedAt }) => check('pending install', 'warn',
     `Unfinished ${command} for ${root}${hostKey === ownKey ? ' (this host)' : ''}; started at ${startedAt};`
-      + ` complete it: llm-bridge ${command} --host "${root}";`
-      + ` or remove it: llm-bridge uninstall --host "${root}".`));
+      + ` ${pendingRecoveryText({ root, command })}`));
 }

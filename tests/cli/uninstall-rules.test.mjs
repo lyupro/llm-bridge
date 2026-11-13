@@ -5,7 +5,12 @@ import fs from 'node:fs/promises';
 import { installRecordPath } from '../../cli/install-record.mjs';
 import { withOwner } from '../../cli/install-owners.mjs';
 import { fileFingerprint } from '../../cli/manifest.mjs';
-import { rulesDryRunLines } from '../../cli/uninstall-rules.mjs';
+import { rulesDryRunLines as rulesDryRunResult } from '../../cli/uninstall-rules.mjs';
+
+// Plan_83 D7: keep every existing lines assertion while the caller contract gains an outcome.
+async function rulesDryRunLines(options) {
+  return (await rulesDryRunResult(options)).lines;
+}
 
 const rulesPath = 'codex-home/rules/llm-bridge.rules';
 const host = { root: 'C:/Repos/Current', scope: 'host', brandRoot: 'bridge-home' };
@@ -135,6 +140,7 @@ for (const version of [1, 2]) {
     assert.deepEqual(lines, [
       'Would leave ' + rulesPath + ' because 2 ownership references cannot be verified: '
       + unknown.map((ref) => ref + ' (legacy owner is not in the current installation record)').join('; ') + '.',
+      ...unknown.map((ref) => `Only an operator can confirm ownership reference ${ref}.`),
     ]);
   });
 }
@@ -150,7 +156,8 @@ test('an unknown record reference is named even if its folder vanished', async (
   const lines = await rulesDryRunLines({ ...inputs('original fingerprint'),
     registry: { version: 2, owners: [], records: [missing] } });
   assert.deepEqual(lines, ['Would leave ' + rulesPath + ' because 1 ownership reference cannot be verified: '
-    + missing + ' (installation record does not exist (ENOENT)).']);
+    + missing + ' (installation record does not exist (ENOENT)).',
+    `Only an operator can confirm ownership reference ${missing}.`]);
 });
 
 test('live owners do not hide unknown references from the dry-run explanation', async (t) => {
@@ -161,5 +168,6 @@ test('live owners do not hide unknown references from the dry-run explanation', 
     'Would leave ' + rulesPath + ' because 1 other owner remains.',
     'Would leave ' + rulesPath + ' because 1 ownership reference cannot be verified: '
       + 'vanished (legacy owner is not in the current installation record).',
+    'Only an operator can confirm ownership reference vanished.',
   ]);
 });

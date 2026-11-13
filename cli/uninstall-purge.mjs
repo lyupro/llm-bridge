@@ -91,7 +91,7 @@ async function purgeInRun(options, ticket) {
   await removeEmpty(host.agentsDir);
   const appeared = appearedLines(host, plan, outcomes);
   return {
-    exitCode: appeared.length ? 1 : outcomeExitCode(outcomes),
+    exitCode: rules.rulesUnresolved || appeared.length ? 1 : outcomeExitCode(outcomes),
     output: ['Purged llm-bridge.', permissionLine, ...hostSide.lines, ...rules.lines,
       ...outcomeLines(outcomes, { host }), ...appeared].join('\n'),
   };
@@ -121,9 +121,10 @@ async function purgeDryRun(options) {
   if (!hostSide.detached) {
     lines.push(`Would leave ${host.brandRoot} untouched: this host's hooks could not be removed.`);
   }
-  lines.push(...await rulesDryRunLines({ host, record, registry, registryError, detached: hostSide.detached }));
+  const rules = await rulesDryRunLines({ host, record, registry, registryError, detached: hostSide.detached });
+  lines.push(...rules.lines);
   lines.push(...purgeDryRunLines(diagnosis, { host }));
-  return { exitCode: hostSide.detached ? purgeDryRunExitCode(diagnosis) : 1, output: lines.join('\n') };
+  return { exitCode: hostSide.detached && !rules.rulesUnresolved ? purgeDryRunExitCode(diagnosis) : 1, output: lines.join('\n') };
 }
 
 async function missingHome(options) {

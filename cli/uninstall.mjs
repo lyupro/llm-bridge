@@ -208,12 +208,13 @@ async function uninstallInRun(options = {}) {
     if (imageLine) lines.push(imageLine);
     if (lastKnownOwner) lines.push(`A real run would ask whether ${host.root} is the last host \
 using ${host.brandRoot}.`);
-    lines.push(...await rulesDryRunLines({
+    const rules = await rulesDryRunLines({
       host, record, registry, registryError, detached: hostSide.detached,
-    }));
+    });
+    lines.push(...rules.lines);
     lines.push(...planLines(plan, { host, detached: hostSide.detached }));
     return {
-      exitCode: imageOwnershipUnknown(decision) || !hostSide.detached ? 1 : planExitCode(plan),
+      exitCode: rules.rulesUnresolved || imageOwnershipUnknown(decision) || !hostSide.detached ? 1 : planExitCode(plan),
       output: lines.join('\n'),
     };
   }
@@ -243,7 +244,7 @@ using ${host.brandRoot}.`);
     ? 'Uninstalled llm-bridge.'
     : stillAttachedLine(host);
   return {
-    exitCode: imageOwnershipUnknown(decision) || !hostSide.detached ? 1 : outcomeExitCode(outcomes),
+    exitCode: rulesResult.rulesUnresolved || imageOwnershipUnknown(decision) || !hostSide.detached ? 1 : outcomeExitCode(outcomes),
     output: [heading, permissionLine, ...hostSide.lines, ...rulesOutput, imageLine, lastOwnerHint,
       ...outcomeLines(outcomes, { host })].filter(Boolean).join('\n'),
   };

@@ -10,16 +10,28 @@ async function readRecord(recordPath) {
   try {
     record = await readJsonFile(recordPath);
   } catch (err) {
-    return { reason: err.code === 'ENOENT' ? 'installation record does not exist (ENOENT)'
+    return { kind: err.code === 'ENOENT' ? 'missing' : 'unreadable',
+      reason: err.code === 'ENOENT' ? 'installation record does not exist (ENOENT)'
       : `cannot read installation record: ${err.code ? `${err.code}: ` : ''}${err.message}` };
   }
-  if (record?.format !== 2) return { reason: 'installation record is not format 2' };
+  if (record?.format !== 2) return { kind: 'invalid', reason: 'installation record is not format 2' };
   try {
     validateFormat2(record);
   } catch (err) {
-    return { reason: `invalid installation record: ${err.message}` };
+    return { kind: 'invalid', reason: `invalid installation record: ${err.message}` };
   }
   return { record };
+}
+
+// Plan_83 D7: eligibility follows evidence, never the wording of a diagnostic reason.
+export function offerableUnknown(reference) {
+  return reference.kind === 'legacy' || reference.kind === 'missing';
+}
+
+function incompleteEvidence(record) {
+  return Object.hasOwn(record, 'pending')
+    ? { kind: 'pending', pendingHosts: pendingEntries(record).map(({ root, command }) => ({ root, command })) }
+    : { kind: 'inventory' };
 }
 
 export async function rulesOwnerHints(index) {
@@ -78,7 +90,8 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
     const loaded = await load(recordPath);
     const reason = loaded.reason ?? incompleteReason(loaded.record);
     if (reason) {
-      result.unknown.push({ recordPath, reason });
+      result.unknown.push({ recordPath, reason,
+        ...(loaded.kind ? { kind: loaded.kind } : incompleteEvidence(loaded.record)) });
       continue;
     }
     const owners = Object.entries(loaded.record.owners)
@@ -90,13 +103,13 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
   for (const legacy of index?.legacy ?? []) {
     const loaded = await load(currentRecordPath);
     if (loaded.reason) {
-      result.unknown.push({ legacy, recordPath: currentRecordPath, reason: loaded.reason });
+      result.unknown.push({ legacy, recordPath: currentRecordPath, reason: loaded.reason, kind: 'legacy-unverified' });
       continue;
     }
     // OW-086 / Plan_65 D5: a vanished folder proves nothing; only this exact recorded key can help.
     const owner = Object.hasOwn(loaded.record.owners, legacy) ? loaded.record.owners[legacy] : null;
     if (owner && matches(owner)) addLive(currentRecordPath, [legacy]);
-    else result.unknown.push({ legacy, recordPath: currentRecordPath,
+    else result.unknown.push({ legacy, recordPath: currentRecordPath, kind: 'legacy',
       reason: owner ? 'recorded owner does not reference this rules file'
         : 'legacy owner is not in the current installation record' });
   }
@@ -105,7 +118,8 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
     const loaded = await load(currentRecordPath);
     if (loaded.record?.pending && !result.unknown.some((ref) => ref.legacy === undefined
       && identity(ref.recordPath) === identity(currentRecordPath))) {
-      result.unknown.push({ recordPath: currentRecordPath, reason: incompleteReason(loaded.record) });
+      result.unknown.push({ recordPath: currentRecordPath, reason: incompleteReason(loaded.record),
+        ...incompleteEvidence(loaded.record) });
     }
   }
   return result;
