@@ -8,6 +8,7 @@ import { readInstallRecordFile, recordTarget } from './install-record.mjs';
 import { runsRootResolution } from '../src/home/lib/runner/runs-root.mjs';
 import { check, renderDoctor } from './doctor-format.mjs';
 import { homeImageCheck } from './doctor-home-image.mjs';
+import { pendingInstallChecks } from './doctor-pending.mjs';
 import { homeOwnersCheck, hostSideCheck, ownerEntry, ownersInSyncCheck } from './doctor-host-side.mjs';
 import { inspectHost } from './host-inspection.mjs';
 import {
@@ -164,6 +165,7 @@ export async function diagnose({
   checks.push(await sessionAgentsCheck({ stateDir }));
   const rules = await rulesCheck(host, record);
   checks.push(...rules);
+  checks.push(...await pendingInstallChecks(host));
   const claudeRules = await claudeRulesCheck(host, record);
   checks.push(claudeRules);
   checks.push(await permissionsCheck(host));

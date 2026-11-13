@@ -7,6 +7,7 @@ import { diagnose, renderDoctor } from '../../cli/doctor.mjs';
 import { fileFingerprint, writeInstallRecord } from '../../cli/manifest.mjs';
 import { RULES_REGISTRY_NAME, rulesRegistryPath } from '../../cli/rules-owners.mjs';
 import { installRecordPath } from '../../cli/install-record.mjs';
+import { withPending } from '../../cli/install-pending.mjs';
 import { rulesCheck } from '../../cli/doctor-installation.mjs';
 import { normalizeRepoPath } from '../../src/home/lib/runner/project-dir.mjs';
 import { codexProbe, hostFixture, installedFixture, ownPackage, honestInstalledFixture } from './doctor-fixtures.mjs';
@@ -136,6 +137,17 @@ async function indexedFixture(t) {
   await fs.writeFile(rulesRegistryPath(host), JSON.stringify({ version: 2, records: [recordPath], legacy: [] }));
   return { host, record, recordPath, raw };
 }
+
+test('Plan_83 D4/D5 places pending checks after the complete rules group and before host rules', async (t) => {
+  const { host, recordPath, raw } = await indexedFixture(t);
+  const foreign = { root: path.join(host.root, 'Other Host') };
+  await fs.writeFile(recordPath, JSON.stringify(withPending(raw, foreign, 'update', '2026-11-13T20:15:00Z')));
+  const result = await diagnose({ host, codexProbe, currentPackage: ownPackage });
+  const rulesIndex = result.checks.findIndex(({ key }) => key === 'rules');
+  // Plan_83 D4/D5: pending evidence follows every ownership row without splitting that group.
+  assert.deepEqual(result.checks.slice(rulesIndex, rulesIndex + 4).map(({ key }) => key),
+    ['rules', 'rules ownership', 'pending install', 'claudeRules']);
+});
 
 test('version 2 reports live owners by installation record separately from content integrity', async (t) => {
   const { host, record, recordPath, raw } = await indexedFixture(t);
