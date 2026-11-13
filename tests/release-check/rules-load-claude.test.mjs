@@ -18,7 +18,9 @@ const sha256 = 'a'.repeat(64);
 
 function fixture() {
   const calls = { sessions: [], removed: [], created: [], stdout: [], stderr: [], attempts: [], preflight: [] };
-  const targets = Object.fromEntries(['cli', 'vscode'].map((role) => [role, { role, executable: path.resolve('fake-host', `${role}.exe`) }]));
+  const targets = Object.fromEntries(['cli', 'vscode'].map((role) => [role, {
+    role, executable: path.resolve('fake-host', `${role}.exe`), source: role === 'cli' ? 'path' : 'flag',
+  }]));
   const trees = {};
   let sequence = 0;
   const deps = {
@@ -27,7 +29,10 @@ function fixture() {
     now: () => 1_700_000_000_000, randomUUID: () => `uuid-${++sequence}`,
     stdout: (line) => calls.stdout.push(line), stderr: (line) => calls.stderr.push(line),
     realStateSentinel: ({ env }) => { assert.equal(env.CLAUDE_CODE_ENTRYPOINT, 'vscode'); return { record: 'stable' }; },
-    resolveTargets: ({ env, vscodeExecutable }) => { assert.equal(env.CLAUDE_CODE_EXECPATH, deps.env.CLAUDE_CODE_EXECPATH); calls.vscodeExecutable = vscodeExecutable; return targets; },
+    resolveTargets: ({ env, vscodeExecutable, extensionsDir }) => {
+      assert.equal(env.CLAUDE_CODE_EXECPATH, deps.env.CLAUDE_CODE_EXECPATH);
+      calls.vscodeExecutable = vscodeExecutable; calls.extensionsDir = extensionsDir; return targets;
+    },
     run: () => { throw new Error('Unexpected process runner call'); },
     preflightTarget,
     preflightRun: (executable, args, options) => {
@@ -91,6 +96,85 @@ test('default attempt location is repository-relative and explicit target is for
   assert.equal(await f.invoke(['--model', model, '--vscode-executable', 'explicit-host']), 0);
   assert.equal(f.calls.vscodeExecutable, 'explicit-host');
   assert.equal(f.calls.attempts[0].file, path.resolve(repositoryRoot, DEFAULT_ATTEMPT_PATH));
+});
+
+test('extensions directory is forwarded unchanged, including relative paths', async () => {
+  for (const directory of ['relative/extensions', path.resolve('fixture-extensions')]) {
+    const f = fixture();
+    assert.equal(await f.invoke(['--model', model, '--extensions-dir', directory]), 0);
+    assert.equal(f.calls.extensionsDir, directory);
+  }
+});
+
+test('invalid extensions directory arguments stop before discovery with usage and exit 2', async () => {
+  for (const suffix of [['--extensions-dir'], ['--extensions-dir', ''], ['--extensions-dir', '  '],
+    ['--extensions-dir', '--attempt-file'], ['--extensions-dir', 'one', '--extensions-dir', 'two']]) {
+    const f = fixture();
+    f.deps.resolveTargets = () => { assert.fail('invalid arguments must not reach discovery'); };
+    assert.equal(await f.invoke(['--model', model, ...suffix]), 2);
+    assert.deepEqual(f.calls.stderr, ['Usage: npm run release-check:rules-load-claude -- --model <id> [--vscode-executable <path>] [--extensions-dir <path>] [--attempt-file <path>]']);
+    assert.equal(f.calls.attempts.length, 0); assert.equal(f.calls.preflight.length, 0);
+  }
+});
+
+test('discovery evidence is saved separately from the observed version and appended to unchanged summaries', async () => {
+  const baseline = fixture(); assert.equal(await baseline.invoke(), 0);
+  const f = fixture();
+  const selection = { source: 'discovery', reason: 'Exactly one registered, platform-matching candidate and no uncertain roots.',
+    root: 'fixture/extensions', folder: 'fixture/extensions/extension', version: '9.9.9', targetPlatform: 'fixture-platform',
+    roots: [{ path: 'fixture/extensions', source: 'flag' }], candidates: [{ executable: f.targets.vscode.executable }],
+    rejected: [], uncertainRoots: [] };
+  Object.assign(f.targets.vscode, { source: 'discovery', selection });
+  assert.equal(await f.invoke(), 0);
+  const { cells } = f.calls.attempts[0].attempt;
+  assert.equal(cells.cli.source, 'path'); assert.equal(Object.hasOwn(cells.cli, 'selection'), false);
+  assert.equal(cells.vscode.source, 'discovery'); assert.deepEqual(cells.vscode.selection, selection);
+  assert.equal(cells.vscode.version, version); assert.equal(cells.vscode.selection.version, '9.9.9');
+  assert.deepEqual(f.calls.stdout.slice(0, 2), baseline.calls.stdout.slice(0, 2));
+  assert.equal(f.calls.stdout[2], `vscode selection: discovery — ${selection.reason} (root fixture/extensions, extension 9.9.9)`);
+  assert.equal(f.calls.stdout[3], baseline.calls.stdout[2]); assert.equal(f.calls.stdout.length, 4);
+});
+
+test('selection summaries handle either role, optional details and line breaks without mutating evidence', async () => {
+  for (const [details, suffix] of [[{}, ''], [{ root: 'root\r\npath' }, ' (root root path)'],
+    [{ version: 'extension-version' }, ' (extension extension-version)']]) {
+    const f = fixture();
+    f.targets.cli.selection = { source: 'path', reason: '' };
+    f.targets.vscode.selection = { source: 'discovery\r\nsource', reason: 'one\nreason', ...details };
+    assert.equal(await f.invoke(), 0);
+    assert.equal(f.calls.stdout[2], 'cli selection: path — -');
+    assert.equal(f.calls.stdout[3], `vscode selection: discovery source — one reason${suffix}`);
+    assert.ok(f.calls.stdout.every((line) => !/[\r\n]/.test(line)));
+    assert.deepEqual(f.calls.attempts[0].attempt.cells.vscode.selection, f.targets.vscode.selection);
+  }
+  const f = fixture(); f.targets.vscode.selection = { source: 'flag' };
+  assert.equal(await f.invoke(), 0); assert.equal(f.calls.stdout[2], 'vscode selection: flag — -');
+});
+
+test('no selection summary is printed without a selection source', async () => {
+  for (const selection of [undefined, {}, { reason: 'no source' }]) {
+    const f = fixture(); f.targets.vscode.selection = selection;
+    assert.equal(await f.invoke(), 0); assert.equal(f.calls.stdout.length, 3);
+    assert.ok(f.calls.stdout.every((line) => !line.includes(' selection:')));
+  }
+});
+
+test('selection evidence preserves verified, inconclusive and failed verdicts and judgement ordering', async () => {
+  const setups = [() => {}, (f) => { f.targets.vscode.error = 'ambiguous candidates'; },
+    (f) => { f.deps.installCandidate = () => ({ ok: false, reason: 'install failed' }); },
+    (f) => { f.deps.realStateSentinel = () => { throw new Error('cannot read sentinel'); }; },
+    (f) => { let count = 0; f.deps.realStateSentinel = () => ({ record: count++ });
+      f.deps.installCandidate = () => ({ ok: false, reason: 'original failure' }); },
+    (f) => { f.deps.removeRoleTree = () => ({ ok: false, reason: 'cleanup failed' }); }];
+  for (const setup of setups) {
+    const baseline = fixture(); const selected = fixture(); setup(baseline); setup(selected);
+    selected.targets.vscode.selection = { source: 'discovery', reason: 'selection evidence', candidates: [] };
+    assert.equal(await selected.invoke(), await baseline.invoke());
+    const { selection, ...cell } = selected.calls.attempts[0].attempt.cells.vscode;
+    assert.deepEqual(selection, selected.targets.vscode.selection);
+    assert.deepEqual(cell, baseline.calls.attempts[0].attempt.cells.vscode);
+    assert.deepEqual(selected.calls.attempts[0].attempt.cells.cli, baseline.calls.attempts[0].attempt.cells.cli);
+  }
 });
 
 test('missing extension target is inconclusive while CLI is still measured', async () => {

@@ -1219,8 +1219,20 @@ npm run release-check:rules-load-claude -- --model <model>
 This check lives in `scripts/release-check/` and is not shipped in the npm package. The CLI
 target is `claude` on `PATH`; the VS Code target is the extension's binary, supplied with
 `--vscode-executable <path>` or taken from `CLAUDE_CODE_EXECPATH` only when it points under
-`extensions/anthropic.claude-code-*`. Each target's version and required isolation flags are
+`extensions/anthropic.claude-code-*`, or discovered from `extensions.json` registrations when
+neither supplies a target. Discovery requires exactly one registered, platform-matching
+candidate and no uncertain roots; otherwise the cell is `inconclusive` with candidates listed.
+It does not rank versions or run binaries to break a tie. An invalid explicit executable path
+is never rescued by discovery. Each target's version and required isolation flags are
 preflighted before a session starts; a missing target or unsupported flag is inconclusive.
+
+Default extension roots are `~/.vscode/extensions`, `~/.vscode-insiders/extensions`,
+`~/.vscode-server/extensions` and `~/.vscode-server-insiders/extensions`. On macOS and Linux,
+discovery also checks `$XDG_DATA_HOME/code-server/extensions` (defaulting to
+`~/.local/share/code-server/extensions`). `--extensions-dir <path>` overrides `VSCODE_EXTENSIONS`;
+either restricts discovery to that one root instead of the defaults. Relative paths are resolved
+from the working directory. Missing default roots are skipped; unreadable or invalid registries
+and unavailable override roots leave discovery inconclusive.
 
 For each target the check creates a throwaway project with its own `.git` and runs the real
 `install --scope project` with temporary `LLM_BRIDGE_HOME`, `CODEX_HOME` and `LLM_BRIDGE_RUNS_ROOT`.
@@ -1239,8 +1251,13 @@ oversized core, changed installation, isolation escape or failed session/cleanup
 Exit 0 means both cells verified, 1 means a failure, and 2 means inconclusive without a failure.
 The attempt verdict is written to `docs/audits/release-checks/rules-load-claude.json` by default
 (`--attempt-file <path>` overrides it), recording candidate revision/version, timestamps and
-per-cell evidence and reasons. A release needs fresh verified evidence, not just a successful
-install or an older attempt file.
+per-cell evidence and reasons. Cells preserve the target's `source` (`path` for the CLI) and,
+when present, `selection`: why the VS Code binary was chosen, consulted roots, candidates,
+rejections and uncertain roots, plus the chosen root, folder and extension version for discovery.
+The cell's `version` remains the executable's observed version; selection evidence never changes
+the verdict. The console appends selection source and reason, with root and extension version
+when available, after the two role summaries. A release needs fresh verified evidence, not just
+a successful install or an older attempt file.
 
 Operator checklists (`docs/checklists/`), plans (`docs/plans/`), and one-off audits (`docs/audits/`)
 are not part of the repository: they are detailed working notes for the maintainer and live only

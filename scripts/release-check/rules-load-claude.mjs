@@ -14,10 +14,11 @@ import { createRoleTree, isolatedEnv, installCandidate, freezeInstall, recheckFr
 import { runSession, awaitWitness } from './rules-load-session.mjs';
 
 const REPOSITORY_ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const USAGE = 'Usage: npm run release-check:rules-load-claude -- --model <id> [--vscode-executable <path>] [--attempt-file <path>]';
+const USAGE = 'Usage: npm run release-check:rules-load-claude -- --model <id> [--vscode-executable <path>] [--extensions-dir <path>] [--attempt-file <path>]';
 
 function argumentsFor(argv) {
-  const names = new Map([['--model', 'model'], ['--vscode-executable', 'vscodeExecutable'], ['--attempt-file', 'attemptFile']]);
+  const names = new Map([['--model', 'model'], ['--vscode-executable', 'vscodeExecutable'],
+    ['--extensions-dir', 'extensionsDir'], ['--attempt-file', 'attemptFile']]);
   const result = {};
   for (let index = 0; index < argv.length; index += 2) {
     const name = names.get(argv[index]);
@@ -59,11 +60,15 @@ export async function main(argv, deps = {}) {
   let before;
   let sentinelError;
   try { before = await sentinel(); } catch (error) { sentinelError = `cannot prove isolation: ${error.message}`; }
-  const targets = await (deps.resolveTargets ?? resolveTargets)({ env: originalEnv, vscodeExecutable: args.vscodeExecutable });
+  const targets = await (deps.resolveTargets ?? resolveTargets)({ env: originalEnv,
+    vscodeExecutable: args.vscodeExecutable, extensionsDir: args.extensionsDir });
   const cells = {};
   for (const role of ['cli', 'vscode']) {
     const target = targets[role] ?? { role, error: `No ${role} target is available.` };
     const cell = { role, executable: target.executable ?? null, version: null };
+    // OW-085 D1 preserves selection evidence even when isolation or preflight blocks the measurement.
+    cell.source = target.source;
+    if (target.selection) cell.selection = target.selection;
     cells[role] = cell;
     let tree;
     try {
@@ -155,6 +160,14 @@ export async function main(argv, deps = {}) {
   for (const role of ['cli', 'vscode']) {
     const cell = cells[role];
     stdout(`${role}: ${cell.outcome} — ${cell.version ?? '-'} ${cell.executable ?? '-'} — ${cell.reason}`.replace(/[\r\n]+/g, ' '));
+  }
+  for (const role of ['cli', 'vscode']) {
+    const selection = cells[role].selection;
+    if (!selection?.source) continue;
+    const details = [];
+    if (selection.root) details.push(`root ${selection.root}`);
+    if (selection.version) details.push(`extension ${selection.version}`);
+    stdout(`${role} selection: ${selection.source} — ${selection.reason || '-'}${details.length ? ` (${details.join(', ')})` : ''}`.replace(/[\r\n]+/g, ' '));
   }
   stdout(`Attempt file: ${attemptFile}`);
   return (deps.exitCodeFor ?? exitCodeFor)(cells);
