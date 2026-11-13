@@ -1,5 +1,7 @@
 /** Preserves each host's unfinished installation evidence in the shared record (Plan_83 D4/D5). */
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
+import { INSTALL_METHOD_COPY, INSTALL_METHOD_KEY, publishInstallRecordOnly, readInstallRecordFile } from './install-record.mjs';
+import { validateFormat2 } from './install-owners.mjs';
 
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
@@ -62,4 +64,29 @@ export function pendingEntries(record) {
 export function otherPendingEntries(record, host) {
   const key = normalizeRepoPath(host.root);
   return pendingEntries(record).filter((entry) => entry.hostKey !== key);
+}
+
+export function hasOwnPending(record, host) {
+  return pendingEntries(record ?? {}).some((entry) => entry.hostKey === normalizeRepoPath(host.root));
+}
+
+/** Plan_83 D4/D5: publish intent before side effects, without inventing an owner row. */
+export async function publishPending(host, command, currentPackage) {
+  const existing = await readInstallRecordFile(host);
+  const startedAt = new Date().toISOString();
+  const scaffold = existing ?? validateFormat2({
+    format: 2, name: currentPackage.name, [INSTALL_METHOD_KEY]: INSTALL_METHOD_COPY,
+    inventory: 'incomplete', owners: {},
+    image: { version: currentPackage.version, installedAt: startedAt, files: [] },
+  });
+  await publishInstallRecordOnly(host, withPending(scaffold, host, command, startedAt));
+}
+
+/** Plan_83 D5: foreign evidence informs the operator without changing this host's result. */
+export async function pendingOutput(host, result) {
+  const record = await readInstallRecordFile(host);
+  const lines = otherPendingEntries(record ?? {}, host).map(({ root, command }) =>
+    `Pending ${command} for ${root}; complete that host's install (llm-bridge install --host "${root}")`
+      + ` or run llm-bridge uninstall --host "${root}".`);
+  return lines.length ? { ...result, output: [result.output, ...lines].join('\n') } : result;
 }

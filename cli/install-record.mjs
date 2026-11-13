@@ -7,6 +7,7 @@ import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { HOOK_DEFINITIONS } from '../src/home/lib/hook-definitions.mjs';
 import { isFormat2 } from '../src/home/lib/install-owner-roots.mjs';
 import { ownerView, validateFormat2, withOwner, withoutOwner } from './install-owners.mjs';
+import { withoutPending } from './install-pending.mjs';
 
 /**
  * The record's own spelling of the field saying how the package was installed, and its one value.
@@ -317,10 +318,16 @@ export function publishInstallRecordOnly(host, next) {
  * inventory: 'complete' records the operator's D9 confirmation and drops a migrated legacy record
  * in the same publish.
  */
-export async function writeInstallRecord(host, record, { homeHadImage, inventory } = {}) {
+export async function writeInstallRecord(host, record, { homeHadImage, inventory, completes = false } = {}) {
   const normalized = normalizeInstallRecord(record);
-  const next = withOwner(await readAt(installRecordPath(host)), host, normalized, { homeHadImage, inventory });
-  await publishInstallRecord(host, next);
+  const existing = await readAt(installRecordPath(host));
+  // Plan_83 D4: a first-install scaffold is incomplete until the proven new home is completed.
+  if (homeHadImage === false && existing?.format === 2
+    && !Object.keys(existing.owners).length && !existing.image.files.length) inventory ??= 'complete';
+  const next = withOwner(existing, host, normalized, { homeHadImage, inventory });
+  // Plan_83 D5: even a legacy migration or owner synchronization must retain every pending host.
+  if (existing?.pending !== undefined) next.pending = existing.pending;
+  await publishInstallRecord(host, validateFormat2(completes ? withoutPending(next, host) : next));
 }
 
 /**

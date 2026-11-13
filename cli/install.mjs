@@ -17,6 +17,7 @@ import { copyPlannedFile, planHomeWriter, targetMatches } from './copy.mjs';
 import { hookTargets, recordHasHooks } from './hook-targets.mjs';
 import { fingerprintFor, readInstallRecordFile } from './install-record.mjs';
 import { ownImageStampCurrent } from './install-owners.mjs';
+import { hasOwnPending, pendingOutput, publishPending } from './install-pending.mjs';
 import { syncOtherOwners } from './owner-sync-apply.mjs';
 import { ownerRecord } from './owner-record.mjs';
 import {
@@ -114,6 +115,7 @@ async function installInRun(options = {}) {
     hostVersion,
     observations,
     inventoryTransition,
+    pendingCommand = 'install',
   } = options;
   const transitionState = inventoryTransition === undefined
     ? await detectTransition(host) : inventoryTransition;
@@ -193,7 +195,7 @@ async function installInRun(options = {}) {
     new Map(states.map((state) => [recordFileKey(state.item), state.fingerprint])),
     { path: rule.target, fingerprint: ruleState.fingerprint });
   // D11: the command doctor recommends must clear its warning about this host's image stamp.
-  if (!transition && !changedFiles.length && !changedRule && inspectedHooks.every((state) => state.current)
+  if (!hasOwnPending(rawRecord, host) && !transition && !changedFiles.length && !changedRule && inspectedHooks.every((state) => state.current)
     && recordHasHooks(record, targets) && sameRecord && ownImageStampCurrent(rawRecord, host)) {
     if (!dryRun) {
       await addRulesOwner(host);
@@ -232,7 +234,11 @@ async function installInRun(options = {}) {
       contractOutput(hostContract, retentionOutput(configuredRetentionLine, lines.join('\n') + hookEdits)));
   }
 
-  // Claim ownership of the shared rules file before writing anything. Claiming it last meant a
+  // Plan_83 D4/D5: nested install keeps update's original intent and leaves completion to update.
+  if (pendingCommand !== 'update' || !hasOwnPending(rawRecord, host)) {
+    await publishPending(host, pendingCommand, currentPackage);
+  }
+  // Claim ownership of the shared rules file before copying anything. Claiming it last meant a
   // failure at that step left a fully installed host absent from the registry, and the next
   // uninstall elsewhere would then delete the rules out from under it.
   await addRulesOwner(host);
@@ -259,7 +265,7 @@ async function installInRun(options = {}) {
     ? { dryRun: true, added: 0, present: 0, total: 0 }
     : await addPermissionRules(host.settingsPath);
   const row = await ownerRecord({ plan, rule, targets, hookResults, prior: record, currentPackage });
-  await writeInstallRecord(host, row, { homeHadImage, inventory });
+  await writeInstallRecord(host, row, { homeHadImage, inventory, completes: pendingCommand === 'install' });
   const transitionLine = transition ? `\n${transitionOutcome(host, inventory)}` : '';
   return ownerSyncOutput(host, { packageRoot, env, dryRun }, contractOutput(
     hostContract,
@@ -274,13 +280,17 @@ async function installInRun(options = {}) {
 export async function install(options = {}) {
   const host = options?.host;
   if (!host?.settingsPath) return installInRun(options);
-  if (options.dryRun === true) return withSettingsRun(host.settingsPath, () => installInRun(options));
+  const run = async () => {
+    const result = await installInRun(options);
+    return options.pendingCommand === 'update' ? result : pendingOutput(host, result);
+  };
+  if (options.dryRun === true) return withSettingsRun(host.settingsPath, run);
   // Plan_83 D2 / OW-086, risk r2: home before rules; never take another home's lock inside.
   return withLifecycle(
     host,
     'install',
     () => withRulesDirLock(host, 'install',
-      () => withSettingsRun(host.settingsPath, () => installInRun(options)),
+      () => withSettingsRun(host.settingsPath, run),
       { ticket: options.rulesTicket }),
     { ticket: options.lifecycleTicket, waitMs: options.lifecycleWaitMs, createHome: true },
   );

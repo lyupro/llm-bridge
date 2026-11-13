@@ -18,7 +18,8 @@ import {
 } from './manifest.mjs';
 import { targetMatches } from './copy.mjs';
 import { hookTargets, recordHasHooks } from './hook-targets.mjs';
-import { definitionForRecordedHook, fileEntry, fingerprintFor, readInstallRecordFile } from './install-record.mjs';
+import { definitionForRecordedHook, fileEntry, fingerprintFor, readInstallRecordFile, writeInstallRecord } from './install-record.mjs';
+import { hasOwnPending, pendingOutput, publishPending } from './install-pending.mjs';
 import { ownImageStampCurrent } from './install-owners.mjs';
 import {
   commandFor,
@@ -162,6 +163,7 @@ async function updateInRun({
     }
     const installed = await install({
       host,
+      pendingCommand: 'update',
       dryRun,
       force,
       packageRoot,
@@ -173,6 +175,9 @@ async function updateInRun({
       stdin,
       promptOutput,
     });
+    if (!dryRun && (installed.exitCode === 0 || installed.ownerSync?.complete === false)) {
+      await writeInstallRecord(host, await readInstallRecord(host), { completes: true });
+    }
     return {
       exitCode: installed.exitCode,
       output: `No installation record names ${host.root}; recording what is installed.\n${installed.output}`,
@@ -268,7 +273,7 @@ async function updateInRun({
   // Plan_65 D9: a format-1 migration remains work when every installed file is current.
   const changed = transition || states.some((state) => state.status !== 'up-to-date') || oldHooks.length > 0;
   // D11: the command doctor recommends must clear its warning about this host's image stamp.
-  if (!changed && inspectedHooks.every(({ state }) => state.current)
+  if (!hasOwnPending(rawRecord, host) && !changed && inspectedHooks.every(({ state }) => state.current)
     && recordHasHooks(record, targets) && recordCurrent && ownImageStampCurrent(rawRecord, host)) {
     if (!dryRun) {
       await addRulesOwner(host);
@@ -291,6 +296,7 @@ async function updateInRun({
     };
   }
 
+  await publishPending(host, 'update', currentPackage);
   for (const state of orphanStates) {
     if (state.status !== 'orphaned' || !state.exists) continue;
     await removeRecordedFile(host, writer, state.entry);
@@ -300,6 +306,7 @@ async function updateInRun({
   }
   const installed = await install({
     host,
+    pendingCommand: 'update',
     force: true,
     packageRoot,
     env,
@@ -313,6 +320,7 @@ async function updateInRun({
   });
   // Plan_65 D7: another owner left behind must not prevent this host's retirement and summary.
   if (installed.exitCode !== 0 && installed.ownerSync?.complete !== false) return installed;
+  await writeInstallRecord(host, await readInstallRecord(host), { completes: true });
   const outcome = transition ? transitionOutcome(host, inventory) : null;
   return {
     exitCode: installed.exitCode,
@@ -326,13 +334,14 @@ export async function update(options = {}) {
   const host = options?.host;
   if (!host?.settingsPath) return updateInRun(options);
   // A dry run only reads; like install's, it must not wait on or create anything.
-  if (options.dryRun === true) return withSettingsRun(host.settingsPath, () => updateInRun(options));
+  const run = async (runOptions) => pendingOutput(host, await updateInRun(runOptions));
+  if (options.dryRun === true) return withSettingsRun(host.settingsPath, () => run(options));
   // Plan_83 D2 / OW-086, risk r2: home before rules, reverse release; no other home's lock inside.
   return withLifecycle(
     host,
     'update',
     (ticket) => withRulesDirLock(host, 'update', (rulesTicket) =>
-      withSettingsRun(host.settingsPath, () => updateInRun({ ...options, lifecycleTicket: ticket, rulesTicket })),
+      withSettingsRun(host.settingsPath, () => run({ ...options, lifecycleTicket: ticket, rulesTicket })),
     { ticket: options.rulesTicket }),
     { ticket: options.lifecycleTicket, waitMs: options.lifecycleWaitMs },
   );
