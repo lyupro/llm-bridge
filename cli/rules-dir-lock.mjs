@@ -16,7 +16,7 @@ const LOCK_NAME = `.${PACKAGE_NAME}-rules.lock`;
 const liveTickets = new WeakMap();
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-export async function withRulesDirLock(host, command, action, { ticket } = {}) {
+export async function withRulesDirLock(host, command, action, { ticket, createDirectory = true } = {}) {
   if (typeof action !== 'function') throw new TypeError('rules lock action must be a function');
   requirePath('rulesDir', host?.codexRulesDir);
   if (ticket !== undefined) {
@@ -31,7 +31,9 @@ export async function withRulesDirLock(host, command, action, { ticket } = {}) {
   // Plan_83 D2 / OW-086: the physical lock needs a directory; never bypass home-write checks.
   const writer = createHomeWriter({ root: host.brandRoot });
   writer.assertOutside(host.codexRulesDir);
-  await fsp.mkdir(host.codexRulesDir, { recursive: true });
+  // Plan_83 D2 / OW-086, risk r5: removal must not create a directory with no rules to protect.
+  if (createDirectory) await fsp.mkdir(host.codexRulesDir, { recursive: true });
+  else if (directoryDigest(host.codexRulesDir) === null) return action(undefined);
   const lock = await acquireRulesDirLock(host.codexRulesDir, {
     command, hostRoot: host.root, homeRoot: host.brandRoot,
   });

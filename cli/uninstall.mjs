@@ -12,6 +12,7 @@ import { removeHostSide } from './host-removal.mjs';
 import { askRemoval, removalHint } from './inventory-removal.mjs';
 import { withSettingsRun } from './settings-merge.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
+import { withRulesDirLock } from './rules-dir-lock.mjs';
 import { readRulesRegistry } from './rules-owners.mjs';
 import { readRulesIndex } from './rules-index.mjs';
 import { rulesOwnerHints } from './rules-ownership.mjs';
@@ -242,10 +243,13 @@ export async function uninstall(options = {}) {
   if (!host?.settingsPath) return uninstallInRun(options);
   // A dry run only reads; like install's, it must not wait on or create anything.
   if (options.dryRun === true) return withSettingsRun(host.settingsPath, () => uninstallInRun(options));
+  // Plan_83 D2 / OW-086, risk r5: home lock before rules lock, from preflight through deletion.
   return withLifecycle(
     host,
     'uninstall',
-    () => withSettingsRun(host.settingsPath, () => uninstallInRun(options)),
+    () => withRulesDirLock(host, 'uninstall',
+      () => withSettingsRun(host.settingsPath, () => uninstallInRun(options)),
+      { ticket: options.rulesTicket, createDirectory: false }),
     { ticket: options.lifecycleTicket, waitMs: options.lifecycleWaitMs },
   );
 }

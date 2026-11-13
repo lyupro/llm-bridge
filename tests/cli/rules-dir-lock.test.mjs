@@ -9,6 +9,11 @@ import { acquireLifecycleLock, parseHolder } from '../../cli/lifecycle-lock.mjs'
 import { acquireRulesDirLock, assertLiveRulesTicket, withRulesDirLock } from '../../cli/rules-dir-lock.mjs';
 import { openOutsideFileLock } from '../../src/home/lib/file-lock.mjs';
 import { makeTempTree } from '../temp-tree.mjs';
+import { fixture as hostFixture } from './host-fixture.mjs';
+import { install } from '../../cli/install.mjs';
+import { uninstall } from '../../cli/uninstall.mjs';
+import { purge } from '../../cli/uninstall-purge.mjs';
+import { rulesRegistryPath } from '../../cli/rules-owners.mjs';
 
 const platforms = [...new Set([process.platform, 'darwin'])];
 const lockName = '.llm-bridge-rules.lock';
@@ -349,3 +354,40 @@ test('rules action refuses an inside-home directory before creating it and requi
   }
   assert.equal(fs.existsSync(outside.codexRulesDir), false);
 });
+
+// Plan_83 D2 / OW-086, risk r5: every ownership read and destructive decision needs both locks.
+for (const command of [uninstall, purge]) {
+  test(command.name + ' holds home and rules locks from preflight through removal', async (t) => {
+    const { host } = await hostFixture(t);
+    await install({ host });
+    const registry = rulesRegistryPath(host), rules = path.join(host.codexRulesDir, 'llm-bridge.rules');
+    const seen = new Set(), readFile = fsp.readFile, rm = fsp.rm;
+    const checkHeld = async (stage) => {
+      await assert.rejects(acquireRulesDirLock(host.codexRulesDir, {
+        command: 'contender', hostRoot: host.root, homeRoot: host.brandRoot + '-other', waitMs: 0,
+      }), /rules directory lock busy/);
+      await assert.rejects(acquireLifecycleLock(host.brandRoot, {
+        command: 'contender', hostRoot: host.root, waitMs: 0,
+      }), /lifecycle lock busy/);
+      seen.add(stage);
+    };
+    t.mock.method(fsp, 'readFile', async (target, ...args) => {
+      if (target === registry) await checkHeld('registry read');
+      if (target === rules) await checkHeld('fingerprint');
+      return readFile(target, ...args);
+    });
+    t.mock.method(fsp, 'rm', async (target, ...args) => {
+      if (target === registry) await checkHeld('index edit');
+      if (target === rules) await checkHeld('rules removal');
+      return rm(target, ...args);
+    });
+    const result = await command({ host, isTTY: true, prompt: async () => 'yes',
+      liveRunCheck: () => ({ verdict: 'clear', blocked: [], unknown: [] }) });
+    assert.equal(result.exitCode, 0, result.output);
+    assert.deepEqual(seen, new Set(['registry read', 'fingerprint', 'index edit', 'rules removal']));
+    const next = await acquireRulesDirLock(host.codexRulesDir, {
+      command: 'after', hostRoot: host.root, homeRoot: host.brandRoot, waitMs: 0,
+    });
+    await next.release();
+  });
+}

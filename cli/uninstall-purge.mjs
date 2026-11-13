@@ -11,6 +11,7 @@ import { inspectHost } from './host-inspection.mjs';
 import { removeHostSide } from './host-removal.mjs';
 import { withSettingsRun } from './settings-merge.mjs';
 import { withLifecycle } from './lifecycle-transaction.mjs';
+import { withRulesDirLock } from './rules-dir-lock.mjs';
 import { readRulesRegistry } from './rules-owners.mjs';
 import { readRulesIndex } from './rules-index.mjs';
 import { rulesOwnerHints } from './rules-ownership.mjs';
@@ -134,8 +135,11 @@ export async function purge(options) {
   const { host } = options;
   if (options.dryRun) return withSettingsRun(host.settingsPath, () => purgeDryRun(options));
   if (!fs.existsSync(host.brandRoot)) return missingHome(options);
+  // Plan_83 D2 / OW-086, risk r5: home lock before rules lock protects preflight through deletion.
   return withLifecycle(host, 'purge', (ticket) => {
     if (ticket === undefined) return missingHome(options);
-    return withSettingsRun(host.settingsPath, () => purgeInRun(options, ticket));
+    return withRulesDirLock(host, 'purge',
+      () => withSettingsRun(host.settingsPath, () => purgeInRun(options, ticket)),
+      { ticket: options.rulesTicket, createDirectory: false });
   }, { waitMs: options.lifecycleWaitMs });
 }

@@ -12,7 +12,8 @@ import { findOwnHooks } from '../../cli/hook-recognizer.mjs';
 import { installRecordPath, readInstallRecord, recordTarget } from '../../cli/manifest.mjs';
 import { purge, appearedLines } from '../../cli/uninstall-purge.mjs';
 import { uninstall } from '../../cli/uninstall.mjs';
-import { rulesRegistryPath } from '../../cli/rules-owners.mjs';
+import { readRulesRegistry, rulesRegistryPath } from '../../cli/rules-owners.mjs';
+import { acquireRulesDirLock, assertLiveRulesTicket } from '../../cli/rules-dir-lock.mjs';
 import { commandOptions, COMMANDS } from '../../cli/command-registry.mjs';
 import { normalizeRepoPath } from '../../src/home/lib/runner/project-dir.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
@@ -310,4 +311,72 @@ test('purge preflight shows record-only hints and honors explicit candidates', a
   assert.equal((await purge({ host, packageRoot, ...options, liveRunCheck: clear })).exitCode, 1);
   assert.ok(questions[0].split('\n').includes('  none found'));
   await verifyUnchanged();
+});
+
+// Plan_83 D2 / OW-086: removals borrow live tickets, while dry runs never acquire or validate one.
+for (const command of [uninstall, purge]) {
+  test(command.name + ' dry run ignores tickets and a held rules lock', async (t) => {
+    const { host } = await installedHome(t);
+    const held = await acquireRulesDirLock(host.codexRulesDir, {
+      command: 'held', hostRoot: host.root, homeRoot: host.brandRoot,
+    });
+    try {
+      const result = await command({ host, dryRun: true, rulesTicket: {}, liveRunCheck: clear });
+      assert.equal(result.exitCode, 0, result.output);
+      assert.doesNotThrow(() => assertLiveRulesTicket(held.ticket, host.codexRulesDir));
+    } finally { await held.release(); }
+  });
+  test(command.name + ' borrows its rules ticket without releasing the owner', async (t) => {
+    const { host } = await installedHome(t);
+    const held = await acquireRulesDirLock(host.codexRulesDir, {
+      command: 'outer', hostRoot: host.root, homeRoot: host.brandRoot,
+    });
+    try {
+      const { options } = consent();
+      const result = await command({ host, rulesTicket: held.ticket, ...options, liveRunCheck: clear });
+      assert.equal(result.exitCode, 0, result.output);
+      assert.doesNotThrow(() => assertLiveRulesTicket(held.ticket, host.codexRulesDir));
+    } finally { await held.release(); }
+    await assert.rejects(command({ host, rulesTicket: held.ticket }), /no longer active/);
+  });
+  test(command.name + ' succeeds without recreating an absent Codex rules directory', async (t) => {
+    const { root, host } = await installedHome(t);
+    await fs.rename(host.codexRulesDir, path.join(root, 'saved-rules'));
+    const { options } = consent();
+    assert.equal((await command({ host, ...options, liveRunCheck: clear })).exitCode, 0);
+    await assert.rejects(fs.access(host.codexRulesDir), { code: 'ENOENT' });
+  });
+}
+
+// Plan_83 D2 / OW-086, risk r5: another home cannot publish ownership while uninstall decides.
+test('an install from a second home waits for a running uninstall', { timeout: 10_000 }, async (t) => {
+  const { root, host } = await installedHome(t);
+  const other = resolveHost({ host: path.join(root, 'other-host'), brandRoot: path.join(root, 'other-home'),
+    codexHome: path.dirname(host.codexRulesDir) });
+  const readFile = fs.readFile, mkdir = fs.mkdir;
+  let enter, resume, installEnter, paused = false, settled = false;
+  const entered = new Promise((resolve) => { enter = resolve; });
+  const gate = new Promise((resolve) => { resume = resolve; });
+  const installing = new Promise((resolve) => { installEnter = resolve; });
+  t.mock.method(fs, 'readFile', async (target, ...args) => {
+    if (target === rulesRegistryPath(host) && !paused) { paused = true; enter(); await gate; }
+    return readFile(target, ...args);
+  });
+  t.mock.method(fs, 'mkdir', async (target, ...args) => {
+    if (target === other.codexRulesDir) installEnter();
+    return mkdir(target, ...args);
+  });
+  const removal = uninstall({ host });
+  await entered;
+  const pending = install({ host: other }).then((result) => { settled = true; return result; });
+  try {
+    await installing;
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.equal(settled, false, 'the second home must wait on the rules lock');
+    await assert.rejects(fs.access(installRecordPath(other)), { code: 'ENOENT' });
+  } finally { resume(); await Promise.allSettled([removal, pending]); }
+  assert.equal((await removal).exitCode, 0);
+  assert.equal((await pending).exitCode, 0);
+  assert.deepEqual((await readRulesRegistry(other)).records, [installRecordPath(other)]);
+  await fs.access(path.join(other.codexRulesDir, 'llm-bridge.rules'));
 });

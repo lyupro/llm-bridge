@@ -214,7 +214,7 @@ test('uninstall without a record is nonzero and dry-run uninstall changes nothin
   assert.equal(missing.exitCode, 1);
   assert.match(missing.output, /not installed/);
   assert.equal(missing.output.split('\n').at(-1), `Run artifacts in ${runsRoot()} are outside uninstall and stay.`);
-  await assert.rejects(() => fs.access(absent.host.root), { code: 'ENOENT' });
+  for (const target of [absent.host.root, absent.host.codexRulesDir]) await assert.rejects(fs.access(target), { code: 'ENOENT' });
 
   const installed = await fixture(t);
   await install({ host: installed.host });
