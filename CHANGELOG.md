@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `llm-bridge advice check <value> [--json]` exposes the installed home's shared advice check
+  for other projects' gates, read-only, with a stable eight-field JSON contract (`schema_version: 1`)
+  and exit codes 0 (valid), 1 (invalid), and 2 (call or environment error) (Plan_68 D4/D10).
+
 ## [0.7.0] - 2026-11-12
 
 ### Changed

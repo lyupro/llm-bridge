@@ -452,6 +452,58 @@ Each run row in `llm-bridge projects <project> --json` includes `path`, the abso
 alongside its `run` name. Use that address to read artifacts rather than deriving the run root
 from the package's installation directory; the store may be elsewhere.
 
+### Checking advice
+
+```bash
+llm-bridge advice check mechanical
+llm-bridge advice check "/absolute/path/to/project/advice-run" --json
+```
+
+Another project's gate can call this command instead of implementing its own acceptance rule.
+It accepts exactly one value after `check`, optionally `--json`, and never writes, moves or
+prunes anything. The command loads `lib/advice-check.mjs` from the installed brand home
+(`LLM_BRIDGE_HOME`, otherwise `~/.lyupro/.llm-bridge/`), just like `run` (Plan_62 D17).
+There is no fallback to the package's `src/home` copy. Only that shared function decides whether
+a value is acceptable: the CLI adds argument parsing and presentation.
+
+Without `--json`, one short line names validity, the reason and the run folder when known.
+With `--json`, stdout contains exactly one JSON object, even on exit 2. All eight fields are
+always present; unknown values are `null`:
+
+```json
+{"schema_version":1,"ok":true,"kind":"run","reason":"valid-run","run":"/runs/project/advice-run","project":"project","phase":"advise","verdict":"OK"}
+```
+
+This JSON shape is a stable public contract. `ok` is `true` (exit 0), `false` (exit 1), or `null`
+(exit 2); `kind` is `label`, `run`, `unknown`, or `null`. `run` is the supplied absolute folder
+path, `project` its parent folder's name, and `phase` and `verdict` come from `meta.json` when
+available. Renaming or removing a field, or introducing a new `schema_version`, is a breaking
+change and must be recorded in CHANGELOG. Consumers should fail loudly on an unknown version.
+
+| Reason | Exit | Meaning |
+| --- | --- | --- |
+| `bridge-label` | 0 | A shared bridge label: `mechanical`, `revert`, `docs-only`, or `test-only`. |
+| `valid-run` | 0 | Metadata identifies an `OK` `codex-advisor` run in phase `advise`. |
+| `not-bridge-value` | 1 | Neither a bridge label nor an absolute run path; includes plan labels such as `operator-preference`. |
+| `retired-root` | 1 | The path is under a retired run root (Plan_77 D6). |
+| `not-found` | 1 | The folder does not exist. |
+| `not-directory` | 1 | The path exists but is not a folder. |
+| `meta-missing` | 1 | The folder has no `meta.json`. |
+| `meta-invalid` | 1 | Metadata is invalid JSON or is not an object. |
+| `wrong-agent` | 1 | Metadata does not name `codex-advisor`. |
+| `wrong-phase` | 1 | Metadata does not name phase `advise`. |
+| `wrong-verdict` | 1 | Metadata does not name status `OK`. |
+| `invalid-call` | 2 | Missing/unknown subcommand, missing/extra value, or an unknown/repeated flag; stderr has a one-line usage error. |
+| `unreadable` | 2 | The shared check cannot read the path, metadata, or run-root environment. |
+| `environment-error` | 2 | The installed check is missing, fails to load, or throws while checking. |
+
+Plan_68 D4 also reserved `invalid-path` (exit 1); the current shared function does not emit it.
+The CLI does not add a path rule of its own.
+
+There is no `pruned` reason: age-based cleanup removes transport but keeps `meta.json`, so a
+cleaned advice stays valid. `prune --purge` removes the folder; the check then returns
+`not-found`, without guessing whether the folder was removed or never existed.
+
 ### Cleaning the store
 
 ```bash

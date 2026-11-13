@@ -4,6 +4,7 @@
  * dispatch and usage had separate sources. One registry keeps invocation and help together.
  */
 import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
+import { advice } from './advice.mjs';
 import { diagnose, renderDoctor } from './doctor.mjs';
 import { sandboxChecks } from './doctor-sandbox.mjs';
 import { sessionLogCheck } from './doctor-session-log.mjs';
@@ -283,6 +284,19 @@ ${SETTINGS_SUMMARY}`);
       io.log(result.output);
       return result.exitCode;
     },
+  },
+  {
+    name: 'advice',
+    summary: 'Check an advice value using the installed bridge rules (read-only)',
+    usage: [`${CLI_NAME} advice check <value> [--json]`],
+    section: 'public',
+    actions: {
+      check: {
+        summary: 'Check a label or advice run without changing its artifacts',
+        usage: [`${CLI_NAME} advice check <value> [--json]`],
+      },
+    },
+    handler: advice,
   },
   {
     name: 'projects',
