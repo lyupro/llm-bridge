@@ -6,8 +6,9 @@ import { createHomeWriter } from '../src/home/lib/home-write.mjs';
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { HOOK_DEFINITIONS } from '../src/home/lib/hook-definitions.mjs';
 import { isFormat2 } from '../src/home/lib/install-owner-roots.mjs';
-import { ownerView, validateFormat2, withOwner, withoutOwner } from './install-owners.mjs';
+import { ownerView, validateFormat2, withOwner } from './install-owners.mjs';
 import { withoutPending } from './install-pending.mjs';
+import { recordAfterDeparture } from './uninstall-pending.mjs';
 
 /**
  * The record's own spelling of the field saying how the package was installed, and its one value.
@@ -344,7 +345,7 @@ export async function removeInstallOwner(host) {
   const parsed = await readAt(installRecordPath(host));
   if (parsed === null) return null;
   const record2 = asFormat2(parsed, host);
-  const next = withoutOwner(record2, host);
+  const next = recordAfterDeparture(record2, host);
   if (next === record2) return next;
   await publishInstallRecord(host, next);
   return next;

@@ -4,7 +4,11 @@
  */
 import { readInstallRecord } from './manifest.mjs';
 import { imageRemoval } from './install-owners.mjs';
+import { buildHomeRemovalPlan } from './home-removal-plan.mjs';
 import { asFormat2, readInstallRecordFile } from './install-record.mjs';
+import { hasOwnPending } from './install-pending.mjs';
+import { pendingUninstallView, pendingImageLine, imageOwnershipUnknown,
+  pendingRemovalPlan, pendingDepartureLine } from './uninstall-pending.mjs';
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { removePermissionRules } from './permissions.mjs';
 import { inspectHost, hasPackageMarks } from './host-inspection.mjs';
@@ -19,7 +23,6 @@ import { rulesOwnerHints } from './rules-ownership.mjs';
 import { rulesDryRunLines, removeRulesForHost, remainingOwnersText } from './uninstall-rules.mjs';
 import { removeEmpty } from './remove-layout.mjs';
 import { recordHomeWriter } from './record-removal.mjs';
-import { buildHomeRemovalPlan } from './home-removal-plan.mjs';
 import { executeHomePlan } from './home-plan-execute.mjs';
 import { outcomeLines, outcomeExitCode, planLines, planExitCode } from './removal-outcomes.mjs';
 
@@ -62,6 +65,8 @@ function imagePolicyFor(decision, hostSide) {
 
 function imageDispositionLine(host, decision, dryRun) {
   if (decision.removeImage) return null;
+  const pendingLine = pendingImageLine(host, decision, dryRun);
+  if (pendingLine) return pendingLine;
   const verb = dryRun ? 'Would leave' : 'Left';
   if (decision.reason === 'no-record') {
     return `${verb} the shared image in ${host.brandRoot} because \
@@ -78,19 +83,21 @@ the installation inventory is incomplete: other installations may use this home.
 // of ANY host of the home promised a question and printed "not installed" instead. The branch decides from
 // the raw record and the inspection only — `legacy` is nobody's host view (D10 item 5) — removes the named
 // host's side either way, and removes the image only on "yes" for a detached host.
-async function uninstallOrphan(options, inspection, candidates) {
+async function uninstallOrphan(options, inspection, candidates, format2) {
   const { host, dryRun = false } = options;
+  const decision = imageRemoval(format2, host);
+  const foreignPending = decision.reason === 'other-pending-hosts';
   const promptOptions = { ...options, candidates: options.candidates ?? candidates };
   if (dryRun) {
     const permissionLine = await removePermissions(host, inspection, true);
     const hostSide = await removeHostSide(host, inspection, { owner: null, dryRun: true });
-    const imagePolicy = { remove: hostSide.detached,
+    const imagePolicy = { remove: hostSide.detached && !foreignPending,
       reason: hostSide.detached ? 'operator confirmed' : 'this host is still attached' };
-    const plan = await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
-      imagePolicy });
+    const plan = pendingRemovalPlan(await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
+      imagePolicy }), host);
     return {
       exitCode: 1,
-      output: [permissionLine, ...hostSide.lines,
+      output: [permissionLine, ...hostSide.lines, ...[pendingImageLine(host, decision, true)].filter(Boolean),
         `A real run would ask whether to remove the shared image of ${host.brandRoot}: \
 no host is recorded as using it.`,
         'If the answer is yes:', ...planLines(plan, { host, detached: hostSide.detached })].join('\n'),
@@ -102,12 +109,12 @@ no host is recorded as using it.`,
 
   const permissionLine = await removePermissions(host, inspection, false);
   const hostSide = await removeHostSide(host, inspection, { owner: null });
-  const imagePolicy = answer === 'remove'
+  const imagePolicy = answer === 'remove' && !foreignPending
     ? { remove: hostSide.detached,
       reason: hostSide.detached ? 'operator confirmed' : 'this host is still attached' }
     : { remove: false, reason: 'no host is recorded as using it' };
-  const plan = await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
-    imagePolicy });
+  const plan = pendingRemovalPlan(await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
+    imagePolicy }), host);
   await removeEmpty(host.commandsDir);
   await removeEmpty(host.rulesDir);
   await removeEmpty(host.agentsDir);
@@ -116,7 +123,9 @@ no host is recorded as using it.`,
 
   let imageLine = null;
   let hint = null;
-  if (answer === 'remove' && !hostSide.detached) {
+  if (foreignPending) {
+    imageLine = pendingImageLine(host, decision, false);
+  } else if (answer === 'remove' && !hostSide.detached) {
     imageLine = `Left the shared image in ${host.brandRoot} because this host's hooks could not be removed.`;
   } else if (answer !== 'remove') {
     imageLine = `Left the shared image in ${host.brandRoot} because no host is recorded as using it \
@@ -130,7 +139,7 @@ and the inventory is incomplete.`;
     : hasMarks ? 'Uninstalled llm-bridge.'
       : `No llm-bridge files or hooks were found in ${host.root}.`;
   return {
-    exitCode: answer === 'remove' && hostSide.detached ? outcomeExitCode(outcomes) : 1,
+    exitCode: answer === 'remove' && hostSide.detached && !foreignPending ? outcomeExitCode(outcomes) : 1,
     output: [heading, permissionLine, ...hostSide.lines, imageLine, hint, ...outcomeLines(outcomes, { host })]
       .filter(Boolean).join('\n'),
   };
@@ -153,19 +162,20 @@ async function uninstallInRun(options = {}) {
   const rawRecord = await readInstallRecordFile(host);
   const ownerKey = normalizeRepoPath(host.root);
   const format2 = rawRecord === null ? null : asFormat2(rawRecord, host);
+  const ownPending = hasOwnPending(format2, host);
   const orphaned = format2 !== null && Object.keys(format2.owners).length === 0;
   const owner = format2?.owners[ownerKey] ?? null;
   // Plan_65 D10: inspect marks and content before permission edits or any other host mutation.
   const inspection = await inspectHost(host, { owner });
-  if (orphaned) return uninstallOrphan(options, inspection, candidates);
+  if (orphaned && !ownPending) return uninstallOrphan(options, inspection, candidates, format2);
 
-  const record = await readInstallRecord(host);
+  const record = pendingUninstallView(format2, host, await readInstallRecord(host));
   let decision = rawRecord === null
     ? (record ? { removeImage: true } : { removeImage: false, reason: 'no-record' })
     : imageDecision(rawRecord, host);
   if (!record && decision.removeImage) decision = { removeImage: false, reason: 'no-record' };
   const lastKnownOwner = decision.reason === 'incomplete-inventory'
-    && Object.hasOwn(format2.owners, ownerKey);
+    && (Object.hasOwn(format2.owners, ownerKey) || ownPending);
   let lastOwnerHint = null;
   if (lastKnownOwner && !dryRun) {
     const answer = await askRemoval(host, 'last-owner', options);
@@ -186,9 +196,10 @@ async function uninstallInRun(options = {}) {
   if (dryRun) {
     const hostSide = await removeHostSide(host, inspection, { owner, dryRun: true });
     const imagePolicy = imagePolicyFor(decision, hostSide);
-    const plan = await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
-      imagePolicy });
+    const plan = pendingRemovalPlan(await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
+      imagePolicy }), host);
     const lines = [permissionLine, ...hostSide.lines];
+    if (ownPending) lines.push(pendingDepartureLine(format2, host, hostSide.detached, true));
     const blockedImageLine = decision.removeImage && !hostSide.detached
       ? `Would leave the shared image in ${host.brandRoot} because this host's hooks could not be removed.`
       : null;
@@ -202,15 +213,15 @@ using ${host.brandRoot}.`);
     }));
     lines.push(...planLines(plan, { host, detached: hostSide.detached }));
     return {
-      exitCode: decision.reason === 'incomplete-inventory' || !hostSide.detached ? 1 : planExitCode(plan),
+      exitCode: imageOwnershipUnknown(decision) || !hostSide.detached ? 1 : planExitCode(plan),
       output: lines.join('\n'),
     };
   }
 
   const hostSide = await removeHostSide(host, inspection, { owner });
   const imagePolicy = imagePolicyFor(decision, hostSide);
-  const plan = await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
-    imagePolicy });
+  const plan = pendingRemovalPlan(await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
+    imagePolicy }), host);
   // Plan_65 D10 item 4: a host still attached keeps everything it shares — its rules ownership, its
   // place in the record — so a repeat run after the fix finds it whole.
   const rulesResult = await removeRulesForHost({
@@ -232,7 +243,7 @@ using ${host.brandRoot}.`);
     ? 'Uninstalled llm-bridge.'
     : stillAttachedLine(host);
   return {
-    exitCode: decision.reason === 'incomplete-inventory' || !hostSide.detached ? 1 : outcomeExitCode(outcomes),
+    exitCode: imageOwnershipUnknown(decision) || !hostSide.detached ? 1 : outcomeExitCode(outcomes),
     output: [heading, permissionLine, ...hostSide.lines, ...rulesOutput, imageLine, lastOwnerHint,
       ...outcomeLines(outcomes, { host })].filter(Boolean).join('\n'),
   };

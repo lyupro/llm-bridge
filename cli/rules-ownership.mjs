@@ -1,7 +1,7 @@
 /** Classifies rules ownership from read-only installation-record evidence and unresolved legacy hints. */
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { validateFormat2 } from './install-owners.mjs';
-import { pendingEntries } from './install-pending.mjs';
+import { pendingEntries, withoutPending } from './install-pending.mjs';
 import { installRecordPath } from './install-record.mjs';
 import { normalizedRulesOwner, rulesPathIdentity as identity } from './rules-owners.mjs';
 
@@ -46,7 +46,7 @@ function incompleteReason(record) {
   return null;
 }
 
-export async function classifyRulesOwnership(index, rulesPath, currentRecordPath) {
+export async function classifyRulesOwnership(index, rulesPath, currentRecordPath, departingHost) {
   if (index === undefined) throw new Error('rules index is required; use null for an absent index');
   if (typeof rulesPath !== 'string' || !rulesPath) throw new Error('rules path is required');
   if (typeof currentRecordPath !== 'string' || !currentRecordPath) {
@@ -57,7 +57,11 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
   const reads = new Map();
   const load = (recordPath) => {
     const key = identity(recordPath);
-    if (!reads.has(key)) reads.set(key, readRecord(recordPath));
+    if (!reads.has(key)) reads.set(key, readRecord(recordPath).then((loaded) => {
+      // Plan_83 D5: classify after this departure; every foreign entry stays unknown.
+      return loaded.record && departingHost && key === identity(currentRecordPath)
+        ? { record: withoutPending(loaded.record, departingHost) } : loaded;
+    }));
     return reads.get(key);
   };
   const matches = (owner) => owner.rules !== undefined && identity(owner.rules.path) === target;
@@ -96,13 +100,21 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
       reason: owner ? 'recorded owner does not reference this rules file'
         : 'legacy owner is not in the current installation record' });
   }
+  // Plan_83 D1/D5: an old or missing index cannot erase foreign intent in our readable record.
+  if (departingHost) {
+    const loaded = await load(currentRecordPath);
+    if (loaded.record?.pending && !result.unknown.some((ref) => ref.legacy === undefined
+      && identity(ref.recordPath) === identity(currentRecordPath))) {
+      result.unknown.push({ recordPath: currentRecordPath, reason: incompleteReason(loaded.record) });
+    }
+  }
   return result;
 }
 
 export async function remainingRulesOwnership(index, host, record) {
   const recordPath = installRecordPath(host);
-  const result = await classifyRulesOwnership(index, record.rules.path, recordPath);
-  if (index === null) return null;
+  const result = await classifyRulesOwnership(index, record.rules.path, recordPath, host);
+  if (index === null && !result.unknown.length) return null;
   const key = normalizedRulesOwner(host);
   // OW-086 / Plan_65 D5: departure proves only this host gone, never an unverified neighbour.
   return {
