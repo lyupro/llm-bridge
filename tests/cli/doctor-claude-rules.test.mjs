@@ -19,7 +19,13 @@ test('doctor confirms planned host rules match this package immediately after th
   }
   const result = await diagnose({ host, codexProbe, bridgeProbe, currentPackage: ownPackage });
   const index = result.checks.findIndex((item) => item.key === 'rules');
-  assert.deepEqual(result.checks[index + 1], {
+  assert.ok(index >= 0);
+  const ownershipKeys = ['rules owners', 'rules ownership'];
+  const hostRulesIndex = result.checks.findIndex((item, checkIndex) =>
+    checkIndex > index && !ownershipKeys.includes(item.key));
+  assert.ok(result.checks.slice(index + 1, hostRulesIndex)
+    .every((item) => ownershipKeys.includes(item.key)));
+  assert.deepEqual(result.checks[hostRulesIndex], {
     key: 'claudeRules',
     status: 'ok',
     value: `${rules.length} host rules file(s) match this package`,

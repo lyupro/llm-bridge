@@ -163,7 +163,7 @@ export async function diagnose({
   const stateDir = brandStateDir(host.brandRoot);
   checks.push(await sessionAgentsCheck({ stateDir }));
   const rules = await rulesCheck(host, record);
-  checks.push(rules);
+  checks.push(...rules);
   const claudeRules = await claudeRulesCheck(host, record);
   checks.push(claudeRules);
   checks.push(await permissionsCheck(host));
@@ -248,7 +248,7 @@ export async function diagnose({
   }
 
   return {
-    exitCode: !record || recordBroken || missingFiles.length || agents.status === 'fail' || rules.status === 'fail'
+    exitCode: !record || recordBroken || missingFiles.length || agents.status === 'fail' || rules[0].status === 'fail'
       || homeImage.status === 'fail' || claudeRules.status === 'fail'
       || hostContractStatus === 'fail' || retention.status === 'fail' || conventions.status === 'fail'
       || runsRoot.status === 'fail' || projectRuns.status === 'fail'

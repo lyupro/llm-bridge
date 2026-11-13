@@ -8,7 +8,9 @@ import {
 } from './manifest.mjs';
 import { plannedContent } from './copy.mjs';
 import { RULE_LIST_NAMES, inspectPermissions } from './permissions.mjs';
-import { readRulesRegistry } from './rules-owners.mjs';
+import { readRulesIndex } from './rules-index.mjs';
+import { classifyRulesOwnership } from './rules-ownership.mjs';
+import { installRecordPath } from './install-record.mjs';
 import { parseFrontmatter } from '../src/home/lib/frontmatter.mjs';
 import { check } from './doctor-format.mjs';
 
@@ -97,23 +99,33 @@ export async function conventionsCheck(host) {
 }
 
 export async function rulesCheck(host, record) {
-  if (!record) return check('rules', 'warn', 'cannot check before installation');
+  if (!record) return [check('rules', 'warn', 'cannot check before installation')];
   if (!record.rules) {
-    return check('rules', 'warn', 'rules were not installed by this installation; install or update will add them');
+    return [check('rules', 'warn', 'rules were not installed by this installation; install or update will add them')];
   }
-  let registry;
+  let index;
   try {
-    registry = await readRulesRegistry(host);
+    index = await readRulesIndex(host);
   } catch (err) {
     // Keep every diagnostic visible: package removal on a broken registry left the host without its watchdog.
-    return check('rules', 'fail', err.message);
+    return [check('rules', 'fail', err.message)];
   }
-  const ownerNote = registry?.owners.length > 1 ? `; ${registry.owners.length} owners` : '';
+  const ownership = await classifyRulesOwnership(index, record.rules.path, installRecordPath(host));
+  const ownershipChecks = [
+    ...ownership.live.map(({ recordPath, owners }) => check('rules owners', 'ok',
+      `${recordPath}: ${owners.join(', ')}`)),
+    ...ownership.unknown.map(({ legacy, recordPath, reason }) => check('rules ownership', 'warn',
+      `unknown ${legacy === undefined ? recordPath : `${legacy} (record ${recordPath})`}: ${reason}`)),
+    ...ownership.detached.map(({ recordPath }) => check('rules ownership', 'warn',
+      `detached record ${recordPath}: complete inventory has no owner of this rules file`)),
+  ];
+  // OW-086: file integrity cannot make unresolved ownership healthy; keep its evidence separate.
   const fingerprint = await fileFingerprint(record.rules.path);
-  if (!fingerprint) return check('rules', 'fail', `${record.rules.path}${ownerNote ? ` (${registry.owners.length} owners)` : ''}`);
-  return fingerprint === record.rules.fingerprint
-    ? check('rules', 'ok', `${record.rules.path} (matches record${ownerNote})`)
-    : check('rules', 'warn', `${record.rules.path} (modified after installation${ownerNote})`);
+  if (!fingerprint) return [check('rules', 'fail', record.rules.path), ...ownershipChecks];
+  const ownershipWarning = ownership.unknown.length > 0 || ownership.detached.length > 0;
+  return [fingerprint === record.rules.fingerprint
+    ? check('rules', ownershipWarning ? 'warn' : 'ok', `${record.rules.path} (matches record)`)
+    : check('rules', 'warn', `${record.rules.path} (modified after installation)`), ...ownershipChecks];
 }
 
 export async function permissionsCheck(host) {
