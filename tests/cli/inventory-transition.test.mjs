@@ -9,7 +9,6 @@ import { withOwner } from '../../cli/install-owners.mjs';
 import { resolveHost } from '../../cli/hosts.mjs';
 import {
   normalizedRulesOwner,
-  RULES_REGISTRY_VERSION,
   rulesRegistryPath,
 } from '../../cli/rules-owners.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
@@ -71,7 +70,7 @@ test('asks with newline-separated text and omits this host from registry candida
   await fs.mkdir(otherRoot, { recursive: true });
   await fs.mkdir(host.codexRulesDir, { recursive: true });
   await fs.writeFile(rulesRegistryPath(host), JSON.stringify({
-    version: RULES_REGISTRY_VERSION,
+    version: 1,
     owners: [ownRoot, otherRoot],
   }) + '\n');
   let question;

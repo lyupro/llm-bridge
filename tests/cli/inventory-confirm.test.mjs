@@ -10,7 +10,7 @@ import { validateFormat2, withOwner } from '../../cli/install-owners.mjs';
 import { withLifecycle } from '../../cli/lifecycle-transaction.mjs';
 import { resolveHost } from '../../cli/hosts.mjs';
 import {
-  normalizedRulesOwner, RULES_REGISTRY_VERSION, rulesRegistryPath,
+  normalizedRulesOwner, rulesRegistryPath,
 } from '../../cli/rules-owners.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
@@ -82,7 +82,7 @@ function noPrompt() {
 async function seedHints(host, roots) {
   await fs.mkdir(host.codexRulesDir, { recursive: true });
   await fs.writeFile(rulesRegistryPath(host), JSON.stringify({
-    version: RULES_REGISTRY_VERSION, owners: roots,
+    version: 1, owners: roots,
   }) + '\n');
 }
 

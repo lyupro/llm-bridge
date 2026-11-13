@@ -1,14 +1,8 @@
 /** Classifies rules ownership from read-only installation-record evidence and unresolved legacy hints. */
-import path from 'node:path';
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { validateFormat2 } from './install-owners.mjs';
 import { installRecordPath } from './install-record.mjs';
-import { normalizedRulesOwner } from './rules-owners.mjs';
-
-function identity(file) {
-  // Plan_65 D5: lexical identity is deliberate; resolving links changes the recorded owner keys.
-  return normalizedRulesOwner({ root: path.resolve(file) });
-}
+import { normalizedRulesOwner, rulesPathIdentity as identity } from './rules-owners.mjs';
 
 async function readRecord(recordPath) {
   let record;

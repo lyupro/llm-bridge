@@ -6,7 +6,7 @@ import test from 'node:test';
 import {
   askPurgeConsent, askRemoval, lastOwnerQuestion, orphanQuestion, purgeDataQuestion, purgeInventoryQuestion, removalHint,
 } from '../../cli/inventory-removal.mjs';
-import { normalizedRulesOwner, RULES_REGISTRY_VERSION, rulesRegistryPath } from '../../cli/rules-owners.mjs';
+import { normalizedRulesOwner, rulesRegistryPath } from '../../cli/rules-owners.mjs';
 import { resolveHost } from '../../cli/hosts.mjs';
 import { installRecordPath } from '../../cli/install-record.mjs';
 import { withOwner } from '../../cli/install-owners.mjs';
@@ -103,7 +103,7 @@ test('an unknown kind fails loudly even without a terminal', async (t) => {
 test('reads registry candidates when askRemoval receives none explicitly', async (t) => {
   const { host, ownRoot, otherRoot } = await fixture(t);
   await fs.mkdir(host.codexRulesDir, { recursive: true });
-  const registry = { version: RULES_REGISTRY_VERSION, owners: [ownRoot, otherRoot] };
+  const registry = { version: 1, owners: [ownRoot, otherRoot] };
   await fs.writeFile(rulesRegistryPath(host), `${JSON.stringify(registry)}\n`);
   const prompt = countingPrompt('no');
 

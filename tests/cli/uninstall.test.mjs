@@ -60,16 +60,15 @@ test('uninstall leaves shared rules for another owner and removes them for the l
   await install({ host: first });
   await install({ host: second });
   const rulesPath = path.join(codexHome, 'rules', 'llm-bridge.rules');
-  assert.equal((await readRulesRegistry(first)).owners.length, 2);
+  assert.deepEqual((await readRulesRegistry(first)).records, [installRecordPath(first), installRecordPath(second)]);
 
   const removedFirst = await uninstall({ host: first });
-  assert.match(removedFirst.output, /1 ownership reference cannot be verified/);
-  assert.ok(removedFirst.output.includes(normalizeRepoPath(second.root)
-    + ' (legacy owner is not in the current installation record)'));
+  assert.equal(removedFirst.exitCode, 0);
+  assert.match(removedFirst.output, /1 other owner remains/);
+  assert.doesNotMatch(removedFirst.output, /cannot be verified/);
   await fs.access(rulesPath);
   assert.deepEqual(await readRulesRegistry(second), {
-    version: 1,
-    owners: [normalizeRepoPath(second.root)],
+    version: 2, records: [installRecordPath(second)], owners: [],
   });
 
   const dryRun = await uninstall({ host: second, dryRun: true });
@@ -373,7 +372,8 @@ for (const scenario of ['live', 'detached', 'snapshot', 'mixed', 'unknown']) {
       assert.deepEqual(await fs.readFile(record.rules.path), await fs.readFile('src/codex/rules/llm-bridge.rules'));
     }
     assert.deepEqual(await readRulesRegistry(host), scenario === 'snapshot'
-      ? { version: 1, owners: refs } : { version: 2, owners: scenario === 'mixed' ? ['vanished'] : [], records: refs });
+      ? { version: 2, owners: refs, records: [] }
+      : { version: 2, owners: scenario === 'mixed' ? ['vanished'] : [], records: refs.slice(1) });
   });
 }
 

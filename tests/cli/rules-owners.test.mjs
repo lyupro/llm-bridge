@@ -7,6 +7,10 @@ import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 import { installRecordPath, readInstallRecord } from '../../cli/install-record.mjs';
 import { install } from '../../cli/install.mjs';
 import { update } from '../../cli/update.mjs';
+import { resolveHost } from '../../cli/hosts.mjs';
+import { uninstall } from '../../cli/uninstall.mjs';
+import { purge } from '../../cli/uninstall-purge.mjs';
+import { removeRulesForHost } from '../../cli/uninstall-rules.mjs';
 import { fixture } from './host-fixture.mjs';
 import {
   addRulesOwner,
@@ -30,8 +34,8 @@ test('concurrent owner registrations retain every owner', async (t) => {
   await Promise.all(hosts.map((host) => addRulesOwner(host)));
 
   const registry = await readRulesRegistry(hosts[0]);
-  assert.equal(registry.owners.length, hosts.length);
-  for (const host of hosts) assert.ok(registry.owners.includes(normalizedRulesOwner(host)));
+  assert.deepEqual(registry.owners, []);
+  assert.deepEqual(registry.records, [path.resolve(installRecordPath(hosts[0]))]);
 });
 
 test('a lock left behind by a dead process does not block the next owner', async (t) => {
@@ -48,7 +52,7 @@ test('a lock left behind by a dead process does not block the next owner', async
 
   const registry = await addRulesOwner(host);
 
-  assert.deepEqual(registry.owners, [normalizedRulesOwner(host)]);
+  assert.deepEqual(registry, { version: 2, records: [path.resolve(installRecordPath(host))], owners: [] });
   await assert.rejects(() => fs.stat(lockPath), { code: 'ENOENT' });
 });
 
@@ -79,7 +83,7 @@ test('a lock a live process is holding is waited for, not stolen', async (t) => 
   t.after(() => clearTimeout(release));
   const registry = await addRulesOwner(host);
 
-  assert.deepEqual(registry.owners, [normalizedRulesOwner(host)]);
+  assert.deepEqual(registry, { version: 2, records: [path.resolve(installRecordPath(host))], owners: [] });
 });
 
 async function registryFixture(t, registry) {
@@ -166,15 +170,15 @@ for (const registry of [
   });
 }
 
-test('absent and version-1 registries keep version-1 registration and last-owner removal', async (t) => {
+test('an absent registry becomes version 2 and explicit last-record removal deletes it', async (t) => {
   const host = await registryFixture(t, null);
   assert.equal(await readRulesRegistry(host), null);
   assert.equal(await removeRulesOwner(host), null);
-  const expected = { version: 1, owners: [normalizedRulesOwner(host)] };
-  assert.deepEqual(await addRulesOwner(host), expected);
+  const expected = { version: 2, records: [path.resolve(installRecordPath(host))], legacy: [] };
+  assert.deepEqual(await addRulesOwner(host), { version: 2, records: expected.records, owners: [] });
   assert.deepEqual(JSON.parse(await fs.readFile(rulesRegistryPath(host))), expected);
   await addRulesOwner(host);
-  assert.deepEqual(await removeRulesOwner(host), { version: 1, owners: [] });
+  assert.deepEqual(await removeRulesOwner(host, { removeRecord: true }), { version: 2, records: [], owners: [] });
   assert.equal(await readRulesRegistry(host), null);
 });
 
@@ -216,3 +220,139 @@ test('a failed v2 atomic publication leaves the index intact and releases its lo
   assert.deepEqual(await fs.readFile(rulesRegistryPath(host)), before);
   assert.deepEqual(await fs.readdir(host.codexRulesDir), [path.basename(rulesRegistryPath(host))]);
 });
+
+// OW-086 / Plan_83 B3b: migration proves only the exact installing host hint, never its neighbours or aliases.
+for (const version of [1, 2]) {
+  test('v' + version + ' registration replaces only its own legacy key with record evidence', async (t) => {
+    const host = await registryFixture(t, null);
+    const own = normalizedRulesOwner(host);
+    const others = ['C:/Other/Host/', 'C:/Other/Host/', own.toUpperCase() + '/'];
+    const hints = [own, ...others, own];
+    await fs.writeFile(rulesRegistryPath(host), JSON.stringify(version === 1
+      ? { version, owners: hints } : { version, records: [], legacy: hints }));
+    await addRulesOwner(host);
+    assert.deepEqual(JSON.parse(await fs.readFile(rulesRegistryPath(host))), {
+      version: 2, records: [path.resolve(installRecordPath(host))], legacy: others,
+    });
+  });
+}
+
+test('version-1 removal migrates other hints losslessly to version 2', async (t) => {
+  const host = await registryFixture(t, null);
+  const others = ['C:/Other/Host/', 'C:/Other/Host/'];
+  await fs.writeFile(rulesRegistryPath(host), JSON.stringify({ version: 1,
+    owners: [normalizedRulesOwner(host), ...others] }));
+  await removeRulesOwner(host);
+  assert.deepEqual(JSON.parse(await fs.readFile(rulesRegistryPath(host))), { version: 2, records: [], legacy: others });
+});
+
+test('repeat registration performs no atomic write for the same lexical record identity', async (t) => {
+  const host = await registryFixture(t, null);
+  await addRulesOwner(host);
+  const before = await fs.stat(rulesRegistryPath(host));
+  const bytes = await fs.readFile(rulesRegistryPath(host));
+  const rename = fs.rename;
+  t.mock.method(fs, 'rename', async (source, target) => {
+    assert.notEqual(target, rulesRegistryPath(host), 'unchanged registry must not be republished');
+    return rename(source, target);
+  });
+  const alias = path.join(host.brandRoot, '..', path.basename(host.brandRoot), '.installed.json');
+  await addRulesOwner({ ...host, brandInstallRecordPath: alias });
+  assert.deepEqual(await fs.readFile(rulesRegistryPath(host)), bytes);
+  assert.equal((await fs.stat(rulesRegistryPath(host))).mtimeMs, before.mtimeMs);
+});
+
+test('two homes registering into an absent index retain both record paths', async (t) => {
+  const first = await registryFixture(t, null);
+  const second = { ...first, root: path.join(first.root, 'second'), brandRoot: path.join(first.brandRoot, 'second') };
+  await Promise.all([addRulesOwner(first), addRulesOwner(second)]);
+  const raw = JSON.parse(await fs.readFile(rulesRegistryPath(first)));
+  assert.equal(raw.version, 2);
+  assert.deepEqual(raw.legacy, []);
+  assert.deepEqual(new Set(raw.records), new Set([installRecordPath(first), installRecordPath(second)]));
+});
+
+test('explicit record retirement uses lexical identity and preserves other records and legacy hints', async (t) => {
+  const host = await registryFixture(t, null);
+  const own = installRecordPath(host);
+  const alias = path.dirname(own) + '/unused/../.installed.json';
+  const other = path.join(host.brandRoot, 'other', '.installed.json');
+  await fs.writeFile(rulesRegistryPath(host), JSON.stringify({ version: 2, records: [own, alias, other],
+    legacy: [normalizedRulesOwner(host), 'unknown'] }));
+  await removeRulesOwner(host, { removeRecord: true });
+  assert.deepEqual(JSON.parse(await fs.readFile(rulesRegistryPath(host))), {
+    version: 2, records: [other], legacy: ['unknown'],
+  });
+});
+
+// OW-086 / Plan_83 B3b: retiring a home must not leave an ENOENT reference that blocks the next home.
+for (const shared of [true, false]) {
+  test('uninstall ' + (shared ? 'keeps a record with another live owner' : 'drops the last owner record'), async (t) => {
+    const { root, host: first } = await fixture(t);
+    const second = resolveHost({ host: path.join(root, 'second-host'),
+      brandRoot: shared ? first.brandRoot : path.join(root, 'second-home'),
+      codexHome: path.dirname(first.codexRulesDir) });
+    assert.equal((await install({ host: first })).exitCode, 0);
+    assert.equal((await install({ host: second })).exitCode, 0);
+    const records = shared ? [installRecordPath(first)] : [installRecordPath(first), installRecordPath(second)];
+    assert.deepEqual(await readRulesRegistry(first), { version: 2, records, owners: [] });
+    const result = await uninstall({ host: first });
+    assert.equal(result.exitCode, 0);
+    assert.match(result.output, /1 other owner remains/);
+    assert.doesNotMatch(result.output, /cannot be verified/);
+    assert.deepEqual(await readRulesRegistry(second), { version: 2, records: [installRecordPath(second)], owners: [] });
+    await fs.access(path.join(first.codexRulesDir, 'llm-bridge.rules'));
+    assert.equal((await uninstall({ host: second })).exitCode, 0);
+    assert.equal(await readRulesRegistry(second), null);
+    await assert.rejects(fs.access(path.join(first.codexRulesDir, 'llm-bridge.rules')), { code: 'ENOENT' });
+  });
+}
+
+test('a purged home no longer blocks the other home uninstall', async (t) => {
+  const { root, host: first } = await fixture(t);
+  const second = resolveHost({ host: path.join(root, 'second-host'), brandRoot: path.join(root, 'second-home'),
+    codexHome: path.dirname(first.codexRulesDir) });
+  assert.equal((await install({ host: first })).exitCode, 0);
+  assert.equal((await install({ host: second })).exitCode, 0);
+  // Plan_83 B3b: use the real purge API; uninstall ignores a purge option and keeps operator files.
+  const purged = await purge({ host: first, isTTY: true, prompt: async () => 'yes' });
+  assert.equal(purged.exitCode, 0, purged.output);
+  await assert.rejects(fs.access(installRecordPath(first)), { code: 'ENOENT' });
+  await assert.rejects(fs.access(first.brandRoot), { code: 'ENOENT' }, purged.output);
+  assert.deepEqual(await readRulesRegistry(second), { version: 2, records: [installRecordPath(second)], owners: [] });
+  const removed = await uninstall({ host: second });
+  assert.equal(removed.exitCode, 0, removed.output);
+  assert.doesNotMatch(removed.output, /cannot be verified/);
+  await assert.rejects(fs.access(path.join(second.codexRulesDir, 'llm-bridge.rules')), { code: 'ENOENT' });
+  assert.equal(await readRulesRegistry(second), null);
+});
+
+for (const condition of ['incomplete', 'pending', 'legacy', 'unreadable', 'missing', 'malformed']) {
+  test('uninstall retains its own ' + condition + ' indexed record as unknown', async (t) => {
+    const { host } = await fixture(t);
+    assert.equal((await install({ host })).exitCode, 0);
+    const file = installRecordPath(host);
+    const raw = JSON.parse(await fs.readFile(file));
+    if (condition === 'incomplete') raw.inventory = 'incomplete';
+    if (condition === 'pending') raw.pending = false;
+    if (condition === 'legacy') raw.legacy = { ...raw.image, files: [] };
+    if (['incomplete', 'pending', 'legacy'].includes(condition)) await fs.writeFile(file, JSON.stringify(raw));
+    const rules = Object.values(raw.owners)[0].rules;
+    const readFile = fs.readFile;
+    if (['unreadable', 'missing', 'malformed'].includes(condition)) {
+      t.mock.method(fs, 'readFile', async (target, ...args) => {
+        if (target === file) {
+          if (condition === 'malformed') return '{';
+          throw Object.assign(new Error('record unavailable'), { code: condition === 'missing' ? 'ENOENT' : 'EACCES' });
+        }
+        return readFile(target, ...args);
+      });
+    }
+    const result = await removeRulesForHost({ host, record: { rules }, detached: true,
+      registry: await readRulesRegistry(host), registryError: null });
+    assert.equal(result.registryError, null);
+    assert.match(result.lines.join('\n'), /cannot be verified/);
+    assert.deepEqual(await readRulesRegistry(host), { version: 2, records: [file], owners: [] });
+    await fs.access(rules.path);
+  });
+}

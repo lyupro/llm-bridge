@@ -1,7 +1,7 @@
 {
   "name": "@lyupro/llm-bridge",
   "version": "0.7.0",
-  "description": "Claude Code-to-Codex delegation with 8 guards, 6539 tests, zero runtime dependencies, and zero build steps.",
+  "description": "Claude Code-to-Codex delegation with 8 guards, 6554 tests, zero runtime dependencies, and zero build steps.",
   "keywords": [
     "claude-code",
     "codex",

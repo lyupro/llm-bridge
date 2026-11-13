@@ -11,7 +11,7 @@ function stringList(value, label) {
   return [...value];
 }
 
-function validateIndex(parsed) {
+export function validateIndex(parsed) {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('rules ownership registry must be an object');
   }

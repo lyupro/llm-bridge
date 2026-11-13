@@ -19,7 +19,6 @@ import { PERMISSION_RULES } from '../../cli/settings-declarations.mjs';
 import { RULES_REGISTRY_NAME } from '../../cli/rules-owners.mjs';
 import { uninstall } from '../../cli/uninstall.mjs';
 import { update } from '../../cli/update.mjs';
-import { normalizeRepoPath } from '../../src/home/lib/runner/project-dir.mjs';
 import { allFiles, fixture, formatOneRecord } from './host-fixture.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
@@ -168,7 +167,7 @@ test('a corrupt rules registry aborts update before removing or writing any file
   assert.deepEqual(await allFiles(root), before);
 });
 
-test('install and update keep one normalized owner without duplicates', async (t) => {
+test('install and update keep one installation-record path without duplicates', async (t) => {
   const root = makeTempTree('bridge-owners-');
   t.after(() => removeTempTree(root));
   const host = resolveHost({
@@ -178,15 +177,15 @@ test('install and update keep one normalized owner without duplicates', async (t
   });
   await install({ host });
   assert.deepEqual(await readRulesRegistry(host), {
-    version: 1,
-    owners: [normalizeRepoPath(host.root)],
+    version: 2,
+    records: [path.resolve(installRecordPath(host))], legacy: [],
   });
   await install({ host });
   await fs.rm(rulesRegistryPath(host));
   assert.equal((await update({ host })).exitCode, 0);
   assert.deepEqual(await readRulesRegistry(host), {
-    version: 1,
-    owners: [normalizeRepoPath(host.root)],
+    version: 2,
+    records: [path.resolve(installRecordPath(host))], legacy: [],
   });
 });
 
@@ -219,7 +218,15 @@ test('second install is a complete no-op with unchanged mtimes and no new backup
     record: (await fs.stat(recordPath)).mtimeMs,
     settings: (await fs.stat(host.settingsPath)).mtimeMs,
     backups: await backups(host),
+    registry: await fs.readFile(rulesRegistryPath(host)),
+    registryMtime: (await fs.stat(rulesRegistryPath(host))).mtimeMs,
   };
+  // OW-086 / Plan_83 B3b: a repeated install must not republish an unchanged index.
+  const rename = fs.rename;
+  t.mock.method(fs, 'rename', async (source, target) => {
+    assert.notEqual(target, rulesRegistryPath(host), 'unchanged registry must not be rewritten');
+    return rename(source, target);
+  });
   const result = await install({ host });
   assert.equal(result.exitCode, 0);
   assert.match(result.output, /nothing to do/);
@@ -229,6 +236,8 @@ test('second install is a complete no-op with unchanged mtimes and no new backup
   assert.equal((await fs.stat(recordPath)).mtimeMs, before.record);
   assert.equal((await fs.stat(host.settingsPath)).mtimeMs, before.settings);
   assert.deepEqual(await backups(host), before.backups);
+  assert.deepEqual(await fs.readFile(rulesRegistryPath(host)), before.registry);
+  assert.equal((await fs.stat(rulesRegistryPath(host))).mtimeMs, before.registryMtime);
 });
 
 // The no-op branch reports the permission set by reading it, never by granting it: a sentence about

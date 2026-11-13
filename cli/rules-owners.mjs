@@ -7,11 +7,12 @@ import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { withOutsideFileLock } from '../src/home/lib/file-lock.mjs';
 import { createHomeWriter } from '../src/home/lib/home-write.mjs';
-import { INSTALL_RECORD_NAME, installRecordPath } from './install-record.mjs';
+import { installRecordPath } from './install-record.mjs';
+import { validateIndex } from './rules-index.mjs';
 export { isLockTaken } from '../src/home/lib/file-lock.mjs';
 
 export const RULES_REGISTRY_NAME = `.${PACKAGE_NAME}-rules.json`;
-export const RULES_REGISTRY_VERSION = 1;
+export const RULES_REGISTRY_VERSION = 2;
 
 export function rulesRegistryPath(host) {
   return path.join(host.codexRulesDir, RULES_REGISTRY_NAME);
@@ -21,37 +22,23 @@ export function normalizedRulesOwner(host) {
   return normalizeRepoPath(host.root);
 }
 
+export function rulesPathIdentity(file) {
+  // Plan_65 D5 / Plan_83 B3b: lexical identity must not resolve links into different owner keys.
+  return normalizedRulesOwner({ root: path.resolve(file) });
+}
+
 function normalizeOwners(owners) {
   return [...new Set(owners.map((owner) => normalizeRepoPath(owner)))];
 }
 
 function validateRegistry(parsed) {
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('rules ownership registry must be an object');
-  }
+  // OW-086 / Plan_83 B3b: the reader and writers must accept exactly the same index formats.
+  const index = validateIndex(parsed);
   if (parsed.version === 2) {
-    for (const field of ['records', 'legacy']) {
-      if (!Array.isArray(parsed[field])
-        || parsed[field].some((item) => typeof item !== 'string' || !item)) {
-        throw new Error(`rules ownership registry ${field} must be a list of non-empty strings`);
-      }
-    }
-    if (parsed.records.some((file) => !path.isAbsolute(file) || path.basename(file) !== INSTALL_RECORD_NAME)) {
-      throw new Error(`rules ownership registry records must be absolute paths to ${INSTALL_RECORD_NAME}`);
-    }
     // OW-086: unresolved legacy hints must remain visible to callers not yet using record evidence.
-    return { version: 2, owners: [...parsed.legacy], records: [...parsed.records] };
+    return { version: 2, owners: index.legacy, records: index.records };
   }
-  if (parsed.version !== RULES_REGISTRY_VERSION) {
-    throw new Error('rules ownership registry version must be 1 or 2');
-  }
-  if (!Array.isArray(parsed.owners) || parsed.owners.some((owner) => typeof owner !== 'string' || !owner)) {
-    throw new Error('rules ownership registry owners must be a list of non-empty strings');
-  }
-  return {
-    version: RULES_REGISTRY_VERSION,
-    owners: normalizeOwners(parsed.owners),
-  };
+  return { version: 1, owners: normalizeOwners(index.legacy) };
 }
 
 async function loadRulesRegistry(host) {
@@ -111,22 +98,18 @@ export async function addRulesOwner(host) {
     // Read after locking so a concurrent installer is merged instead of overwritten.
     const loaded = await loadRulesRegistry(host);
     const owner = normalizedRulesOwner(host);
-    const current = loaded?.registry || { version: RULES_REGISTRY_VERSION, owners: [] };
-    if (current.version === 2) {
-      const records = [...current.records];
-      const recordPath = path.resolve(installRecordPath(host));
-      const identity = (file) => normalizedRulesOwner({ root: path.resolve(file) });
-      if (!records.some((file) => identity(file) === identity(recordPath))) records.push(recordPath);
-      const registry = { version: 2, records, legacy: current.owners };
-      if (!hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
-      return validateRegistry(registry);
-    }
+    const current = loaded ? validateIndex(loaded.raw) : { records: [], legacy: [] };
+    const records = [...current.records];
+    const recordPath = path.resolve(installRecordPath(host));
+    if (!records.some((file) => rulesPathIdentity(file) === rulesPathIdentity(recordPath))) records.push(recordPath);
+    // OW-086 / Plan_83 B3b: only this exact host key is now proved by its record; preserve all other hints.
     const registry = {
       version: RULES_REGISTRY_VERSION,
-      owners: normalizeOwners([...current.owners, owner]),
+      records,
+      legacy: current.legacy.filter((candidate) => candidate !== owner),
     };
     if (!loaded || !hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
-    return registry;
+    return validateRegistry(registry);
   });
 }
 
@@ -136,22 +119,21 @@ export function remainingRulesOwners(registry, host) {
   return registry.owners.filter((candidate) => candidate !== owner);
 }
 
-export async function removeRulesOwner(host) {
+export async function removeRulesOwner(host, { removeRecord = false } = {}) {
   const initial = await loadRulesRegistry(host);
   if (!initial) return null;
   return withRegistryLock(host, async () => {
     const loaded = await loadRulesRegistry(host);
     if (!loaded) return null;
-    const registry = loaded.registry.version === 2 ? {
-      version: 2,
-      records: loaded.registry.records,
-      legacy: loaded.registry.owners.filter((owner) => owner !== normalizedRulesOwner(host)),
-    } : {
+    const current = validateIndex(loaded.raw);
+    const recordKey = rulesPathIdentity(installRecordPath(host));
+    const registry = {
       version: RULES_REGISTRY_VERSION,
-      owners: remainingRulesOwners(loaded.registry, host),
+      records: current.records.filter((file) => !removeRecord || rulesPathIdentity(file) !== recordKey),
+      legacy: current.legacy.filter((owner) => owner !== normalizedRulesOwner(host)),
     };
-    // Plan_65 D5 / OW-086: dropping a host hint cannot attest that a bridge-home record is unused.
-    if (registry.version === 2 ? registry.records.length || registry.legacy.length : registry.owners.length) {
+    // OW-086 / Plan_83 B3b: without explicit record evidence, departure only clears this host's hint.
+    if (registry.records.length || registry.legacy.length) {
       if (!hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
     } else {
       await fs.rm(rulesRegistryPath(host), { force: true });

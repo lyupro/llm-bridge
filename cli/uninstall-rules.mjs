@@ -4,7 +4,8 @@
  * decisions prevents their behavior and output from drifting apart.
  */
 import { fileFingerprint } from './manifest.mjs';
-import { removeRulesOwner } from './rules-owners.mjs';
+import { removeRulesOwner, rulesPathIdentity } from './rules-owners.mjs';
+import { installRecordPath } from './install-record.mjs';
 import { readRulesIndex } from './rules-index.mjs';
 import { remainingRulesOwnership } from './rules-ownership.mjs';
 import { removeOutside } from './record-removal.mjs';
@@ -68,7 +69,14 @@ export async function removeRulesForHost({ host, record, registry, registryError
       // OW-086 / Plan_65 D5: classify before detaching the legacy hint; unknown evidence keeps the file.
       const index = await readRulesIndex(host);
       if (detachedRecord.rules) ownership = await remainingRulesOwnership(index, host, record);
-      await removeRulesOwner(host);
+      const recordKey = rulesPathIdentity(installRecordPath(host));
+      // OW-086 / Plan_83 B3b: retire only a readable, complete indexed record with no remaining live owner.
+      // Unresolved legacy hints stay independent; uncertainty in this indexed record forbids retirement.
+      const removeRecord = ownership !== null
+        && index.records.some((file) => rulesPathIdentity(file) === recordKey)
+        && !ownership.unknown.some((ref) => ref.legacy === undefined && rulesPathIdentity(ref.recordPath) === recordKey)
+        && !ownership.live.some((live) => rulesPathIdentity(live.recordPath) === recordKey);
+      await removeRulesOwner(host, { removeRecord });
     } catch (err) {
       registryError = err;
     }
