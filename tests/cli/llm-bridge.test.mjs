@@ -149,3 +149,39 @@ test('doctor subcommand diagnoses only the explicit temporary host', (t) => {
   assert.match(result.stdout, /installation: not installed/);
   assert.match(result.stdout, new RegExp(host.replaceAll('\\', '\\\\')));
 });
+
+// Plan_83 D3: the public route must select CODEX_HOME before touching run records or host options.
+test('unlock --rules reaches the selected Codex directory through the public binary', async (t) => {
+  const root = makeTempTree('bridge-bin-rules-');
+  t.after(() => removeTempTree(root));
+  const codexHome = path.join(root, 'codex');
+  const rulesDir = path.join(codexHome, 'rules');
+  await fs.mkdir(rulesDir, { recursive: true });
+  const env = { CODEX_HOME: codexHome, LLM_BRIDGE_HOME: path.join(root, 'package'),
+    LLM_BRIDGE_RUNS_ROOT: path.join(root, 'runs') };
+  // raw argv: rules recovery is a public command, independent of runner order transport.
+  const result = run(['unlock', '--rules'], env);
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(result.stdout.startsWith(`Rules lock of ${rulesDir} (`));
+  assert.match(result.stdout, /free/);
+  assert.deepEqual(await fs.readdir(rulesDir), []);
+  assert.equal((await fs.readdir(root)).includes('runs'), false);
+  // raw argv: --host is outside the strict rules recovery grammar.
+  const refused = run(['unlock', '--rules', '--host', path.join(root, 'other-host')], env);
+  assert.equal(refused.status, 2);
+  assert.match(refused.stdout, /unexpected argument "--host"/);
+  // raw argv: changing CODEX_HOME must change the selected directory without creating it.
+  const otherRules = path.join(root, 'other-codex', 'rules');
+  const missing = run(['unlock', '--rules', '--clear'], { ...env, CODEX_HOME: path.dirname(otherRules) });
+  assert.equal(missing.status, 1, missing.stderr);
+  assert.ok(missing.stdout.startsWith(`Rules lock of ${otherRules} (`));
+  assert.match(missing.stdout, /no rules directory.*nothing to inspect/);
+  assert.equal((await fs.readdir(root)).includes('other-codex'), false);
+});
+
+test('unlock help advertises the rules recovery form after lifecycle', () => {
+  // raw argv: the public help lists both recovery selectors in their pinned order.
+  const result = run(['unlock', '-h']);
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /llm-bridge unlock --lifecycle \[--clear\][\s\S]*llm-bridge unlock --rules \[--clear\]/);
+});

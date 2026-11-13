@@ -31,6 +31,8 @@ export const HOME_WRITE_INVENTORY = Object.freeze([
   outside('cli/remove-layout.mjs', 'rmdir', 1, 'Removes empty host package directories (agents, commands, their legacy layout); home folders go through the adapter (Plan_65 B15b2).'),
   outside('cli/rules-dir-lock.mjs', 'mkdir', 1, 'Creates the Codex rules directory only after writer.assertOutside, so its physical lock can be acquired (Plan_83 D2 / OW-086).'),
   outside('cli/rules-dir-lock.mjs', 'unlink', 1, 'Removes only this holder\'s rules lock after writer.assertOutside and a file-identity check (Plan_83 D2 / OW-086).'),
+  outside('cli/rules-lock-recovery.mjs', 'open', 1, 'Exclusively creates the rules clear gate only after writer.assertOutside (Plan_83 D3 / Plan_65 A5/D11).'),
+  outside('cli/rules-lock-recovery.mjs', 'unlink', 1, 'Removes the rules lock or clear gate only after writer.assertOutside and shared recovery policy checks (Plan_83 D3 / Plan_65 A5/D8/D11).'),
   outside('cli/rules-owners.mjs', 'rename', 1, 'Publishes the shared host rules ownership registry.'),
   outside('cli/rules-owners.mjs', 'rm', 2, 'Removes a failed temporary copy or the host rules ownership registry.'),
   outside('cli/rules-owners.mjs', 'withOutsideFileLock', 1, 'Locks the shared registry under the host Codex rules directory.'),

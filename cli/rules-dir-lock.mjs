@@ -10,7 +10,7 @@ import {
   acquireKernelLock, directoryDigest, kernelLockAddress, kernelLockStrategy,
 } from '../src/home/lib/kernel-lock.mjs';
 import { PACKAGE_NAME } from '../src/home/lib/package-identity.mjs';
-import { parseHolder } from './lifecycle-lock.mjs';
+import { holderLiveness, parseHolder } from './lifecycle-lock.mjs';
 
 const LOCK_NAME = `.${PACKAGE_NAME}-rules.lock`;
 const liveTickets = new WeakMap();
@@ -50,10 +50,22 @@ function requirePath(name, value) {
   }
 }
 
-function identity(rulesDir) {
+export function rulesLockTarget(rulesDir, { platform = process.platform, identity = {} } = {}) {
+  requirePath('rulesDir', rulesDir);
   const digest = directoryDigest(rulesDir);
-  if (digest === null) throw new Error(`rules lock directory does not exist: ${rulesDir}`);
-  return digest;
+  if (digest === null) return null;
+  // Plan_83 D3: acquisition and recovery must agree even through a retargetable directory alias.
+  const physicalDir = fs.realpathSync(rulesDir);
+  assertIdentity(physicalDir, digest);
+  const strategy = kernelLockStrategy(platform) ?? 'file';
+  const lockPath = path.join(physicalDir, LOCK_NAME);
+  return {
+    digest, physicalDir, strategy,
+    address: kernelLockAddress('rules-dir', digest, platform) ?? lockPath,
+    lockPath, gatePath: `${lockPath}.clear`, parseHolder,
+    judgeHolder: (holder) => holderLiveness(holder, identity),
+    label: 'rules directory lock',
+  };
 }
 
 function assertIdentity(rulesDir, digest) {
@@ -106,11 +118,8 @@ function checkedOutsideFiles(homeRoot, lockPath) {
   };
 }
 
-async function acquireFile(rulesDir, digest, holder, { homeRoot, waitMs, retryMs }) {
-  // Plan_83 D2: pin the physical path so retargeting a rules-directory link cannot redirect cleanup.
-  const physicalDir = fs.realpathSync(rulesDir);
-  assertIdentity(physicalDir, digest);
-  const lockPath = path.join(physicalDir, LOCK_NAME);
+async function acquireFile(rulesDir, target, holder, { homeRoot, waitMs, retryMs }) {
+  const { lockPath, parseHolder } = target;
   const files = checkedOutsideFiles(homeRoot, lockPath);
   const deadline = Date.now() + waitMs;
   let handle;
@@ -194,22 +203,23 @@ export async function acquireRulesDirLock(rulesDir, {
       throw new TypeError(`${name} must be a ${minimum ? 'positive' : 'non-negative'} number`);
     }
   }
-  const digest = identity(rulesDir);
+  const target = rulesLockTarget(rulesDir, { platform });
+  if (target === null) throw new Error(`rules lock directory does not exist: ${rulesDir}`);
+  const { digest, strategy } = target;
   const holder = { pid: process.pid, command, hostRoot, token: randomUUID() };
-  const strategy = kernelLockStrategy(platform);
   let lock;
-  if (strategy) {
+  if (strategy !== 'file') {
     // Plan_83 D2 / OW-086: physical exclusion is independent of lexical ownership and home locks.
     const result = await acquireKernelLock({
-      address: kernelLockAddress('rules-dir', digest, platform),
+      address: target.address,
       holder, waitMs, retryMs, answerTimeoutMs, createServer,
-      parseAnswer: parseHolder,
-      label: 'rules directory lock',
+      parseAnswer: target.parseHolder,
+      label: target.label,
     });
     if (!result.held) throw busyError(rulesDir, result.holder);
     lock = { strategy, release: result.release };
   } else {
-    lock = await acquireFile(rulesDir, digest, holder, { homeRoot, waitMs, retryMs });
+    lock = await acquireFile(rulesDir, target, holder, { homeRoot, waitMs, retryMs });
   }
   try {
     assertIdentity(rulesDir, digest);

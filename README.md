@@ -61,7 +61,7 @@ Run records in `~/.lyupro/.llm-bridge/runs/` (or `~/.claude/codex-runs/` before 
 - **Every run leaves an audit folder.** The verbatim task, scope, before/after git state, events, report, verdict, and reason remain together.
 - **Zero runtime dependencies and zero build steps.** The package is plain `.mjs` on the Node.js standard library.
 
-The current suite contains **6624 automated tests: 6618 passing and 6 skipped**.
+The current suite contains **6665 automated tests: 6659 passing and 6 skipped**.
 ## Verify
 
 ```bash
@@ -152,7 +152,7 @@ Transport files from runs at least **30 days** old are pruned automatically when
 | `projects [<name>] [--json]` | List projects or runs in the run store. |
 | `advice check <value> [--json]` | Check a bridge label or advice run using the installed home's shared rules, read-only; exits 0 for valid, 1 for invalid, 2 for call or environment errors. See [Checking advice](docs/overview.md#checking-advice). |
 | `prune <project> [<run>] [--purge] [--older-than <age>] [-f] [--json]`<br>`prune --all-projects [--older-than <age>] [-f] [--json]` | Plan or perform operator-confirmed cleanup, for one project or across the whole run store. |
-| `unlock [<project>\|--all]`<br>`unlock --lifecycle [--clear]` | Close records whose runner is gone, or show who holds the lock that serializes install, update and uninstall of this home; `--clear` removes that lock only when it is a file left by a holder proven dead (macOS; Windows and Linux locks are released by the kernel). |
+| `unlock [<project>\|--all]`<br>`unlock --lifecycle [--clear]`<br>`unlock --rules [--clear]` | Close records whose runner is gone, or show who holds the lock that serializes install, update and uninstall of this home; `--rules` inspects or clears the shared rules-directory lock under `CODEX_HOME` (default `~/.codex`); `--clear` removes that lock only when it is a file left by a holder proven dead (macOS; Windows and Linux locks are released by the kernel). |
 | `read <run>` | Render a run's structured event stream. |
 | `stop <run>` | Stop a run and record a `FAIL` verdict. |
 

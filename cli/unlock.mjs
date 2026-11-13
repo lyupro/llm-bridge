@@ -16,6 +16,7 @@ import { runsRoot } from '../src/home/lib/runner/runs-root.mjs';
 import { readJson } from '../src/home/lib/write-meta.mjs';
 import { renderTable } from './table.mjs';
 import { unlockLifecycle } from './unlock-lifecycle.mjs';
+import { unlockRules } from './unlock-rules.mjs';
 
 const CLOSED_COLUMNS = [
   { key: 'project', label: 'project' },
@@ -231,6 +232,7 @@ function renderReport(plan, records, closed, failures, options) {
 
 export function unlock(argv = [], options = {}) {
   if (argv[0] === '--lifecycle') return unlockLifecycle(argv, options);
+  if (argv[0] === '--rules') return unlockRules(argv, options);
   const plan = unlockPlan(argv, options);
   if (plan.error) return result(2, plan.error);
   const records = plan.projects.flatMap((project) => inspectRuns(project, options));

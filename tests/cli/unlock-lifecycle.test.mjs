@@ -198,7 +198,7 @@ test('the registry awaits lifecycle inspection and uses the shared brand home re
   });
   process.env.LLM_BRIDGE_HOME = homeRoot;
   const entry = COMMANDS.find((candidate) => candidate.name === 'unlock');
-  assert.deepEqual(entry.usage, ['llm-bridge unlock [<project>|--all]', 'llm-bridge unlock --lifecycle [--clear]']);
+  assert.deepEqual(entry.usage, ['llm-bridge unlock [<project>|--all]', 'llm-bridge unlock --lifecycle [--clear]', 'llm-bridge unlock --rules [--clear]']);
   assert.equal(entry.summary, 'Close running records whose runner is gone, or show the lifecycle lock');
   const output = [];
   const exitCode = await entry.handler(['--lifecycle'], { log: (message) => output.push(message) });

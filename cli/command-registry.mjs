@@ -326,7 +326,7 @@ ${SETTINGS_SUMMARY}`);
   {
     name: 'unlock',
     summary: 'Close running records whose runner is gone, or show the lifecycle lock',
-    usage: [`${CLI_NAME} unlock [<project>|--all]`, `${CLI_NAME} unlock --lifecycle [--clear]`],
+    usage: [`${CLI_NAME} unlock [<project>|--all]`, `${CLI_NAME} unlock --lifecycle [--clear]`, `${CLI_NAME} unlock --rules [--clear]`],
     section: 'public',
     async handler(argv, io) {
       const result = await unlock(argv);
