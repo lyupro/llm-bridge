@@ -7,6 +7,7 @@ import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { withOutsideFileLock } from '../src/home/lib/file-lock.mjs';
 import { createHomeWriter } from '../src/home/lib/home-write.mjs';
+import { INSTALL_RECORD_NAME, installRecordPath } from './install-record.mjs';
 export { isLockTaken } from '../src/home/lib/file-lock.mjs';
 
 export const RULES_REGISTRY_NAME = `.${PACKAGE_NAME}-rules.json`;
@@ -28,8 +29,21 @@ function validateRegistry(parsed) {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('rules ownership registry must be an object');
   }
+  if (parsed.version === 2) {
+    for (const field of ['records', 'legacy']) {
+      if (!Array.isArray(parsed[field])
+        || parsed[field].some((item) => typeof item !== 'string' || !item)) {
+        throw new Error(`rules ownership registry ${field} must be a list of non-empty strings`);
+      }
+    }
+    if (parsed.records.some((file) => !path.isAbsolute(file) || path.basename(file) !== INSTALL_RECORD_NAME)) {
+      throw new Error(`rules ownership registry records must be absolute paths to ${INSTALL_RECORD_NAME}`);
+    }
+    // OW-086: unresolved legacy hints must remain visible to callers not yet using record evidence.
+    return { version: 2, owners: [...parsed.legacy], records: [...parsed.records] };
+  }
   if (parsed.version !== RULES_REGISTRY_VERSION) {
-    throw new Error(`rules ownership registry version must be ${RULES_REGISTRY_VERSION}`);
+    throw new Error('rules ownership registry version must be 1 or 2');
   }
   if (!Array.isArray(parsed.owners) || parsed.owners.some((owner) => typeof owner !== 'string' || !owner)) {
     throw new Error('rules ownership registry owners must be a list of non-empty strings');
@@ -55,6 +69,11 @@ async function loadRulesRegistry(host) {
 }
 
 function hasSameOwners(raw, registry) {
+  if (registry.version === 2) {
+    return raw.version === 2
+      && ['records', 'legacy'].every((field) => raw[field].length === registry[field].length
+        && raw[field].every((value, index) => value === registry[field][index]));
+  }
   return raw?.version === registry.version
     && Array.isArray(raw.owners)
     && raw.owners.length === registry.owners.length
@@ -93,6 +112,15 @@ export async function addRulesOwner(host) {
     const loaded = await loadRulesRegistry(host);
     const owner = normalizedRulesOwner(host);
     const current = loaded?.registry || { version: RULES_REGISTRY_VERSION, owners: [] };
+    if (current.version === 2) {
+      const records = [...current.records];
+      const recordPath = path.resolve(installRecordPath(host));
+      const identity = (file) => normalizedRulesOwner({ root: path.resolve(file) });
+      if (!records.some((file) => identity(file) === identity(recordPath))) records.push(recordPath);
+      const registry = { version: 2, records, legacy: current.owners };
+      if (!hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
+      return validateRegistry(registry);
+    }
     const registry = {
       version: RULES_REGISTRY_VERSION,
       owners: normalizeOwners([...current.owners, owner]),
@@ -114,15 +142,20 @@ export async function removeRulesOwner(host) {
   return withRegistryLock(host, async () => {
     const loaded = await loadRulesRegistry(host);
     if (!loaded) return null;
-    const registry = {
+    const registry = loaded.registry.version === 2 ? {
+      version: 2,
+      records: loaded.registry.records,
+      legacy: loaded.registry.owners.filter((owner) => owner !== normalizedRulesOwner(host)),
+    } : {
       version: RULES_REGISTRY_VERSION,
       owners: remainingRulesOwners(loaded.registry, host),
     };
-    if (registry.owners.length) {
+    // Plan_65 D5 / OW-086: dropping a host hint cannot attest that a bridge-home record is unused.
+    if (registry.version === 2 ? registry.records.length || registry.legacy.length : registry.owners.length) {
       if (!hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
     } else {
       await fs.rm(rulesRegistryPath(host), { force: true });
     }
-    return registry;
+    return validateRegistry(registry);
   });
 }

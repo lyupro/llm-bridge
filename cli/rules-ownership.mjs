@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { validateFormat2 } from './install-owners.mjs';
+import { installRecordPath } from './install-record.mjs';
 import { normalizedRulesOwner } from './rules-owners.mjs';
 
 function identity(file) {
@@ -86,4 +87,19 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
         : 'legacy owner is not in the current installation record' });
   }
   return result;
+}
+
+export async function remainingRulesOwnership(index, host, record) {
+  const recordPath = installRecordPath(host);
+  const result = await classifyRulesOwnership(index, record.rules.path, recordPath);
+  if (index === null) return null;
+  const key = normalizedRulesOwner(host);
+  // OW-086 / Plan_65 D5: departure proves only this host gone, never an unverified neighbour.
+  return {
+    ...result,
+    live: result.live.map((live) => identity(live.recordPath) === identity(recordPath)
+      ? { ...live, owners: live.owners.filter((owner) => owner !== key) } : live)
+      .filter((live) => live.owners.length),
+    unknown: result.unknown.filter((reference) => reference.legacy !== key),
+  };
 }

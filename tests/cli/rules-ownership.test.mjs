@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { makeTempTree } from '../temp-tree.mjs';
-import { classifyRulesOwnership } from '../../cli/rules-ownership.mjs';
+import { classifyRulesOwnership, remainingRulesOwnership } from '../../cli/rules-ownership.mjs';
 import { readRulesIndex } from '../../cli/rules-index.mjs';
 import { withOwner } from '../../cli/install-owners.mjs';
 import { normalizedRulesOwner, rulesRegistryPath } from '../../cli/rules-owners.mjs';
@@ -207,8 +207,13 @@ for (const kind of ['missing', 'invalid', 'format 1', 'permission']) {
 
 test('OW-086 retains three snapshot hints and reconstructs one live plus three unknown', async () => {
   const f = fixture();
-  const snapshot = JSON.parse(await fs.readFile(new URL('../../docs/audits/OW-086/codex-bridge-rules-owners.json', import.meta.url), 'utf8'));
-  // The committed post-uninstall snapshot has three hints; the fourth was the departing current host.
+  // OW-086: vanished scratchpad probe folders remain unknown ownership hints.
+  const probes = [1, 2, 3].map((id) => path.join(f.root, `scratchpad-probe-${id}`));
+  for (const probe of probes) {
+    await fs.mkdir(probe);
+    await fs.rmdir(probe);
+  }
+  const snapshot = { version: 1, owners: probes.map((root) => normalizedRulesOwner({ root })) };
   assert.equal(snapshot.owners.length, 3);
   await publish(f);
   await fs.mkdir(f.host.codexRulesDir);
@@ -252,3 +257,93 @@ test('required rules and current-record paths never silently default', async () 
   await assert.rejects(classifyRulesOwnership(f.index, undefined, f.recordPath), /rules path is required/);
   await assert.rejects(classifyRulesOwnership(f.index, f.rulesPath), /current installation-record path is required/);
 });
+
+function afterDeparture(f) {
+  return remainingRulesOwnership(f.index, { ...f.host, brandInstallRecordPath: f.recordPath }, f.old);
+}
+
+test('departure removes this host from its own record and legacy without changing either input', async () => {
+  const f = fixture();
+  const second = { root: path.join(f.root, 'second'), scope: 'host' };
+  await publish(f, withOwner(f.record, second, f.old));
+  f.index.legacy = [f.key, normalizedRulesOwner(second), path.join(f.root, 'vanished')];
+  const before = await fs.readFile(f.recordPath, 'utf8');
+  const indexBefore = structuredClone(f.index);
+  const result = await afterDeparture(f);
+  assert.deepEqual(result.live, [{ recordPath: f.recordPath, owners: [normalizedRulesOwner(second)] }]);
+  assert.deepEqual(result.unknown.map((item) => item.legacy), [path.join(f.root, 'vanished')]);
+  assert.match(result.unknown[0].reason, /not in the current installation record/);
+  assert.equal(await fs.readFile(f.recordPath, 'utf8'), before);
+  assert.deepEqual(f.index, indexBefore);
+});
+
+test('departure preserves the same host key when a different bridge-home record still owns rules', async () => {
+  const f = fixture();
+  const other = path.join(f.root, 'other', '.installed.json');
+  await fs.mkdir(path.dirname(other));
+  await publish(f);
+  await fs.writeFile(other, JSON.stringify(f.record));
+  f.index.records.push(other);
+  assert.deepEqual((await afterDeparture(f)).live, [{ recordPath: other, owners: [f.key] }]);
+});
+
+test('departure removes its own legacy hint even when its record cannot verify that hint', async () => {
+  const f = fixture();
+  f.index.legacy = [f.key, 'vanished'];
+  const result = await afterDeparture(f);
+  assert.deepEqual(result.live, []);
+  assert.equal(result.unknown.length, 2);
+  assert.equal(result.unknown[0].recordPath, f.recordPath);
+  assert.equal(result.unknown[1].legacy, 'vanished');
+  assert.match(result.unknown[1].reason, /ENOENT/);
+});
+
+test('departure leaves unknown records blocking and ignores verified detached records', async () => {
+  const f = fixture();
+  await publish(f);
+  const other = fixture();
+  await publish(other);
+  const missing = path.join(f.root, 'missing', '.installed.json');
+  f.index.records.push(other.recordPath, missing);
+  const result = await afterDeparture(f);
+  assert.deepEqual(result.live, []);
+  assert.deepEqual(result.detached, [{ recordPath: other.recordPath }]);
+  assert.equal(result.unknown[0].recordPath, missing);
+  assert.match(result.unknown[0].reason, /ENOENT/);
+});
+
+test('departure with only its own legacy hint has no remaining references', async () => {
+  const f = fixture();
+  await publish(f);
+  f.index = { version: 2, records: [], legacy: [f.key] };
+  assert.deepEqual(await afterDeparture(f), { live: [], unknown: [], detached: [] });
+});
+
+test('departure preserves no-registry separately from an empty index', async (t) => {
+  const f = fixture();
+  t.mock.method(fs, 'readFile', () => { throw new Error('unexpected record read'); });
+  f.index = null;
+  assert.equal(await afterDeparture(f), null);
+  f.index = { version: 2, records: [], legacy: [] };
+  assert.deepEqual(await afterDeparture(f), { live: [], unknown: [], detached: [] });
+  f.index = undefined;
+  await assert.rejects(afterDeparture(f), /rules index is required/);
+});
+
+for (const [label, change, reason] of [
+  ['incomplete', (f) => ({ ...f.record, inventory: 'incomplete' }), /inventory is incomplete/],
+  ['pending', (f) => ({ ...f.record, pending: false }), /pending/],
+  ['legacy', (f) => ({ ...f.record, legacy: f.old }), /legacy/],
+]) {
+  test('departure cannot clear its indexed ' + label + ' record uncertainty', async () => {
+    const f = fixture();
+    await publish(f, change(f));
+    f.index.legacy = [f.key];
+    const result = await afterDeparture(f);
+    assert.deepEqual(result.live, []);
+    assert.equal(result.unknown.length, 1);
+    assert.equal(result.unknown[0].recordPath, f.recordPath);
+    assert.equal(result.unknown[0].legacy, undefined);
+    assert.match(result.unknown[0].reason, reason);
+  });
+}

@@ -4,11 +4,28 @@
  * decisions prevents their behavior and output from drifting apart.
  */
 import { fileFingerprint } from './manifest.mjs';
-import { removeRulesOwner, remainingRulesOwners } from './rules-owners.mjs';
+import { removeRulesOwner } from './rules-owners.mjs';
+import { readRulesIndex } from './rules-index.mjs';
+import { remainingRulesOwnership } from './rules-ownership.mjs';
 import { removeOutside } from './record-removal.mjs';
 
 export function remainingOwnersText(count) {
   return `${count} other owner${count === 1 ? '' : 's'} ${count === 1 ? 'remains' : 'remain'}`;
+}
+
+function indexFromRegistry(registry) {
+  return registry === null ? null : {
+    version: 2, records: registry.records ?? [], legacy: registry.owners,
+  };
+}
+
+function liveOwnerCount(ownership) {
+  return ownership?.live.reduce((count, live) => count + live.owners.length, 0) ?? 0;
+}
+
+function unknownReferencesText(references) {
+  return `${references.length} ownership reference${references.length === 1 ? '' : 's'} cannot be verified: `
+    + references.map((reference) => `${reference.legacy ?? reference.recordPath} (${reference.reason})`).join('; ');
 }
 
 export async function rulesDryRunLines({ host, record, registry, registryError, detached }) {
@@ -18,10 +35,16 @@ export async function rulesDryRunLines({ host, record, registry, registryError, 
     lines.push(`Would leave ${record.rules.path} because the rules ownership registry is invalid; \
 ownership is unknown.`);
   } else {
-    const remainingOwners = remainingRulesOwners(registry, host);
+    const ownership = await remainingRulesOwnership(indexFromRegistry(registry), host, record);
+    const remainingOwners = liveOwnerCount(ownership);
     const currentFingerprint = await fileFingerprint(record.rules.path);
-    if (remainingOwners?.length) {
-      lines.push(`Would leave ${record.rules.path} because ${remainingOwnersText(remainingOwners.length)}.`);
+    if (remainingOwners || ownership?.unknown.length) {
+      if (remainingOwners) {
+        lines.push(`Would leave ${record.rules.path} because ${remainingOwnersText(remainingOwners)}.`);
+      }
+      if (ownership.unknown.length) {
+        lines.push(`Would leave ${record.rules.path} because ${unknownReferencesText(ownership.unknown)}.`);
+      }
     } else if (currentFingerprint === record.rules.fingerprint) {
       lines.push(`Would remove ${record.rules.path}; no other owners remain and its fingerprint is unchanged.`);
     } else if (currentFingerprint !== null) {
@@ -42,7 +65,10 @@ export async function removeRulesForHost({ host, record, registry, registryError
   let ownership = null;
   if (detachedRecord && !registryError) {
     try {
-      ownership = await removeRulesOwner(host);
+      // OW-086 / Plan_65 D5: classify before detaching the legacy hint; unknown evidence keeps the file.
+      const index = await readRulesIndex(host);
+      if (detachedRecord.rules) ownership = await remainingRulesOwnership(index, host, record);
+      await removeRulesOwner(host);
     } catch (err) {
       registryError = err;
     }
@@ -52,8 +78,14 @@ export async function removeRulesForHost({ host, record, registry, registryError
     if (registryError) {
       lines.push(`Left ${record.rules.path} because the rules ownership registry is invalid; ownership is unknown.`);
     } else {
-      if (ownership?.owners.length) {
-        lines.push(`Left ${record.rules.path} because ${remainingOwnersText(ownership.owners.length)}.`);
+      const remainingOwners = liveOwnerCount(ownership);
+      if (remainingOwners || ownership?.unknown.length) {
+        if (remainingOwners) {
+          lines.push(`Left ${record.rules.path} because ${remainingOwnersText(remainingOwners)}.`);
+        }
+        if (ownership.unknown.length) {
+          lines.push(`Left ${record.rules.path} because ${unknownReferencesText(ownership.unknown)}.`);
+        }
       } else {
         const currentFingerprint = await fileFingerprint(record.rules.path);
         if (currentFingerprint === record.rules.fingerprint) {

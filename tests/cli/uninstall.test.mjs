@@ -63,7 +63,9 @@ test('uninstall leaves shared rules for another owner and removes them for the l
   assert.equal((await readRulesRegistry(first)).owners.length, 2);
 
   const removedFirst = await uninstall({ host: first });
-  assert.match(removedFirst.output, /1 other owner remains/);
+  assert.match(removedFirst.output, /1 ownership reference cannot be verified/);
+  assert.ok(removedFirst.output.includes(normalizeRepoPath(second.root)
+    + ' (legacy owner is not in the current installation record)'));
   await fs.access(rulesPath);
   assert.deepEqual(await readRulesRegistry(second), {
     version: 1,
@@ -307,3 +309,70 @@ test('format-1 dry-run keeps the shared image decision and record bytes', async 
   assert.match(dryRun.output, /Would leave the shared image in .* because the installation inventory is incomplete: other installations may use this home\./);
   assert.deepEqual(await fs.readFile(recordPath), before);
 });
+
+// OW-086 / Plan_65 D5: records prove live or detached ownership; vanished legacy paths prove neither.
+for (const scenario of ['live', 'detached', 'snapshot', 'mixed', 'unknown']) {
+  test('rules uninstall uses record evidence for ' + scenario + ' references', async (t) => {
+    const { root, host } = await fixture(t);
+    await install({ host });
+    const record = await readInstallRecord(host);
+    const registryPath = rulesRegistryPath(host);
+    let refs;
+    if (scenario === 'snapshot') {
+      // OW-086: vanished scratchpad probe folders remain unknown ownership hints.
+      const probes = [1, 2, 3].map((id) => path.join(root, `scratchpad-probe-${id}`));
+      for (const probe of probes) {
+        await fs.mkdir(probe);
+        await fs.rmdir(probe);
+      }
+      const snapshot = { version: 1, owners: probes.map((probe) => normalizeRepoPath(probe)) };
+      refs = snapshot.owners;
+      await fs.writeFile(registryPath, JSON.stringify({ version: 1,
+        owners: [...refs, normalizeRepoPath(host.root)] }));
+    } else {
+      const other = resolveHost({ host: path.join(root, 'other-host'),
+        brandRoot: path.join(root, 'other-home'), codexHome: path.dirname(host.codexRulesDir) });
+      await install({ host: other });
+      if (scenario === 'detached') {
+        const raw = JSON.parse(await fs.readFile(installRecordPath(other), 'utf8'));
+        raw.owners[normalizeRepoPath(other.root)].rules.path = path.join(root, 'elsewhere', 'llm-bridge.rules');
+        await fs.writeFile(installRecordPath(other), JSON.stringify(raw));
+      }
+      refs = [installRecordPath(host), scenario === 'unknown'
+        ? path.join(root, 'vanished', '.installed.json') : installRecordPath(other)];
+      await fs.writeFile(registryPath, JSON.stringify({ version: 2, records: refs, legacy: scenario === 'mixed' ? ['vanished'] : [] }));
+    }
+    const before = await fs.readFile(registryPath);
+    const beforeRecord = await fs.readFile(installRecordPath(host));
+    const dry = await uninstall({ host, dryRun: true });
+    assert.equal(dry.exitCode, 0);
+    assert.deepEqual(await fs.readFile(registryPath), before);
+    assert.deepEqual(await fs.readFile(installRecordPath(host)), beforeRecord);
+    const result = await uninstall({ host });
+    assert.equal(result.exitCode, 0);
+    for (const output of [dry.output, result.output]) {
+      if (scenario === 'live' || scenario === 'mixed') assert.match(output, /because 1 other owner remains/);
+      if (scenario === 'unknown') {
+        assert.ok(output.includes(refs[1] + ' (installation record does not exist (ENOENT))'));
+        assert.match(output, /1 ownership reference cannot be verified/);
+      }
+      if (scenario === 'mixed') {
+        assert.match(output, /1 ownership reference cannot be verified: vanished/);
+        assert.ok(output.includes('vanished (legacy owner is not in the current installation record)'));
+      }
+      if (scenario === 'snapshot') {
+        assert.match(output, /3 ownership references cannot be verified/);
+        for (const ref of refs) assert.ok(output.includes(ref
+          + ' (legacy owner is not in the current installation record)'));
+      }
+    }
+    if (scenario === 'detached') {
+      assert.match(dry.output, /Would remove .*llm-bridge.rules; no other owners remain/);
+      await assert.rejects(fs.access(record.rules.path), { code: 'ENOENT' });
+    } else {
+      assert.deepEqual(await fs.readFile(record.rules.path), await fs.readFile('src/codex/rules/llm-bridge.rules'));
+    }
+    assert.deepEqual(await readRulesRegistry(host), scenario === 'snapshot'
+      ? { version: 1, owners: refs } : { version: 2, owners: scenario === 'mixed' ? ['vanished'] : [], records: refs });
+  });
+}
