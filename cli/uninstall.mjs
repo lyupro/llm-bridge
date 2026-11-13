@@ -20,7 +20,8 @@ import { withRulesDirLock } from './rules-dir-lock.mjs';
 import { readRulesRegistry } from './rules-owners.mjs';
 import { readRulesIndex } from './rules-index.mjs';
 import { rulesOwnerHints } from './rules-ownership.mjs';
-import { rulesDryRunLines, removeRulesForHost, remainingOwnersText } from './uninstall-rules.mjs';
+import { rulesDryRunLines, removeRulesForHost, remainingOwnersText, preflightRulesRemoval } from './uninstall-rules.mjs';
+import { confirmRulesRetirement } from './rules-retirement.mjs';
 import { removeEmpty } from './remove-layout.mjs';
 import { recordHomeWriter } from './record-removal.mjs';
 import { executeHomePlan } from './home-plan-execute.mjs';
@@ -177,12 +178,19 @@ async function uninstallInRun(options = {}) {
   const lastKnownOwner = decision.reason === 'incomplete-inventory'
     && (Object.hasOwn(format2.owners, ownerKey) || ownPending);
   let lastOwnerHint = null;
+  let ownHomeAttested = false;
   if (lastKnownOwner && !dryRun) {
     const answer = await askRemoval(host, 'last-owner', options);
     if (answer === 'cancel') return { exitCode: 130, output: 'Cancelled; nothing was changed.' };
-    if (answer === 'remove') decision = { removeImage: true };
+    if (answer === 'remove') { decision = { removeImage: true }; ownHomeAttested = true; }
     else lastOwnerHint = removalHint(host);
   }
+  // Plan_83 D6/D7/D8: the home answer feeds one rules decision before any host mutation.
+  const rulesPlan = record?.rules && inspection.settingsError == null
+    ? await preflightRulesRemoval(record.rules.path, record.rules.fingerprint,
+    { host, registryError, ownHomeAttested }) : null;
+  const rulesAnswer = await confirmRulesRetirement(rulesPlan, options);
+  if (rulesAnswer === 'cancel') return { exitCode: 130, output: 'Cancelled; nothing was changed.' };
   const permissionLine = await removePermissions(host, inspection, dryRun);
   const hostMarks = hasPackageMarks(inspection);
   if (!record && !hostMarks) {
@@ -209,7 +217,7 @@ async function uninstallInRun(options = {}) {
     if (lastKnownOwner) lines.push(`A real run would ask whether ${host.root} is the last host \
 using ${host.brandRoot}.`);
     const rules = await rulesDryRunLines({
-      host, record, registry, registryError, detached: hostSide.detached,
+      host, record, registry, registryError, detached: hostSide.detached, plan: rulesPlan,
     });
     lines.push(...rules.lines);
     lines.push(...planLines(plan, { host, detached: hostSide.detached }));
@@ -226,7 +234,7 @@ using ${host.brandRoot}.`);
   // Plan_65 D10 item 4: a host still attached keeps everything it shares — its rules ownership, its
   // place in the record — so a repeat run after the fix finds it whole.
   const rulesResult = await removeRulesForHost({
-    host, record, registry, registryError, detached: hostSide.detached, writer,
+    host, record, registry, registryError, detached: hostSide.detached, writer, plan: rulesPlan, answer: rulesAnswer,
   });
   const rulesOutput = rulesResult.lines;
   registryError = rulesResult.registryError;

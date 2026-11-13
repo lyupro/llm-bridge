@@ -70,10 +70,9 @@ test('format-1 last owner can confirm removal of the image and record', async (t
   const result = await uninstall({ host: state.host, isTTY: true, prompt });
 
   assert.equal(prompt.calls, 1);
-  // Plan_83 D7 (B4a): the unconfirmed own legacy inventory still holds the rules file; D6 (B4b) lets this yes
-  // attest the rules decision too and restores exit 0.
-  assert.equal(result.exitCode, 1);
-  assert.match(result.output, /Left .*llm-bridge\.rules because/);
+  // Plan_83 D6: one own-home yes resolves the rules inventory doubt as well.
+  assert.equal(result.exitCode, 0);
+  await assert.rejects(() => fs.access(path.join(state.host.codexRulesDir, 'llm-bridge.rules')), { code: 'ENOENT' });
   await assert.rejects(() => fs.access(state.recordPath), { code: 'ENOENT' });
   await assertGone(state.host, state.imageFiles);
 });

@@ -14,12 +14,14 @@ import { registryHintLines } from './inventory-transition.mjs';
 
 const KEPT_DATA = 'config.json, conventions.md and run data stay.';
 
+// Plan_83 D6: the operator must know this same home answer also attests rules ownership.
 export function lastOwnerQuestion(host, candidates) {
   return [
     `Home: ${host.brandRoot}`,
     `Known owners: only this host (${host.root}), which is leaving.`,
     'The installation inventory is incomplete: an old installation record did not name every host that used this home.',
     ...registryHintLines(host, candidates),
+    'The same yes confirms this home has no remaining rules owner; foreign ownership references are checked separately.',
     `Is ${host.root} the last host using this home? Yes removes the shared image and the installation record; ${KEPT_DATA}`,
   ].join('\n');
 }
@@ -52,6 +54,7 @@ export function purgeInventoryQuestion(host, candidates) {
   return [
     `Home: ${host.brandRoot}`,
     `Purge removes this home for good, including what you edited in it. Leaving host: ${host.root}.`,
+    'The same yes confirms this home has no remaining rules owner; foreign ownership references are checked separately.',
     ...registryHintLines(host, candidates),
     'Is the inventory complete — does no other host use this home?',
   ].join('\n');

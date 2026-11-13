@@ -141,3 +141,27 @@ export async function removeRulesOwner(host, { removeRecord = false } = {}) {
     return validateRegistry(registry);
   });
 }
+
+// Plan_83 D7 (3), (5): consent names a whole snapshot; changed evidence retires nothing.
+export async function retireRulesReferences(host, { legacy, records, expectedIndex, verify }) {
+  if (!Array.isArray(legacy) || !Array.isArray(records) || expectedIndex === undefined
+    || typeof verify !== 'function') throw new TypeError('retirement requires named references, an index and verification');
+  const retire = async () => {
+    const loaded = await loadRulesRegistry(host);
+    const current = loaded ? validateIndex(loaded.raw) : null;
+    if (JSON.stringify(current) !== JSON.stringify(expectedIndex)
+      || legacy.some((name) => !current?.legacy.includes(name))
+      || records.some((file) => !current?.records.includes(file))
+      || !await verify(current)) return false;
+    if (!current) return true;
+    const registry = { version: RULES_REGISTRY_VERSION,
+      records: current.records.filter((file) => !records.includes(file)),
+      legacy: current.legacy.filter((name) => !legacy.includes(name)) };
+    if (registry.records.length || registry.legacy.length) {
+      if (!hasSameOwners(loaded.raw, registry)) await writeRulesRegistry(host, registry);
+    } else await fs.rm(rulesRegistryPath(host), { force: true });
+    return true;
+  };
+  // No index means no registry directory is required (the physical rules lock is already held).
+  return await loadRulesRegistry(host) ? withRegistryLock(host, retire) : retire();
+}

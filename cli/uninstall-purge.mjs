@@ -15,7 +15,8 @@ import { withRulesDirLock } from './rules-dir-lock.mjs';
 import { readRulesRegistry } from './rules-owners.mjs';
 import { readRulesIndex } from './rules-index.mjs';
 import { rulesOwnerHints } from './rules-ownership.mjs';
-import { rulesDryRunLines, removeRulesForHost } from './uninstall-rules.mjs';
+import { rulesDryRunLines, removeRulesForHost, preflightRulesRemoval } from './uninstall-rules.mjs';
+import { confirmRulesRetirement } from './rules-retirement.mjs';
 import { removeEmpty } from './remove-layout.mjs';
 import { recordHomeWriter } from './record-removal.mjs';
 import { runPurgePreflight, diagnosePurge } from './purge-preflight.mjs';
@@ -72,6 +73,12 @@ async function purgeInRun(options, ticket) {
   const inspection = await inspectHost(host, { owner });
   const record = await readInstallRecord(host);
   const writer = record ? recordHomeWriter(host, record.files) : null;
+  // Plan_83 D6/D7: purge's inventory consent attests only this home's inventory.
+  const rulesPlan = record?.rules && inspection.settingsError == null
+    ? await preflightRulesRemoval(record.rules.path, record.rules.fingerprint,
+    { host, registryError, ownHomeAttested: true }) : null;
+  const rulesAnswer = await confirmRulesRetirement(rulesPlan, options);
+  if (rulesAnswer === 'cancel') return { exitCode: 130, output: 'Cancelled; nothing was changed.' };
   const permissionLine = await removePermissions(host, inspection, false);
   const hostSide = await removeHostSide(host, inspection, { owner });
   if (!hostSide.detached) {
@@ -82,7 +89,8 @@ async function purgeInRun(options, ticket) {
         .join('\n'),
     };
   }
-  const rules = await removeRulesForHost({ host, record, registry, registryError, detached: true, writer });
+  const rules = await removeRulesForHost({ host, record, registry, registryError, detached: true, writer,
+    plan: rulesPlan, answer: rulesAnswer });
   const { outcomes } = await executeHomePlan(host, plan, {
     detached: true, imageMembers: plan.imageMembers, authorization,
   });

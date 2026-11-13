@@ -372,8 +372,9 @@ for (const scenario of ['live', 'detached', 'snapshot', 'mixed', 'unknown']) {
       assert.deepEqual(await fs.readFile(record.rules.path), await fs.readFile('src/codex/rules/llm-bridge.rules'));
     }
     assert.deepEqual(await readRulesRegistry(host), scenario === 'snapshot'
-      ? { version: 2, owners: refs, records: [] }
-      : { version: 2, owners: scenario === 'mixed' ? ['vanished'] : [], records: refs.slice(1) });
+      ? { version: 1, owners: [...refs, normalizeRepoPath(host.root)] }
+      : { version: 2, owners: scenario === 'mixed' ? ['vanished'] : [], records: scenario === 'unknown' ? refs : refs.slice(1) });
+    if (scenario === 'snapshot' || scenario === 'unknown') assert.deepEqual(await fs.readFile(registryPath), before);
   });
 }
 

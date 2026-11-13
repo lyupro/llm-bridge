@@ -141,6 +141,10 @@ for (const version of [1, 2]) {
       'Would leave ' + rulesPath + ' because 2 ownership references cannot be verified: '
       + unknown.map((ref) => ref + ' (legacy owner is not in the current installation record)').join('; ') + '.',
       ...unknown.map((ref) => `Only an operator can confirm ownership reference ${ref}.`),
+      'A real run would ask about these rules references:\nRules file: ' + rulesPath
+        + '\nUnverified ownership references:\n'
+        + unknown.map((ref) => '  ' + ref + ' (legacy; folder does not exist)').join('\n')
+        + '\nYes removes these references and the rules file. No keeps both. Remove them?',
     ]);
   });
 }

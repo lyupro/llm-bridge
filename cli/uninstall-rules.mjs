@@ -6,12 +6,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileFingerprint } from './manifest.mjs';
-import { removeRulesOwner, rulesPathIdentity } from './rules-owners.mjs';
-import { installRecordPath } from './install-record.mjs';
 import { readRulesIndex } from './rules-index.mjs';
+import { removeRulesOwner } from './rules-owners.mjs';
 import { remainingRulesOwnership, offerableUnknown } from './rules-ownership.mjs';
 import { pendingRecoveryText } from './install-pending.mjs';
-import { removeOutside } from './record-removal.mjs';
+import { retireRulesPlan, rulesQuestion, rulesRepeatLine } from './rules-retirement.mjs';
 
 export function remainingOwnersText(count) {
   return `${count} other owner${count === 1 ? '' : 's'} ${count === 1 ? 'remains' : 'remain'}`;
@@ -54,93 +53,104 @@ async function rulesFilePresent(file) {
   catch (err) { return err.code !== 'ENOENT'; }
 }
 
-export async function rulesDryRunLines({ host, record, registry, registryError, detached }) {
-  const lines = [];
-  let rulesUnresolved = false;
-  if (!record?.rules || !detached) return { lines, rulesUnresolved };
-  if (registryError) {
-    lines.push(`Would leave ${record.rules.path} because the rules ownership registry is invalid; \
-ownership is unknown.`);
-    rulesUnresolved = await rulesFilePresent(record.rules.path);
-  } else {
-    const ownership = await remainingRulesOwnership(indexFromRegistry(registry), host, record);
-    const remainingOwners = liveOwnerCount(ownership);
-    const currentFingerprint = await fileFingerprint(record.rules.path);
-    if (remainingOwners || ownership?.unknown.length) {
-      if (remainingOwners) {
-        lines.push(`Would leave ${record.rules.path} because ${remainingOwnersText(remainingOwners)}.`);
-      }
-      if (ownership.unknown.length) {
-        lines.push(`Would leave ${record.rules.path} because ${unknownReferencesText(ownership.unknown)}.`);
-        lines.push(...unknownRecoveryLines(ownership.unknown));
-        rulesUnresolved = !remainingOwners && currentFingerprint !== null;
-      }
-    } else if (currentFingerprint === record.rules.fingerprint) {
-      lines.push(`Would remove ${record.rules.path}; no other owners remain and its fingerprint is unchanged.`);
-    } else if (currentFingerprint !== null) {
-      lines.push(`Would leave ${record.rules.path} because its contents changed after installation.`);
-    } else {
-      lines.push(`Would leave ${record.rules.path} because it is already absent.`);
-    }
-    if (!registry) {
-      lines.push(`Warning: the rules ownership registry was missing; \
-other installations may use ${record.rules.path}.`);
-    }
+// Plan_83 D8: the decision consumes file evidence, not an owner view, including record-free callers.
+export async function preflightRulesRemoval(rulesPath, storedFingerprint,
+  { host, index, registryError = null, ownHomeAttested = false }) {
+  if (typeof rulesPath !== 'string' || !rulesPath) throw new TypeError('rules path is required');
+  if (typeof storedFingerprint !== 'string' || !storedFingerprint) {
+    throw new TypeError('stored rules fingerprint is required');
   }
-  return { lines, rulesUnresolved };
+  if (!registryError && index === undefined) {
+    try { index = await readRulesIndex(host); }
+    catch (err) { registryError = err; }
+  }
+  const ownership = registryError ? null : await remainingRulesOwnership(index, host,
+    { rules: { path: rulesPath, fingerprint: storedFingerprint } }, { ownHomeAttested });
+  const currentFingerprint = registryError ? null : await fileFingerprint(rulesPath);
+  const exists = registryError ? await rulesFilePresent(rulesPath) : currentFingerprint !== null;
+  const live = ownership?.live ?? [];
+  const unknown = ownership?.unknown ?? [];
+  const offerable = unknown.filter(offerableUnknown);
+  const blocking = unknown.filter((ref) => !offerableUnknown(ref));
+  return { rulesPath, storedFingerprint, index, registryError, ownership, live, offerable, blocking,
+    currentFingerprint, exists, ownHomeAttested,
+    canAsk: !registryError && !live.length && !blocking.length && offerable.length > 0
+      && exists && currentFingerprint === storedFingerprint };
 }
 
-export async function removeRulesForHost({ host, record, registry, registryError, detached, writer }) {
-  const detachedRecord = record && detached ? record : null;
-  let ownership = null;
-  if (detachedRecord && !registryError) {
-    try {
-      // OW-086 / Plan_65 D5: classify before detaching the legacy hint; unknown evidence keeps the file.
-      const index = await readRulesIndex(host);
-      if (detachedRecord.rules) ownership = await remainingRulesOwnership(index, host, record);
-      const recordKey = rulesPathIdentity(installRecordPath(host));
-      // OW-086 / Plan_83 B3b: retire only a readable, complete indexed record with no remaining live owner.
-      // Unresolved legacy hints stay independent; uncertainty in this indexed record forbids retirement.
-      const removeRecord = ownership !== null
-        && index.records.some((file) => rulesPathIdentity(file) === recordKey)
-        && !ownership.unknown.some((ref) => ref.legacy === undefined && rulesPathIdentity(ref.recordPath) === recordKey)
-        && !ownership.live.some((live) => rulesPathIdentity(live.recordPath) === recordKey);
-      await removeRulesOwner(host, { removeRecord });
-    } catch (err) {
-      registryError = err;
-    }
-  }
+function dispositionLines(plan, dryRun) {
+  const { rulesPath, storedFingerprint, currentFingerprint, ownership, registryError } = plan;
   const lines = [];
-  let rulesUnresolved = false;
-  if (detachedRecord?.rules) {
-    if (registryError) {
-      lines.push(`Left ${record.rules.path} because the rules ownership registry is invalid; ownership is unknown.`);
-      rulesUnresolved = await rulesFilePresent(record.rules.path);
-    } else {
-      const remainingOwners = liveOwnerCount(ownership);
-      if (remainingOwners || ownership?.unknown.length) {
-        if (remainingOwners) {
-          lines.push(`Left ${record.rules.path} because ${remainingOwnersText(remainingOwners)}.`);
-        }
-        if (ownership.unknown.length) {
-          lines.push(`Left ${record.rules.path} because ${unknownReferencesText(ownership.unknown)}.`);
-          lines.push(...unknownRecoveryLines(ownership.unknown));
-          // Plan_83 D7 (6): unknowns affect the exit only when they alone keep an existing file.
-          rulesUnresolved = !remainingOwners && await rulesFilePresent(record.rules.path);
-        }
-      } else {
-        const currentFingerprint = await fileFingerprint(record.rules.path);
-        if (currentFingerprint === record.rules.fingerprint) {
-          await removeOutside(writer, record.rules.path);
-        } else if (currentFingerprint !== null) {
-          lines.push(`Left ${record.rules.path} because its contents changed after installation.`);
-        }
-      }
-      if (!registry) {
-        lines.push(`Warning: the rules ownership registry was missing; \
-other installations may use ${record.rules.path}.`);
-      }
+  const verb = dryRun ? 'Would leave' : 'Left';
+  const remainingOwners = liveOwnerCount(ownership);
+  if (registryError) {
+    lines.push(verb + ' ' + rulesPath + ' because the rules ownership registry is invalid; ownership is unknown.');
+  } else if (remainingOwners || ownership?.unknown.length) {
+    if (remainingOwners) lines.push(verb + ' ' + rulesPath + ' because ' + remainingOwnersText(remainingOwners) + '.');
+    if (ownership.unknown.length) {
+      lines.push(verb + ' ' + rulesPath + ' because ' + unknownReferencesText(ownership.unknown) + '.');
+      lines.push(...unknownRecoveryLines(ownership.unknown));
     }
+  } else if (currentFingerprint === storedFingerprint) {
+    if (dryRun) lines.push('Would remove ' + rulesPath + '; no other owners remain and its fingerprint is unchanged.');
+  } else if (currentFingerprint !== null) {
+    lines.push(verb + ' ' + rulesPath + ' because its contents changed after installation.');
+  } else if (dryRun) lines.push(verb + ' ' + rulesPath + ' because it is already absent.');
+  if (!registryError && plan.index === null) {
+    lines.push('Warning: the rules ownership registry was missing; other installations may use ' + rulesPath + '.');
   }
-  return { lines, registryError, rulesUnresolved };
+  return lines;
+}
+
+function unresolved(plan) {
+  return plan.exists && !plan.live.length && Boolean(plan.registryError || plan.ownership?.unknown.length);
+}
+
+export async function rulesDryRunLines({ host, record, registry, registryError, detached, plan }) {
+  if (!record?.rules || !detached) return { lines: [], rulesUnresolved: false };
+  plan ??= await preflightRulesRemoval(record.rules.path, record.rules.fingerprint,
+    { host, index: indexFromRegistry(registry), registryError });
+  const lines = dispositionLines(plan, true);
+  if (plan.canAsk) lines.push('A real run would ask about these rules references:\n' + await rulesQuestion(plan));
+  return { lines, rulesUnresolved: unresolved(plan) };
+}
+
+export async function removeRulesForHost({ host, record, registry, registryError, detached, writer,
+  plan, answer = 'no' }) {
+  if (!record || !detached) return { lines: [], registryError, rulesUnresolved: false };
+  if (!record.rules) {
+    // Plan_83 D8: record-free rules evidence is B4c; preserve the old no-metadata host-hint departure.
+    if (!registryError) {
+      try { await removeRulesOwner(host); }
+      catch (err) { registryError = err; }
+    }
+    return { lines: [], registryError, rulesUnresolved: false };
+  }
+  plan ??= await preflightRulesRemoval(record.rules.path, record.rules.fingerprint, { host, registryError });
+  const lines = dispositionLines(plan, false);
+  let rulesUnresolved = unresolved(plan);
+  if (!plan.registryError) {
+    // Plan_83 D7 (3): a refusal or a mixed unknown set keeps even our own reference byte-identical.
+    const confirmed = plan.canAsk && answer === 'yes';
+    if (!plan.ownership?.unknown.length || plan.live.length || confirmed) {
+      try {
+        const result = await retireRulesPlan(host, plan, writer, confirmed);
+        if (!result.retired) {
+          lines.push('Left ' + plan.rulesPath + ' because rules ownership references changed; nothing was retired.');
+          rulesUnresolved = plan.exists;
+        } else if (confirmed) {
+          lines.length = 0;
+          if (result.changed) lines.push('Left ' + plan.rulesPath + ' because its contents changed after installation.');
+          rulesUnresolved = !result.removed && await rulesFilePresent(plan.rulesPath);
+        } else if (result.changed) {
+          lines.push('Left ' + plan.rulesPath + ' because its contents changed after installation.');
+        }
+      } catch (err) {
+        registryError = err;
+        lines.push('Left ' + plan.rulesPath + ' because the rules ownership registry could not be updated: ' + err.message);
+        rulesUnresolved = await rulesFilePresent(plan.rulesPath);
+      }
+    } else if (plan.canAsk) lines.push(rulesRepeatLine(host));
+  }
+  return { lines, registryError: registryError ?? plan.registryError, rulesUnresolved };
 }

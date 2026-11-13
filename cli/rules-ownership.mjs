@@ -2,10 +2,10 @@
 import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { validateFormat2 } from './install-owners.mjs';
 import { pendingEntries, withoutPending } from './install-pending.mjs';
-import { installRecordPath } from './install-record.mjs';
+import { installRecordPath, asFormat2 } from './install-record.mjs';
 import { normalizedRulesOwner, rulesPathIdentity as identity } from './rules-owners.mjs';
 
-async function readRecord(recordPath) {
+async function readRecord(recordPath, currentHost) {
   let record;
   try {
     record = await readJsonFile(recordPath);
@@ -13,6 +13,11 @@ async function readRecord(recordPath) {
     return { kind: err.code === 'ENOENT' ? 'missing' : 'unreadable',
       reason: err.code === 'ENOENT' ? 'installation record does not exist (ENOENT)'
       : `cannot read installation record: ${err.code ? `${err.code}: ` : ''}${err.message}` };
+  }
+  // Plan_83 D6: only our own valid old record has the same inventory doubt as last-owner.
+  if (record?.format !== 2 && currentHost) {
+    try { record = asFormat2(record, currentHost); }
+    catch { return { kind: 'invalid', reason: 'installation record is not format 2' }; }
   }
   if (record?.format !== 2) return { kind: 'invalid', reason: 'installation record is not format 2' };
   try {
@@ -69,7 +74,8 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
   const reads = new Map();
   const load = (recordPath) => {
     const key = identity(recordPath);
-    if (!reads.has(key)) reads.set(key, readRecord(recordPath).then((loaded) => {
+    if (!reads.has(key)) reads.set(key, readRecord(recordPath,
+      key === identity(currentRecordPath) ? departingHost : undefined).then((loaded) => {
       // Plan_83 D5: classify after this departure; every foreign entry stays unknown.
       return loaded.record && departingHost && key === identity(currentRecordPath)
         ? { record: withoutPending(loaded.record, departingHost) } : loaded;
@@ -116,7 +122,7 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
   // Plan_83 D1/D5: an old or missing index cannot erase foreign intent in our readable record.
   if (departingHost) {
     const loaded = await load(currentRecordPath);
-    if (loaded.record?.pending && !result.unknown.some((ref) => ref.legacy === undefined
+    if (loaded.record && incompleteReason(loaded.record) && !result.unknown.some((ref) => ref.legacy === undefined
       && identity(ref.recordPath) === identity(currentRecordPath))) {
       result.unknown.push({ recordPath: currentRecordPath, reason: incompleteReason(loaded.record),
         ...incompleteEvidence(loaded.record) });
@@ -125,7 +131,7 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
   return result;
 }
 
-export async function remainingRulesOwnership(index, host, record) {
+export async function remainingRulesOwnership(index, host, record, { ownHomeAttested = false } = {}) {
   const recordPath = installRecordPath(host);
   const result = await classifyRulesOwnership(index, record.rules.path, recordPath, host);
   if (index === null && !result.unknown.length) return null;
@@ -136,6 +142,9 @@ export async function remainingRulesOwnership(index, host, record) {
     live: result.live.map((live) => identity(live.recordPath) === identity(recordPath)
       ? { ...live, owners: live.owners.filter((owner) => owner !== key) } : live)
       .filter((live) => live.owners.length),
-    unknown: result.unknown.filter((reference) => reference.legacy !== key),
+    // Plan_83 D6/D7: home consent resolves only our inventory, never another host's pending intent.
+    unknown: result.unknown.filter((reference) => reference.legacy !== key
+      && !(ownHomeAttested && reference.legacy === undefined && reference.kind === 'inventory'
+        && identity(reference.recordPath) === identity(recordPath))),
   };
 }

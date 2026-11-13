@@ -86,12 +86,13 @@ for (const command of [uninstall, purge]) {
       let questions = 0;
       const result = await command({ host, isTTY: true, liveRunCheck: clear, prompt: () => {
         questions++;
-        assert.equal(command, purge, 'B4a adds no uninstall question');
-        assert.ok(questions <= 2, 'only the existing purge consent questions are allowed');
-        return 'yes';
+        // Plan_83 D7 (1): offerable references now get one question after purge's two consents.
+        const consents = command === purge ? 2 : 0;
+        assert.ok(questions <= consents + Number(scenario === 'offerable'));
+        return questions > consents ? 'no' : 'yes';
       } });
       assert.equal(result.exitCode, expectedExit, result.output);
-      assert.equal(questions, command === purge ? 2 : 0);
+      assert.equal(questions, (command === purge ? 2 : 0) + Number(scenario === 'offerable'));
       for (const output of [preview.output, result.output]) {
         if (scenario === 'offerable' || scenario === 'mixed') {
           assert.match(output, /Only an operator can confirm ownership reference unconfirmed-legacy-host/);
@@ -133,7 +134,9 @@ for (const command of [uninstall, purge]) {
         const remaining = JSON.parse(await fs.readFile(registryPath, 'utf8'));
         const original = JSON.parse(registryBefore);
         assert.deepEqual(remaining.legacy, original.legacy);
-        assert.deepEqual(remaining.records, original.records.slice(1), 'no unknown reference may be retired');
+        // Plan_83 D7 (3): a mixed set retires nothing, including the departing host reference.
+        assert.deepEqual(remaining.records, original.records, 'no reference may be retired');
+        assert.deepEqual(await fs.readFile(registryPath), registryBefore);
       }
     });
   }

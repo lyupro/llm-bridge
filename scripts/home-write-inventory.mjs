@@ -34,7 +34,7 @@ export const HOME_WRITE_INVENTORY = Object.freeze([
   outside('cli/rules-lock-recovery.mjs', 'open', 1, 'Exclusively creates the rules clear gate only after writer.assertOutside (Plan_83 D3 / Plan_65 A5/D11).'),
   outside('cli/rules-lock-recovery.mjs', 'unlink', 1, 'Removes the rules lock or clear gate only after writer.assertOutside and shared recovery policy checks (Plan_83 D3 / Plan_65 A5/D8/D11).'),
   outside('cli/rules-owners.mjs', 'rename', 1, 'Publishes the shared host rules ownership registry.'),
-  outside('cli/rules-owners.mjs', 'rm', 2, 'Removes a failed temporary copy or the host rules ownership registry.'),
+  outside('cli/rules-owners.mjs', 'rm', 3, 'Removes a failed temporary copy or an empty rules ownership registry, including confirmed retirement (Plan_83 D7).'),
   outside('cli/rules-owners.mjs', 'withOutsideFileLock', 1, 'Locks the shared registry under the host Codex rules directory.'),
   outside('cli/rules-owners.mjs', 'writeFile', 1, 'Writes a temporary shared host rules ownership registry.'),
   outside('cli/settings-merge.mjs', 'mkdir', 1, 'Creates the host settings.json parent directory.'),
