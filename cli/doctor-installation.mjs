@@ -13,6 +13,7 @@ import { classifyRulesOwnership } from './rules-ownership.mjs';
 import { installRecordPath } from './install-record.mjs';
 import { parseFrontmatter } from '../src/home/lib/frontmatter.mjs';
 import { check } from './doctor-format.mjs';
+import { rulesLeftoverCheck, rulesOwnershipChecks } from './doctor-rules-leftover.mjs';
 
 export async function exists(target) {
   try {
@@ -99,9 +100,9 @@ export async function conventionsCheck(host) {
 }
 
 export async function rulesCheck(host, record) {
-  if (!record) return [check('rules', 'warn', 'cannot check before installation')];
+  if (!record) return rulesLeftoverCheck(host, 'cannot check before installation');
   if (!record.rules) {
-    return [check('rules', 'warn', 'rules were not installed by this installation; install or update will add them')];
+    return rulesLeftoverCheck(host, 'rules were not installed by this installation; install or update will add them');
   }
   let index;
   try {
@@ -111,14 +112,7 @@ export async function rulesCheck(host, record) {
     return [check('rules', 'fail', err.message)];
   }
   const ownership = await classifyRulesOwnership(index, record.rules.path, installRecordPath(host));
-  const ownershipChecks = [
-    ...ownership.live.map(({ recordPath, owners }) => check('rules owners', 'ok',
-      `${recordPath}: ${owners.join(', ')}`)),
-    ...ownership.unknown.map(({ legacy, recordPath, reason }) => check('rules ownership', 'warn',
-      `unknown ${legacy === undefined ? recordPath : `${legacy} (record ${recordPath})`}: ${reason}`)),
-    ...ownership.detached.map(({ recordPath }) => check('rules ownership', 'warn',
-      `detached record ${recordPath}: complete inventory has no owner of this rules file`)),
-  ];
+  const ownershipChecks = rulesOwnershipChecks(ownership);
   // OW-086: file integrity cannot make unresolved ownership healthy; keep its evidence separate.
   const fingerprint = await fileFingerprint(record.rules.path);
   if (!fingerprint) return [check('rules', 'fail', record.rules.path), ...ownershipChecks];
