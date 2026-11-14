@@ -11,6 +11,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `llm-bridge advice check <value> [--json]` exposes the installed home's shared advice check
   for other projects' gates, read-only, with a stable eight-field JSON contract (`schema_version: 1`)
   and exit codes 0 (valid), 1 (invalid), and 2 (call or environment error) (Plan_68 D4/D10).
+- Install, update and uninstall serialize the shared rules decision with a lock on the physical
+  Codex rules directory, taken after the home lifecycle lock and held through publication or
+  removal. Its fallback file is never taken over by age; dry runs take no locks (Plan_83 D2).
+- `llm-bridge unlock --rules [--clear]` inspects the selected Codex rules-directory lock and
+  clears its fallback file only for a verified dead holder. Live, foreign and unverified holders
+  are refused; kernel-managed locks need no clearing (Plan_83 D3).
+- `doctor` prints a `pending install` warning for each unfinished host, with its command,
+  start time and the exact install/update and uninstall recovery commands. Targeted
+  `uninstall --host` also recovers a pending-only host or a vanished host folder without
+  recreating it; unreadable settings preserve the mark (Plan_83 D5).
+- Terminal uninstall can retire unverified version-1 strings and references to missing
+  installation records (`ENOENT`), naming each reference and its folder's existence. Consent
+  is all or nothing: a mixed set containing an existing unreadable/invalid record, foreign
+  incomplete/legacy inventory or pending host offers no question and directs repair instead.
+  Ownership and fingerprints are rechecked before removal; refusal, EOF and non-TTY preserve
+  the file, Ctrl+C exits 130 before host changes, and dry-run never asks or writes (Plan_83 D7).
+- Repeating `uninstall --host` reaches the same rules decision after both the owner row and
+  installation record are gone, using the retained installation fingerprint. With no live owner,
+  record-free cleanup keeps the file and exits 1 if evidence is missing or contents changed
+  (Plan_83 D7/D8).
+- Without an installation record or host rules metadata, `doctor` inspects the rules file
+  and index, shows retained-fingerprint integrity or its absence, unknown references and the
+  terminal uninstall command. A file owned by another live installation is identified as such,
+  without a leftover integrity verdict or cleanup advice (Plan_83 D7/D8).
+
+### Changed
+
+- The Codex rules index `.llm-bridge-rules.json` is version 2: `records` holds absolute
+  installation-record paths, `legacy` preserves version-1 host strings as hints, and optional
+  `retained` entries preserve a kept file's path and installation fingerprint after its last
+  owner leaves. Version-1 indexes are read as legacy; ownership is read only from installation
+  records, never inferred from host strings (Plan_83 D1/D8).
+- Install/update publish a per-host `pending` mark before changing installed files or hooks.
+  Only that host's completing publish clears its mark; another host can finish its own work
+  without clearing foreign intent, which keeps that home's rules ownership unknown
+  (Plan_83 D4/D5).
+- Uninstall removes the shared rules file only when no other owner or unresolved reference
+  remains and its bytes match a recorded or retained installation fingerprint. Unknown
+  references keeping the file after the last live owner leaves now cause exit 1, including
+  purge and dry-run, where these cases previously returned 0; with a live owner they are
+  reported without changing the rest of uninstall's result. Yes to this home's inventory
+  question also feeds its rules decision, never another home's evidence (Plan_83 D6/D7/D8).
+
+### Fixed
+
+- On 2026-11-12 uninstall left the Codex rules file behind because the registry held three vanished
+  probe folders while `doctor` said `[ok] ... 4 owners`. Doctor now separates file integrity,
+  verified owners from installation records, unknown references and detached records; matching
+  file bytes cannot make an unverified owner count healthy (Plan_83 D1).
 
 ## [0.7.0] - 2026-11-12
 

@@ -13,7 +13,6 @@ import {
 } from '../../cli/manifest.mjs';
 import {
   readRulesRegistry,
-  remainingRulesOwners,
   rulesRegistryPath,
 } from '../../cli/rules-owners.mjs';
 import { uninstall } from '../../cli/uninstall.mjs';
@@ -21,27 +20,6 @@ import { normalizeRepoPath } from '../../src/home/lib/runner/project-dir.mjs';
 import { runsRoot } from '../../src/home/lib/runner/runs-root.mjs';
 import { allFiles, fixture, formatOneRecord } from './host-fixture.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
-
-test('a missing registry is distinct from an empty owner list', () => {
-  assert.equal(remainingRulesOwners(null, { root: String.raw`C:\Repos\Current` }), null);
-});
-
-test('a sole owner leaves no owners remaining', () => {
-  const host = { root: String.raw`C:\Repos\Current` };
-  assert.deepEqual(remainingRulesOwners({ version: 1, owners: ['c:/repos/current'] }, host), []);
-});
-
-test('other owners remain when the current path differs in case and slashes', () => {
-  const host = { root: String.raw`C:\Repos\Current` };
-  const otherOwners = ['c:/repos/other', 'd:/repos/shared'];
-  assert.deepEqual(
-    remainingRulesOwners({
-      version: 1,
-      owners: ['c:/repos/other', 'c:/repos/current', 'd:/repos/shared'],
-    }, host),
-    otherOwners,
-  );
-});
 
 test('uninstall leaves shared rules for another owner and removes them for the last owner', async (t) => {
   const root = makeTempTree('bridge-shared-owners-');

@@ -626,8 +626,33 @@ reaching the assembled Codex command line.
 The same installer places restrictions for delegated runs: `llm-bridge.rules` goes into
 `$CODEX_HOME/rules/` (by default `~/.codex/rules/`) and prohibits Codex commands that change the
 repository's history, branches, and index. The operator's personal `default.rules` is not changed:
-Codex reads the entire directory and applies the strictest matching decision. `llm-bridge doctor`
-shows the file's state; `llm-bridge update` updates it.
+Codex reads the entire directory and applies the strictest matching decision. `llm-bridge update`
+updates it; [doctor diagnostics](#installation-into-another-claude-code-configuration) report its
+integrity and ownership separately.
+
+Beside the file, `.llm-bridge-rules.json` is a version-2 index: `records` contains absolute paths
+of installation records (`.installed.json`), and `legacy` keeps version-1 host strings as hints.
+Version-1 indexes are read as legacy hints; ownership comes only from each record's `owners` and
+their `rules` fields, never from a string count. Optional `retained` entries hold an absolute
+rules-file path and its installation SHA-256 fingerprint when the file stays after its last owner
+leaves. They prove installation history, not ownership; a fresh departure-time hash or the current
+package cannot replace that evidence. [Uninstall](#uninstall-and-purge) uses it for later cleanup.
+
+`install`, `update` and `uninstall` (including purge) take the home's lifecycle lock first,
+then the lock of the physical rules directory, holding it through publication or rules-file
+removal. Uninstall does not create a missing rules directory. The lock is never taken over by
+age. For its fallback file, `.llm-bridge-rules.lock`, inspect with `llm-bridge unlock --rules`;
+`llm-bridge unlock --rules --clear` clears only a verified dead holder, refusing live, foreign
+or unverified holders. Kernel-managed locks need no clearing. `CODEX_HOME` selects this target,
+not `--host` or the package home. Dry runs take neither lock.
+
+For changes to the installed image or hooks, install/update publish a per-host `pending` mark
+in the installation record after both locks and before their side effects. Each mark stores the
+command, host root and start time. A completing publish clears only that host's mark; owner
+synchronization and another host's successful install/update preserve it. Another host's mark
+makes that home's rules ownership unknown, but does not prevent this host from installing or
+updating. Recovery is reported in the
+[doctor diagnostics](#installation-into-another-claude-code-configuration).
 
 The package's own files—hooks, runner, `config.json`, `conventions.md`, and the installation
 record—live in the branded `~/.lyupro/.llm-bridge/` directory. Its location is overridden by
@@ -1128,6 +1153,29 @@ existing structure without replacing unrelated hooks and backs up the file befor
 What remains is to check `codex --version` and Codex CLI authorization—the package does not install
 them.
 
+For Codex rules, `doctor` reports file integrity separately from `rules owners` rows naming
+installation records and their verified hosts. `rules ownership` warnings name every unknown
+reference and its reason, or a detached record whose complete inventory has no owner of this
+file. Unreadable, invalid, legacy or incomplete records and pending hosts cannot prove complete
+ownership. Matching file bytes do not turn those warnings into a healthy owner count; see the
+[Codex rules index](#environment-configuration).
+
+Each `pending install` warning names an unfinished host, its command and start time, and prints
+two recovery commands: `llm-bridge install --host "<root>"` (or `update`, matching the stored
+command) to complete it, and `llm-bridge uninstall --host "<root>"` to remove it. Recovery uses the
+stored root; uninstall also reaches a pending-only host or a vanished folder without recreating
+it, and preserves the mark if the host's settings cannot be read.
+
+Without an installation record, or when its host view has no rules metadata, `doctor` still
+inspects the rules file and index. A leftover file is `warn` with `matches retained installation
+fingerprint`, `modified after installation` or `integrity since installation cannot be proven`,
+together with `llm-bridge uninstall --host "<root>"` in a terminal and the ownership rows.
+If another live installation owns the file, it says `belongs to another installation` and shows
+that owner, without a leftover integrity verdict or cleanup advice. An index without a file is
+reported as `no rules file; the index still lists references`; with neither, the pre-installation
+warning remains. An unreadable leftover file or invalid/unreadable index is `fail`. These
+checks write nothing and create no directories.
+
 `llm-bridge doctor` also probes the Codex sandbox before an order, sequentially for
 `sandbox:read-only` and `sandbox:workspace-write`, and names the probed repository or current
 folder. A live sandbox is `ok`, a dead one is `fail`, and an inconclusive or unsupported probe
@@ -1205,6 +1253,40 @@ be removed keeps everything it shares, so a repeat run after the fix finds it wh
 removed only when its content proves it is ours — the fingerprint recorded for this host, or an
 exact match with what the current package would write; anything edited stays and is named.
 `config.json`, `conventions.md` and `state/` are operator data and stay.
+
+The shared Codex rules file has its own decision, using the
+[index and installation evidence](#environment-configuration): it is removed only when no other
+owner remains, no unknown reference blocks removal, and its bytes match a recorded or retained
+installation fingerprint. Unknown references keep an existing file when no live owner remains;
+with another live owner, they are reported without changing the rest of uninstall's result.
+A missing index warns that other installations may use the file, but a recorded fingerprint can
+still permit removal.
+
+In a terminal, uninstall may ask to retire only unverified version-1 strings and references to
+records that no longer exist (`ENOENT`). It names each reference and whether its folder exists
+(or folder existence could not be checked). Consent is all or nothing, offered only when these
+are the sole blockers and the file's fingerprint is unchanged; ownership and contents are
+rechecked under the rules lock. Yes retires the named references and removes the file. No,
+Enter, EOF or no terminal keeps those references and the file. Existing unreadable or invalid
+records, another home's incomplete/legacy inventory and foreign pending marks cannot be
+confirmed this way: their diagnostics direct repair from the owning host or home instead,
+using `llm-bridge update`, `llm-bridge inventory confirm` or the
+[pending recovery commands](#installation-into-another-claude-code-configuration) as appropriate.
+Unreadable records require repairing access or removing the record if that home is abandoned.
+A mixed set offers no question and retires none of those foreign references.
+
+The home-removal question comes first when needed. Its yes also resolves this home's inventory
+doubt for the rules decision; it cannot resolve another home's evidence. A repeat
+`llm-bridge uninstall --host "<root>"` reaches the same rules decision with no owner row or even
+no installation record, using the retained fingerprint. With no live owner, an existing file
+stays unresolved if evidence is missing or contents changed; today's package is no substitute.
+
+Uninstall exits 0 when removal completes or a live owner legitimately keeps the file, subject to
+the other removal checks; unresolved last-owner rules cleanup exits 1 (older releases returned 0
+in these cases). A manually edited rules file with a recorded owner fingerprint is preserved
+without itself making uninstall fail. Ctrl+C at a confirmation exits 130 before host changes.
+`--dry-run` never asks or writes: it prints the decision and any proposed question, and exits 1
+when cleanup cannot be established without confirmation or repair.
 
 A new home starts with a complete inventory, but an old record cannot prove it named every host.
 Migration to format 2 without a terminal leaves `inventory: incomplete`; later updates do not

@@ -119,12 +119,6 @@ export async function addRulesOwner(host) {
   });
 }
 
-export function remainingRulesOwners(registry, host) {
-  if (!registry) return null;
-  const owner = normalizedRulesOwner(host);
-  return registry.owners.filter((candidate) => candidate !== owner);
-}
-
 export async function removeRulesOwner(host, { removeRecord = false } = {}) {
   const initial = await loadRulesRegistry(host);
   if (!initial) return null;
