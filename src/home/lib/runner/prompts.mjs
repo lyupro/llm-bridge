@@ -154,6 +154,9 @@ ${questions.some((question) => question?.kind === QUESTION_KIND.STARTUP_CONTEXT)
 
 Working rules:
 - Change only what the task requires. Do not refactor adjacent code or reformat files.
+- Edit files with the patch tool. If a script must read or rewrite a text file, pass UTF-8
+  explicitly on both read and write (Python encoding='utf-8', PowerShell -Encoding utf8,
+  Node 'utf8'): the host default may be a legacy code page that silently corrupts non-ASCII text.
 - Prefer the smallest correct change and the patterns this project already uses over new
   abstractions of your own.
 - Do this work yourself: do not spawn or delegate to other agents. Their edits would land in

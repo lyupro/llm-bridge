@@ -14,6 +14,7 @@ import { createHeartbeat, HEARTBEAT_INTERVAL_MS } from '../heartbeat.mjs';
 import { MAX_LOG } from './git-state.mjs';
 import { createStdoutReceipts } from './stdout-receipts.mjs';
 import { createStopObservation } from './stop-record.mjs';
+import { codexEnv } from './codex-env.mjs';
 
 // Thirty seconds, not a fraction of one: after `exit` the pipe still holds whatever Codex wrote
 // last, and that tail carries `item.completed` — the result the verdict is read from. A quarter
@@ -251,6 +252,7 @@ export function runCodex(args, taskText, eventsPath, budgetMinutes, { graceMs = 
   const child = spawn(spec.command, spec.args, {
     ...spec.options,
     cwd,
+    env: codexEnv(process.env),
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   });
