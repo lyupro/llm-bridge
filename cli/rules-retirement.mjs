@@ -46,7 +46,9 @@ async function restoreRetainedRules(host, plan, retainOwner) {
   const retained = [...(index?.retained ?? [])];
   const previous = (plan.index?.retained ?? []).filter((entry) =>
     rulesPathIdentity(entry.path) === rulesPathIdentity(plan.rulesPath));
-  if (retainOwner) previous.push({ path: path.resolve(plan.rulesPath), fingerprint: plan.storedFingerprint });
+  if (retainOwner && plan.storedFingerprint !== null) {
+    previous.push({ path: path.resolve(plan.rulesPath), fingerprint: plan.storedFingerprint });
+  }
   for (const entry of previous) {
     if (!retained.some((item) => item.path === entry.path && item.fingerprint === entry.fingerprint)) retained.push(entry);
   }
@@ -70,7 +72,7 @@ export async function retireRulesPlan(host, plan, writer, confirmed, { keepFile 
   let retained = plan.index?.retained ?? [];
   if (fingerprint === null || remove) {
     retained = retained.filter((entry) => rulesPathIdentity(entry.path) !== rulesPathIdentity(plan.rulesPath));
-  } else if (!plan.live.length && unchanged && !retained.some((entry) =>
+  } else if (!plan.live.length && unchanged && plan.storedFingerprint !== null && !retained.some((entry) =>
     entry.path === path.resolve(plan.rulesPath) && entry.fingerprint === plan.storedFingerprint)) {
     // Plan_83 D8: never turn a fresh content hash into an installation baseline.
     retained = [...retained, { path: path.resolve(plan.rulesPath), fingerprint: plan.storedFingerprint }];

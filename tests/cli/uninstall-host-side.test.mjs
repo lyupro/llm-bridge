@@ -86,7 +86,9 @@ test('host marks are cleaned when the installation record is missing', async (t)
   await fs.unlink(installRecordPath(host));
   const result = await uninstall({ host });
   const settings = JSON.parse(await fs.readFile(host.settingsPath, 'utf8'));
-  assert.equal(result.exitCode, 0);
+  // Plan_83 D7 (8) / D8: missing owner evidence now reaches the unprovable rules decision.
+  assert.equal(result.exitCode, 1);
+  assert.match(result.output, /integrity since installation cannot be proven/);
   assert.doesNotMatch(result.output, /llm-bridge is not installed/);
   for (const file of hostFiles) await assert.rejects(() => fs.access(recordTarget(host, file)), { code: 'ENOENT' });
   assert.equal(findOwnHooks(settings, host).length, 0);

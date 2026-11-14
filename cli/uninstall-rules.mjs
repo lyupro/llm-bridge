@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileFingerprint } from './manifest.mjs';
 import { readRulesIndex } from './rules-index.mjs';
-import { removeRulesOwner } from './rules-owners.mjs';
+import { removeRulesOwner, rulesPathIdentity } from './rules-owners.mjs';
 import { remainingRulesOwnership, offerableUnknown } from './rules-ownership.mjs';
 import { pendingRecoveryText } from './install-pending.mjs';
 import { retireRulesPlan, rulesQuestion, rulesRepeatLine, matchesRulesFingerprint } from './rules-retirement.mjs';
@@ -58,8 +58,8 @@ async function rulesFilePresent(file) {
 export async function preflightRulesRemoval(rulesPath, storedFingerprint,
   { host, index, registryError = null, ownHomeAttested = false }) {
   if (typeof rulesPath !== 'string' || !rulesPath) throw new TypeError('rules path is required');
-  if (typeof storedFingerprint !== 'string' || !storedFingerprint) {
-    throw new TypeError('stored rules fingerprint is required');
+  if (storedFingerprint !== null && (typeof storedFingerprint !== 'string' || !storedFingerprint)) {
+    throw new TypeError('stored rules fingerprint is required; use null without owner evidence');
   }
   if (!registryError && index === undefined) {
     try { index = await readRulesIndex(host); }
@@ -85,6 +85,13 @@ function dispositionLines(plan, dryRun) {
   const lines = [];
   const verb = dryRun ? 'Would leave' : 'Left';
   const remainingOwners = liveOwnerCount(ownership);
+  // Plan_83 D8: a fresh hash cannot rebuild lost installation evidence.
+  if (plan.storedFingerprint === null && plan.exists && !plan.unchanged && !registryError) {
+    lines.push(verb + ' ' + rulesPath + (plan.index?.retained?.some((entry) =>
+      rulesPathIdentity(entry.path) === rulesPathIdentity(rulesPath))
+      ? ' because its contents changed after installation.'
+      : ' because its integrity since installation cannot be proven.'));
+  }
   if (registryError) {
     lines.push(verb + ' ' + rulesPath + ' because the rules ownership registry is invalid; ownership is unknown.');
   } else if (remainingOwners || ownership?.unknown.length) {
@@ -95,7 +102,7 @@ function dispositionLines(plan, dryRun) {
     }
   } else if (plan.unchanged) {
     if (dryRun) lines.push('Would remove ' + rulesPath + '; no other owners remain and its fingerprint is unchanged.');
-  } else if (currentFingerprint !== null) {
+  } else if (currentFingerprint !== null && plan.storedFingerprint !== null) {
     lines.push(verb + ' ' + rulesPath + ' because its contents changed after installation.');
   } else if (dryRun) lines.push(verb + ' ' + rulesPath + ' because it is already absent.');
   if (!registryError && plan.index === null) {
@@ -105,11 +112,12 @@ function dispositionLines(plan, dryRun) {
 }
 
 function unresolved(plan) {
-  return plan.exists && !plan.live.length && Boolean(plan.registryError || plan.ownership?.unknown.length);
+  return plan.exists && !plan.live.length && Boolean(plan.registryError || plan.ownership?.unknown.length
+    || (plan.storedFingerprint === null && !plan.unchanged));
 }
 
 export async function rulesDryRunLines({ host, record, registry, registryError, detached, plan }) {
-  if (!record?.rules || !detached) return { lines: [], rulesUnresolved: false };
+  if ((!record?.rules && !plan) || !detached) return { lines: [], rulesUnresolved: false };
   plan ??= await preflightRulesRemoval(record.rules.path, record.rules.fingerprint,
     { host, index: indexFromRegistry(registry), registryError });
   const lines = dispositionLines(plan, true);
@@ -119,9 +127,9 @@ export async function rulesDryRunLines({ host, record, registry, registryError, 
 
 export async function removeRulesForHost({ host, record, registry, registryError, detached, writer,
   plan, answer = 'no' }) {
-  if (!record || !detached) return { lines: [], registryError, rulesUnresolved: false };
-  if (!record.rules) {
-    // Plan_83 D8: record-free rules evidence is B4c; preserve the old no-metadata host-hint departure.
+  if ((!record && !plan) || !detached) return { lines: [], registryError, rulesUnresolved: false };
+  if (!record?.rules && !plan) {
+    // Plan_83 D8: callers without a decision preserve the old no-metadata host-hint departure.
     if (!registryError) {
       try { await removeRulesOwner(host); }
       catch (err) { registryError = err; }
@@ -149,7 +157,10 @@ export async function removeRulesForHost({ host, record, registry, registryError
           if (result.changed) lines.push('Left ' + plan.rulesPath + ' because its contents changed after installation.');
           rulesUnresolved = !result.removed && await rulesFilePresent(plan.rulesPath);
         } else if (result.changed) {
-          lines.push('Left ' + plan.rulesPath + ' because its contents changed after installation.');
+          if (plan.storedFingerprint !== null || plan.unchanged) {
+            lines.push('Left ' + plan.rulesPath + ' because its contents changed after installation.');
+          }
+          if (plan.storedFingerprint === null) rulesUnresolved = true;
         }
       } catch (err) {
         registryError = err;

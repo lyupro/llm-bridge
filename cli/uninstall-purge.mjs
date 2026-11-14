@@ -17,6 +17,7 @@ import { readRulesIndex } from './rules-index.mjs';
 import { rulesOwnerHints } from './rules-ownership.mjs';
 import { rulesDryRunLines, removeRulesForHost, preflightRulesRemoval } from './uninstall-rules.mjs';
 import { confirmRulesRetirement } from './rules-retirement.mjs';
+import { preflightRulesReentry } from './uninstall-rules-reentry.mjs';
 import { removeEmpty } from './remove-layout.mjs';
 import { recordHomeWriter } from './record-removal.mjs';
 import { runPurgePreflight, diagnosePurge } from './purge-preflight.mjs';
@@ -72,11 +73,12 @@ async function purgeInRun(options, ticket) {
   const owner = plan.format2?.owners[normalizeRepoPath(host.root)] ?? null;
   const inspection = await inspectHost(host, { owner });
   const record = await readInstallRecord(host);
-  const writer = record ? recordHomeWriter(host, record.files) : null;
+  const writer = recordHomeWriter(host, record?.files ?? []);
   // Plan_83 D6/D7: purge's inventory consent attests only this home's inventory.
   const rulesPlan = record?.rules && inspection.settingsError == null
     ? await preflightRulesRemoval(record.rules.path, record.rules.fingerprint,
-    { host, registryError, ownHomeAttested: true }) : null;
+    { host, registryError, ownHomeAttested: true }) : !record
+      ? await preflightRulesReentry(host, inspection, { registryError, ownHomeAttested: true }) : null;
   const rulesAnswer = await confirmRulesRetirement(rulesPlan, options);
   if (rulesAnswer === 'cancel') return { exitCode: 130, output: 'Cancelled; nothing was changed.' };
   const permissionLine = await removePermissions(host, inspection, false);
@@ -129,7 +131,10 @@ async function purgeDryRun(options) {
   if (!hostSide.detached) {
     lines.push(`Would leave ${host.brandRoot} untouched: this host's hooks could not be removed.`);
   }
-  const rules = await rulesDryRunLines({ host, record, registry, registryError, detached: hostSide.detached });
+  const rulesPlan = !record && !corrupt
+    ? await preflightRulesReentry(host, inspection, { registryError, ownHomeAttested: true }) : null;
+  const rules = await rulesDryRunLines({ host, record, registry, registryError, detached: hostSide.detached,
+    plan: rulesPlan });
   lines.push(...rules.lines);
   lines.push(...purgeDryRunLines(diagnosis, { host }));
   return { exitCode: hostSide.detached && !rules.rulesUnresolved ? purgeDryRunExitCode(diagnosis) : 1, output: lines.join('\n') };

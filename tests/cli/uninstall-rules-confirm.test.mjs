@@ -142,12 +142,15 @@ for (const kind of ['pending', 'unreadable', 'inventory', 'invalid']) {
 }
 
 test('changed fingerprint with offerable references never asks or retires', async (t) => {
-  const { host, record, registryPath } = await setup(t);
-  const before = await fs.readFile(registryPath);
+  const { host, record, registryPath, own } = await setup(t);
+  const before = JSON.parse(await fs.readFile(registryPath));
   await fs.writeFile(record.rules.path, 'operator change\n');
   const result = await uninstall({ host, isTTY: true, prompt: forbiddenPrompt });
   assert.equal(result.exitCode, 1, result.output);
-  assert.deepEqual(await fs.readFile(registryPath), before);
+  // Plan_83 D7 (8): only the deleted home record leaves the index; nothing offerable is retired.
+  await assert.rejects(fs.access(own), { code: 'ENOENT' });
+  assert.deepEqual(JSON.parse(await fs.readFile(registryPath)),
+    { ...before, records: before.records.filter((file) => file !== own) });
   assert.equal(await fs.readFile(record.rules.path, 'utf8'), 'operator change\n');
 });
 
@@ -274,8 +277,10 @@ test('purge inventory consent never resolves a foreign pending reference in its 
     return 'yes';
   } });
   assert.equal(result.exitCode, 1, result.output);
-  assert.deepEqual(JSON.parse(await fs.readFile(state.registryPath)),
-    { ...JSON.parse(before), retained: [state.record.rules] });
+  // Plan_83 D7 (8): purge deleted its own record, so that path leaves the index; foreign ones stay.
+  await assert.rejects(fs.access(state.own), { code: 'ENOENT' });
+  assert.deepEqual(JSON.parse(await fs.readFile(state.registryPath)), { ...JSON.parse(before),
+    records: JSON.parse(before).records.filter((file) => file !== state.own), retained: [state.record.rules] });
   assert.ok(result.output.includes(other.root));
   await fs.access(state.record.rules.path);
 });

@@ -13,6 +13,7 @@ import { inspectSegments } from './link-segments.mjs';
 import { installRecordPath, removeInstallOwner } from './install-record.mjs';
 import { removeEmptyHome } from './remove-layout.mjs';
 import { consumePurgeAuthorization } from './purge-preflight.mjs';
+import { retireDeletedRulesRecord } from './rules-owners.mjs';
 
 function findingReason(finding, root) {
   if (finding.kind === 'link') {
@@ -71,9 +72,13 @@ async function executeRecord(host, record, writer, detached, add) {
     add(recordRelative, finding.kind === 'missing' ? 'missing' : 'kept', findingReason(finding, host.brandRoot));
     return;
   }
+  let recordDeleted = false;
   try {
     if (record.operation === 'delete') {
       await writer.unlink('install-record', target);
+      recordDeleted = true;
+      // Plan_83 D7 (8) / D8: successful unlink retires our path under the registry lock; retained survives.
+      await retireDeletedRulesRecord(host);
       add(recordRelative, 'removed', record.reason);
       return;
     }
@@ -81,7 +86,7 @@ async function executeRecord(host, record, writer, detached, add) {
     add(recordRelative, updated === null ? 'missing' : 'kept',
       updated === null ? 'missing' : 'this host removed from the record');
   } catch (error) {
-    add(recordRelative, error.code === 'ENOENT' ? 'missing' : 'failed', failure(error));
+    add(recordRelative, !recordDeleted && error.code === 'ENOENT' ? 'missing' : 'failed', failure(error));
   }
 }
 

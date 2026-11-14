@@ -45,7 +45,9 @@ for (const kind of ['legacy', 'legacy-unverified', 'missing', 'unreadable', 'inv
       f.index.records = [];
       f.index.legacy = ['unconfirmed-legacy-host'];
     }
-    if (kind === 'legacy-unverified' || kind === 'missing') f.fail('ENOENT');
+    // Plan_83 D7 (8) / D8: only a present unreadable record leaves legacy hints unverified.
+    if (kind === 'legacy-unverified') f.fail('EACCES');
+    if (kind === 'missing') f.fail('ENOENT');
     if (kind === 'unreadable') f.fail('EACCES');
     if (kind === 'invalid') f.publish({ ...f.record, format: 1 });
     if (kind === 'inventory') f.publish({ ...f.record, inventory: 'incomplete' });
@@ -107,3 +109,14 @@ for (const evidence of ['unreadable', 'invalid']) {
     assertReference(await f.classify(), 'legacy-unverified', false);
   });
 }
+
+// Plan_83 D7 (8) / advisor r5: no record can confirm a hint after ENOENT.
+test('absent current record makes legacy hints offerable legacy references', async (t) => {
+  const f = fixture(t);
+  f.index.records = [];
+  f.index.legacy = ['legacy-host'];
+  f.fail('ENOENT');
+  const reference = assertReference(await f.classify(), 'legacy', true);
+  assert.match(reference.reason, /ENOENT/);
+  assert.equal(reference.legacy, 'legacy-host');
+});

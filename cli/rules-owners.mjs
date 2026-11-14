@@ -8,7 +8,7 @@ import { readJsonFile } from '../src/home/lib/json-file.mjs';
 import { withOutsideFileLock } from '../src/home/lib/file-lock.mjs';
 import { createHomeWriter } from '../src/home/lib/home-write.mjs';
 import { installRecordPath, RULES_NAME } from './install-record.mjs';
-import { validateIndex } from './rules-index.mjs';
+import { readRulesIndex, validateIndex } from './rules-index.mjs';
 export { isLockTaken } from '../src/home/lib/file-lock.mjs';
 
 export const RULES_REGISTRY_NAME = `.${PACKAGE_NAME}-rules.json`;
@@ -176,4 +176,15 @@ export async function retireRulesReferences(host, { legacy, records, expectedInd
   };
   // No index means no registry directory is required (the physical rules lock is already held).
   return await loadRulesRegistry(host) || retained?.length ? withRegistryLock(host, retire) : retire();
+}
+
+// Plan_83 D7 (8) / D8: deleting a home retires only its record path, never hints or retained evidence.
+export async function retireDeletedRulesRecord(host) {
+  const index = await readRulesIndex(host);
+  const recordKey = rulesPathIdentity(installRecordPath(host));
+  const records = (index?.records ?? []).filter((file) => rulesPathIdentity(file) === recordKey);
+  if (!records.length) return;
+  if (!await retireRulesReferences(host, { records, legacy: [], expectedIndex: index, verify: async () => true })) {
+    throw new Error('rules ownership index changed while retiring the deleted installation record');
+  }
 }

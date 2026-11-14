@@ -8,6 +8,8 @@ import { resolveHost } from '../../cli/hosts.mjs';
 import { buildHomeRemovalPlan } from '../../cli/home-removal-plan.mjs';
 import { executeHomePlan } from '../../cli/home-plan-execute.mjs';
 import { imageMembers, installRecordPath, readInstallRecordFile } from '../../cli/install-record.mjs';
+import { normalizedRulesOwner, rulesRegistryPath } from '../../cli/rules-owners.mjs';
+import { outcomeExitCode } from '../../cli/removal-outcomes.mjs';
 import { normalizeRepoPath } from '../../src/home/lib/runner/project-dir.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
@@ -233,3 +235,55 @@ test('the home root is removed only after files, record, and its empty descendan
   assert.equal(outcomes[plan.rows.length].relative, '.installed.json');
   await assert.rejects(fs.lstat(host.brandRoot), { code: 'ENOENT' });
 });
+
+// Plan_83 D7 (8) / D8: only a successful record unlink authorizes its index departure.
+for (const failure of [null, 'unlink', 'index-write', 'index-ENOENT']) {
+  test('record deletion retires its index path atomically; failure: ' + failure, async (t) => {
+    const { host, members } = await installedHome(t);
+    const recordPath = installRecordPath(host);
+    const indexPath = rulesRegistryPath(host);
+    const foreign = path.join(path.dirname(host.brandRoot), 'foreign-home', '.installed.json');
+    const retained = [{ path: path.join(host.codexRulesDir, 'llm-bridge.rules'), fingerprint: 'a'.repeat(64) }];
+    const original = { version: 2, records: [recordPath, foreign], legacy: ['foreign-legacy', normalizedRulesOwner(host)], retained };
+    await fs.writeFile(indexPath, JSON.stringify(original));
+    const indexBefore = await fs.readFile(indexPath);
+    const recordBefore = await fs.readFile(recordPath);
+    const plan = await removalPlan(host);
+    let sawUnlink = false;
+    const unlink = fs.unlink;
+    t.mock.method(fs, 'unlink', async (file) => {
+      if (file === recordPath) {
+        if (failure === 'unlink') throw Object.assign(new Error('record unlink denied'), { code: 'EACCES' });
+        await unlink(file);
+        sawUnlink = true;
+        return;
+      }
+      return unlink(file);
+    });
+    const rename = fs.rename;
+    t.mock.method(fs, 'rename', async (source, target) => {
+      if (target === indexPath) {
+        assert.equal(sawUnlink, true, 'the index must not change before successful record unlink');
+        await assert.rejects(fs.access(recordPath), { code: 'ENOENT' });
+        if (failure?.startsWith('index')) {
+          throw Object.assign(new Error('index publication denied'),
+            { code: failure === 'index-ENOENT' ? 'ENOENT' : 'EACCES' });
+        }
+        assert.equal((await fs.stat(indexPath + '.lock')).isFile(), true, 'registry lock is held');
+      }
+      return rename(source, target);
+    });
+    const { outcomes } = await executeHomePlan(host, plan, { detached: true, imageMembers: members });
+    const outcome = outcomeAt(outcomes, '.installed.json');
+    assert.equal(outcome.result, failure ? 'failed' : 'removed');
+    assert.equal(outcomeExitCode(outcomes), failure ? 1 : 0);
+    if (failure) {
+      assert.deepEqual(await fs.readFile(indexPath), indexBefore);
+      if (failure === 'unlink') assert.deepEqual(await fs.readFile(recordPath), recordBefore);
+      else await assert.rejects(fs.access(recordPath), { code: 'ENOENT' });
+    } else {
+      await assert.rejects(fs.access(recordPath), { code: 'ENOENT' });
+      assert.deepEqual(JSON.parse(await fs.readFile(indexPath, 'utf8')), { ...original, records: [foreign] });
+    }
+  });
+}

@@ -109,7 +109,9 @@ export async function classifyRulesOwnership(index, rulesPath, currentRecordPath
   for (const legacy of index?.legacy ?? []) {
     const loaded = await load(currentRecordPath);
     if (loaded.reason) {
-      result.unknown.push({ legacy, recordPath: currentRecordPath, reason: loaded.reason, kind: 'legacy-unverified' });
+      // Plan_83 D7 (8) / D8: ENOENT leaves no record that could ever confirm this legacy hint.
+      result.unknown.push({ legacy, recordPath: currentRecordPath, reason: loaded.reason,
+        kind: loaded.kind === 'missing' ? 'legacy' : 'legacy-unverified' });
       continue;
     }
     // OW-086 / Plan_65 D5: a vanished folder proves nothing; only this exact recorded key can help.

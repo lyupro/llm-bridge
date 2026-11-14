@@ -199,7 +199,9 @@ test('missing home follows ordinary uninstall and appends the nothing-to-purge l
   await fs.rename(host.brandRoot, path.join(root, 'saved-home'));
   const { options, questions } = consent();
   const result = await purge({ host, ...options, liveRunCheck: () => assert.fail('No home means no preflight') });
-  assert.equal(result.exitCode, 0);
+  // Plan_83 D7 (8) / D8: a missing home no longer bypasses unprovable rules integrity.
+  assert.equal(result.exitCode, 1);
+  assert.match(result.output, /integrity since installation cannot be proven/);
   assert.match(result.output, /^Uninstalled llm-bridge\./);
   assert.ok(result.output.endsWith(`Nothing to purge: ${host.brandRoot} does not exist.`));
   assert.equal(questions.length, 0);
@@ -224,7 +226,9 @@ test('home missing at lifecycle entry never passes an undefined ticket to prefli
     return existsSync(target);
   });
   const result = await purge({ host, liveRunCheck: () => assert.fail('Missing home cannot reach preflight') });
-  assert.equal(result.exitCode, 0);
+  // Plan_83 D7 (8) / D8: the fallback also reports rules left without a retained baseline.
+  assert.equal(result.exitCode, 1);
+  assert.match(result.output, /integrity since installation cannot be proven/);
   assert.ok(homeChecks >= 2);
   assert.ok(result.output.endsWith(`Nothing to purge: ${host.brandRoot} does not exist.`));
 });

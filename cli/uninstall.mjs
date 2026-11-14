@@ -22,6 +22,7 @@ import { readRulesIndex } from './rules-index.mjs';
 import { rulesOwnerHints } from './rules-ownership.mjs';
 import { rulesDryRunLines, removeRulesForHost, remainingOwnersText, preflightRulesRemoval } from './uninstall-rules.mjs';
 import { confirmRulesRetirement } from './rules-retirement.mjs';
+import { preflightRulesReentry, runRulesReentry } from './uninstall-rules-reentry.mjs';
 import { removeEmpty } from './remove-layout.mjs';
 import { recordHomeWriter } from './record-removal.mjs';
 import { executeHomePlan } from './home-plan-execute.mjs';
@@ -84,7 +85,7 @@ the installation inventory is incomplete: other installations may use this home.
 // of ANY host of the home promised a question and printed "not installed" instead. The branch decides from
 // the raw record and the inspection only — `legacy` is nobody's host view (D10 item 5) — removes the named
 // host's side either way, and removes the image only on "yes" for a detached host.
-async function uninstallOrphan(options, inspection, candidates, format2) {
+async function uninstallOrphan(options, inspection, candidates, format2, registryError) {
   const { host, dryRun = false } = options;
   const decision = imageRemoval(format2, host);
   const foreignPending = decision.reason === 'other-pending-hosts';
@@ -96,18 +97,25 @@ async function uninstallOrphan(options, inspection, candidates, format2) {
       reason: hostSide.detached ? 'operator confirmed' : 'this host is still attached' };
     const plan = pendingRemovalPlan(await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
       imagePolicy }), host);
+    const rulesPlan = await preflightRulesReentry(host, inspection, { registryError, ownHomeAttested: true });
+    const rules = await runRulesReentry(options, rulesPlan, { detached: hostSide.detached, registryError });
     return {
       exitCode: 1,
       output: [permissionLine, ...hostSide.lines, ...[pendingImageLine(host, decision, true)].filter(Boolean),
         `A real run would ask whether to remove the shared image of ${host.brandRoot}: \
 no host is recorded as using it.`,
-        'If the answer is yes:', ...planLines(plan, { host, detached: hostSide.detached })].join('\n'),
+        'If the answer is yes:', ...planLines(plan, { host, detached: hostSide.detached }), ...rules.lines].join('\n'),
     };
   }
 
   const answer = await askRemoval(host, 'orphan', promptOptions);
   if (answer === 'cancel') return { exitCode: 130, output: 'Cancelled; nothing was changed.' };
 
+  // Plan_83 D7 (7), (8): home consent comes first; either cancel precedes every host write.
+  const rulesPlan = await preflightRulesReentry(host, inspection,
+    { registryError, ownHomeAttested: answer === 'remove' });
+  const rulesAnswer = await confirmRulesRetirement(rulesPlan, options);
+  if (rulesAnswer === 'cancel') return { exitCode: 130, output: 'Cancelled; nothing was changed.' };
   const permissionLine = await removePermissions(host, inspection, false);
   const hostSide = await removeHostSide(host, inspection, { owner: null });
   const imagePolicy = answer === 'remove' && !foreignPending
@@ -116,6 +124,8 @@ no host is recorded as using it.`,
     : { remove: false, reason: 'no host is recorded as using it' };
   const plan = pendingRemovalPlan(await buildHomeRemovalPlan({ command: 'uninstall', host, packageRoot: options.packageRoot,
     imagePolicy }), host);
+  const rules = await runRulesReentry(options, rulesPlan,
+    { detached: hostSide.detached, answer: rulesAnswer, registryError });
   await removeEmpty(host.commandsDir);
   await removeEmpty(host.rulesDir);
   await removeEmpty(host.agentsDir);
@@ -140,8 +150,9 @@ and the inventory is incomplete.`;
     : hasMarks ? 'Uninstalled llm-bridge.'
       : `No llm-bridge files or hooks were found in ${host.root}.`;
   return {
-    exitCode: answer === 'remove' && hostSide.detached && !foreignPending ? outcomeExitCode(outcomes) : 1,
-    output: [heading, permissionLine, ...hostSide.lines, imageLine, hint, ...outcomeLines(outcomes, { host })]
+    exitCode: answer === 'remove' && hostSide.detached && !foreignPending && !rules.rulesUnresolved
+      ? outcomeExitCode(outcomes) : 1,
+    output: [heading, permissionLine, ...hostSide.lines, ...rules.lines, imageLine, hint, ...outcomeLines(outcomes, { host })]
       .filter(Boolean).join('\n'),
   };
 }
@@ -168,7 +179,7 @@ async function uninstallInRun(options = {}) {
   const owner = format2?.owners[ownerKey] ?? null;
   // Plan_65 D10: inspect marks and content before permission edits or any other host mutation.
   const inspection = await inspectHost(host, { owner });
-  if (orphaned && !ownPending) return uninstallOrphan(options, inspection, candidates, format2);
+  if (orphaned && !ownPending) return uninstallOrphan(options, inspection, candidates, format2, registryError);
 
   const record = pendingUninstallView(format2, host, await readInstallRecord(host));
   let decision = rawRecord === null
@@ -188,18 +199,21 @@ async function uninstallInRun(options = {}) {
   // Plan_83 D6/D7/D8: the home answer feeds one rules decision before any host mutation.
   const rulesPlan = record?.rules && inspection.settingsError == null
     ? await preflightRulesRemoval(record.rules.path, record.rules.fingerprint,
-    { host, registryError, ownHomeAttested }) : null;
+    { host, registryError, ownHomeAttested }) : !record
+      ? await preflightRulesReentry(host, inspection, { registryError, ownHomeAttested }) : null;
   const rulesAnswer = await confirmRulesRetirement(rulesPlan, options);
   if (rulesAnswer === 'cancel') return { exitCode: 130, output: 'Cancelled; nothing was changed.' };
   const permissionLine = await removePermissions(host, inspection, dryRun);
   const hostMarks = hasPackageMarks(inspection);
   if (!record && !hostMarks) {
+    const rules = await runRulesReentry(options, rulesPlan,
+      { detached: inspection.settingsError == null, answer: rulesAnswer, registryError });
     return {
-      exitCode: 1,
-      output: [permissionLine, 'llm-bridge is not installed.', ...outcomeLines([], { host })].join('\n'),
+      exitCode: rulesPlan && !rules.rulesUnresolved ? 0 : 1,
+      output: [permissionLine, 'llm-bridge is not installed.', ...rules.lines, ...outcomeLines([], { host })].join('\n'),
     };
   }
-  const writer = record ? recordHomeWriter(host, record.files) : null;
+  const writer = record || rulesPlan ? recordHomeWriter(host, record?.files ?? []) : null;
 
   if (dryRun) {
     const hostSide = await removeHostSide(host, inspection, { owner, dryRun: true });
