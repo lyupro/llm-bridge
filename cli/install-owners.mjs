@@ -105,14 +105,26 @@ export function ownerView(record2, host) {
   return view;
 }
 
-/** Decides whether the departing owner may remove the shared image using only inventory facts. */
-export function imageRemoval(record2, host) {
+// Plan_83 D9: image removal and purge must agree before either can erase another host's evidence.
+// Incomplete/legacy inventory needs separate consent, not another named home user (Plan_65 D6).
+export function otherHomeUsers(record2, host) {
   validateFormat2(record2);
   const key = normalizeRepoPath(host.root);
+  return {
+    owners: Object.entries(record2.owners).filter(([hostKey]) => hostKey !== key)
+      .map(([hostKey, owner]) => ({ ...owner, hostKey })),
+    pending: otherPendingEntries(record2, host),
+  };
+}
+
+/** Decides whether the departing owner may remove the shared image using only inventory facts. */
+export function imageRemoval(record2, host) {
+  const { owners, pending } = otherHomeUsers(record2, host);
+  const key = normalizeRepoPath(host.root);
   const isOwner = Object.hasOwn(record2.owners, key);
-  const remaining = Object.keys(record2.owners).length - Number(isOwner);
+  const remaining = owners.length;
   // Plan_83 D1/D5: a foreign unfinished host may already use the image without an owner row.
-  const pendingHosts = otherPendingEntries(record2, host).map((entry) => entry.root);
+  const pendingHosts = pending.map((entry) => entry.root);
   if (pendingHosts.length) return { removeImage: false, reason: 'other-pending-hosts', pendingHosts };
   if (remaining > 0) return { removeImage: false, reason: 'other-owners', remaining };
   if (record2.legacy !== undefined || record2.inventory !== 'complete') {

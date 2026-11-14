@@ -5,6 +5,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { install } from '../../cli/install.mjs';
+import { purge } from '../../cli/uninstall-purge.mjs';
+import { withPending, pendingRecoveryText } from '../../cli/install-pending.mjs';
 import { resolveHost } from '../../cli/hosts.mjs';
 import { diagnosePurge, planRefusals } from '../../cli/purge-preflight.mjs';
 import { liveRunLines } from '../../cli/purge-live-runs.mjs';
@@ -187,3 +189,62 @@ test('pure rendering keeps all removals conditional, including with refusals or 
   assertConditional(lines);
   assert.equal(purgeDryRunExitCode(diagnostic), 1);
 });
+
+// Plan_83 D9: dry-run and real purge must preserve the entire transaction before either consent.
+for (const mode of ['TTY', 'non-TTY', 'dry-run']) {
+  for (const ownerless of [false, true]) {
+    test(mode + ' purge refuses every foreign pending host (ownerless: ' + ownerless + ')', async (t) => {
+      const { root, host } = await installedHome(t);
+      const entries = ['install', 'update'].map((command) => ({ command,
+        root: path.join(root, 'Stored ' + command + ' Root') + path.sep + '.' + path.sep }));
+      let raw = JSON.parse(await fs.readFile(installRecordPath(host)));
+      if (ownerless) raw = { ...raw, owners: {}, inventory: 'incomplete' };
+      for (const entry of [...entries, { root: host.root, command: 'update' }]) {
+        raw = withPending(raw, entry, entry.command, '2026-11-13T20:15:00Z');
+      }
+      await fs.writeFile(installRecordPath(host), JSON.stringify(raw));
+      const before = await snapshot(root);
+      const diagnostic = await diagnosePurge({ host, packageRoot, liveRunCheck: clear });
+      assert.equal(diagnostic.refusals.length, entries.length);
+      for (const [i, entry] of entries.entries()) {
+        assert.ok(diagnostic.refusals[i].includes(entry.root));
+        assert.ok(diagnostic.refusals[i].includes(pendingRecoveryText(entry)));
+      }
+      let calls = 0;
+      const result = await purge({ host, packageRoot, isTTY: mode !== 'non-TTY',
+        dryRun: mode === 'dry-run', liveRunCheck: clear, prompt: () => { calls++; return 'yes'; } });
+      assert.equal(result.exitCode, 1, result.output);
+      assert.equal(calls, 0);
+      for (const line of diagnostic.refusals) assert.ok(result.output.includes(line), result.output);
+      assert.deepEqual(await snapshot(root), before);
+    });
+  }
+}
+
+// Plan_83 D9: the purging host may still clean up its own interrupted install after both consents.
+for (const ownerless of [false, true]) {
+  for (const dryRun of [false, true]) {
+    test('own pending permits purge (ownerless: ' + ownerless + ', dry-run: ' + dryRun + ')', async (t) => {
+      const { root, host } = await installedHome(t);
+      let raw = JSON.parse(await fs.readFile(installRecordPath(host)));
+      if (ownerless) raw = { ...raw, owners: {}, inventory: 'incomplete' };
+      await fs.writeFile(installRecordPath(host), JSON.stringify(raw));
+      const baseline = await purge({ host, packageRoot, dryRun: true, liveRunCheck: clear });
+      const equivalent = { root: host.root + path.sep + '.' + path.sep };
+      await fs.writeFile(installRecordPath(host),
+        JSON.stringify(withPending(raw, equivalent, 'install', '2026-11-13T20:15:00Z')));
+      const before = await snapshot(root);
+      let calls = 0;
+      const result = await purge({ host, packageRoot, dryRun, isTTY: true,
+        liveRunCheck: clear, prompt: () => { calls++; return 'yes'; } });
+      // Ownerless inventory still lacks rules-integrity evidence; own pending must not alter that result.
+      assert.equal(result.exitCode, baseline.exitCode, result.output);
+      assert.doesNotMatch(result.output, /Purge refused|Unfinished/);
+      const diagnostic = dryRun ? await diagnosePurge({ host, packageRoot, liveRunCheck: clear }) : null;
+      if (dryRun) assert.deepEqual(diagnostic.refusals, []);
+      assert.equal(calls, dryRun ? 0 : 2);
+      if (dryRun) assert.deepEqual(await snapshot(root), before);
+      else await assert.rejects(fs.access(host.brandRoot), { code: 'ENOENT' });
+    });
+  }
+}

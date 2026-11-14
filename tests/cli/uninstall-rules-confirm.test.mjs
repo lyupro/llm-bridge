@@ -270,18 +270,19 @@ test('purge inventory consent never resolves a foreign pending reference in its 
   const other = { root: path.join(state.root, 'pending-host'), scope: 'host' };
   const raw = JSON.parse(await fs.readFile(state.own));
   await fs.writeFile(state.own, JSON.stringify(withPending(raw, other, 'install', '2026-11-13T10:00:00Z')));
-  const before = await fs.readFile(state.registryPath);
+  const before = await snapshot(state.root);
   let calls = 0;
   const result = await purge({ host: state.host, isTTY: true, liveRunCheck: clear, prompt: () => {
-    assert.ok(++calls <= 2, 'foreign pending must block the rules question after inventory consent');
+    calls++;
     return 'yes';
   } });
   assert.equal(result.exitCode, 1, result.output);
-  // Plan_83 D7 (8): purge deleted its own record, so that path leaves the index; foreign ones stay.
-  await assert.rejects(fs.access(state.own), { code: 'ENOENT' });
-  assert.deepEqual(JSON.parse(await fs.readFile(state.registryPath)), { ...JSON.parse(before),
-    records: JSON.parse(before).records.filter((file) => file !== state.own), retained: [state.record.rules] });
+  // Plan_83 D9: neither consent may destroy another host's only unfinished-install evidence.
+  assert.equal(calls, 0);
+  assert.deepEqual(await snapshot(state.root), before);
   assert.ok(result.output.includes(other.root));
+  assert.ok(result.output.includes('llm-bridge install --host "' + other.root + '"'));
+  assert.ok(result.output.includes('llm-bridge uninstall --host "' + other.root + '"'));
   await fs.access(state.record.rules.path);
 });
 

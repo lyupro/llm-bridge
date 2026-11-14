@@ -5,7 +5,8 @@ import test from 'node:test';
 import { normalizeRepoPath } from '../../src/home/lib/runner/project-dir.mjs';
 import { isFormat2 } from '../../src/home/lib/install-owner-roots.mjs';
 import { withPending } from '../../cli/install-pending.mjs';
-import { imageFingerprint, imageRemoval, ownerView, ownImageStampCurrent, validateFormat2, withOwner, withoutOwner } from '../../cli/install-owners.mjs';
+import { planRefusals } from '../../cli/purge-preflight.mjs';
+import { imageFingerprint, imageRemoval, otherHomeUsers, ownerView, ownImageStampCurrent, validateFormat2, withOwner, withoutOwner } from '../../cli/install-owners.mjs';
 
 const brandFiles = [
   { root: 'brand', path: 'hooks/reply-guard.mjs' },
@@ -305,6 +306,50 @@ test('a departing host own pending entry follows all existing image-removal rule
     { ...complete, legacy: record('old') }, { ...complete, owners: {}, inventory: 'incomplete' }]) {
     const pending = withPending(original, departing, 'update', '2026-11-13T20:15:00Z');
     assert.deepEqual(imageRemoval(pending, { root: departing.root + '/./' }), imageRemoval(original, departing));
+  }
+});
+
+// Plan_83 D9: shared decisions retain stored roots and commands instead of normalized recovery paths.
+test('other home users preserve owner rows and pending recovery evidence', () => {
+  const acting = host('/repos/Own Host/.claude');
+  const foreign = host('/repos/Stored Foreign Root/.claude/./');
+  const own = withOwner(null, acting, record(), { homeHadImage: false });
+  const shared = withOwner(own, foreign, record('foreign'));
+  const value = withPending(shared, foreign, 'update', '2026-11-13T20:15:00Z');
+  const before = structuredClone(value);
+  const hostKey = normalizeRepoPath(foreign.root);
+  assert.deepEqual(otherHomeUsers(value, acting), {
+    owners: [{ ...shared.owners[hostKey], hostKey }],
+    pending: [{ ...value.pending[hostKey], hostKey }],
+  });
+  assert.deepEqual(value, before);
+});
+
+// Plan_83 D9: a new kind of home user must never protect the image but lose its record to purge.
+test('image removal and purge agree on every combination of other home users', () => {
+  const acting = { ...host('/repos/Own Host/.claude'), brandRoot: '/shared-home' };
+  const foreign = host('/repos/Foreign Host/.claude');
+  const own = withOwner(null, acting, record(), { homeHadImage: false });
+  const shared = withOwner(own, foreign, record('foreign'));
+  const mark = (value, target) => withPending(value, target, 'update', '2026-11-13T20:15:00Z');
+  const cases = [
+    ['own owner only', own, undefined, 0],
+    ['foreign owner', shared, 'other-owners', 1],
+    ['foreign pending only', mark(own, foreign), 'other-pending-hosts', 1],
+    ['own pending only', mark(own, acting), undefined, 0],
+    ['foreign pending plus foreign owner', mark(shared, foreign), 'other-pending-hosts', 2],
+    ['own pending plus foreign pending', mark(mark(own, acting), foreign), 'other-pending-hosts', 1],
+    ['incomplete inventory only', { ...own, inventory: 'incomplete' }, 'incomplete-inventory', 0],
+    ['legacy inventory only', { ...own, legacy: record('legacy') }, 'incomplete-inventory', 0],
+  ];
+  for (const [name, value, reason, count] of cases) {
+    const record2 = validateFormat2(value);
+    const image = imageRemoval(record2, { ...acting, root: acting.root + '/./' });
+    const refusals = planRefusals({ homeRoot: 'present', recordState: 'valid', format2: record2 }, acting);
+    assert.equal(image.reason, reason, name);
+    assert.equal(refusals.length, count, name);
+    const otherUsers = ['other-owners', 'other-pending-hosts'].includes(image.reason);
+    assert.equal(refusals.length > 0, !image.removeImage && otherUsers, name);
   }
 });
 

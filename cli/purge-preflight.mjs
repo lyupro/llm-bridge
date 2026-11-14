@@ -11,6 +11,8 @@ import { assertLiveTicket } from './lifecycle-transaction.mjs';
 import { askPurgeConsent } from './inventory-removal.mjs';
 import { inspectLiveRuns, liveRunLines } from './purge-live-runs.mjs';
 import { buildHomeRemovalPlan } from './home-removal-plan.mjs';
+import { otherHomeUsers } from './install-owners.mjs';
+import { pendingRecoveryText } from './install-pending.mjs';
 import { normalizeRepoPath } from '../src/home/lib/runner/project-dir.mjs';
 
 const authorizations = new WeakMap();
@@ -39,11 +41,13 @@ export function planRefusals(plan, host) {
     return [`The installation record of ${host.brandRoot} is unreadable: purge cannot tell who uses this home.`];
   }
 
-  const ownerKey = normalizeRepoPath(host.root);
-  const otherOwners = plan.recordState === 'valid'
-    ? Object.keys(plan.format2.owners).filter((root) => root !== ownerKey)
-    : [];
-  return otherOwners.map((root) => `${root} is recorded as using ${host.brandRoot}; uninstall it first.`);
+  if (plan.recordState !== 'valid') return [];
+  const { owners, pending } = otherHomeUsers(plan.format2, host);
+  // Plan_83 D9: consent cannot retire a foreign pending host's only recovery evidence.
+  return [
+    ...owners.map(({ hostKey }) => `${hostKey} is recorded as using ${host.brandRoot}; uninstall it first.`),
+    ...pending.map((entry) => `Unfinished ${entry.command} for ${entry.root}; ${pendingRecoveryText(entry)}`),
+  ];
 }
 
 export function purgeDataFiles(plan) {
