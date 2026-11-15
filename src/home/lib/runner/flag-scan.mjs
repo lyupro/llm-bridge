@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { readFlagBaseline, removeFlagBaselineCopies, FLAG_BASELINE_DIR } from './flag-baseline.mjs';
 import { runSnapshotChanges } from '../meta/run-snapshots.mjs';
+import { scanFileEncoding, mergeEncodingFindings } from './encoding-scan.mjs';
 
 const STUB = /test\.(skip|only)|it\.(skip|only)|describe\.(skip|only)|NotImplemented/;
 const MARKER_PREFIX = /(?:^[ \t]*|\/\/[ \t]*|\/\*+[ \t]*|#[ \t]*|<!--[ \t]*|--[ \t]*|^[ \t]*\*[ \t]*)$/;
@@ -21,27 +22,34 @@ export function isFlagLine(text) {
   return false;
 }
 
-function addedLines(diff) {
-  const added = [];
-  let inside = false;
+function parseHunks(diff) {
+  const hunks = [];
+  let current;
+  let oldNumber = 0;
   let number = 0;
   for (const line of diff.split('\n')) {
     if (line.startsWith('diff ')) {
-      inside = false;
+      current = undefined;
       continue;
     }
-    const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+    const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
     if (hunk) {
-      inside = true;
-      number = Number(hunk[1]);
-    } else if (inside && line.startsWith('+')) {
-      added.push({ number, text: line.slice(1) });
+      current = { removed: [], added: [] };
+      hunks.push(current);
+      oldNumber = Number(hunk[1]);
+      number = Number(hunk[2]);
+    } else if (current && line.startsWith('+')) {
+      current.added.push({ number, text: line.slice(1) });
       number += 1;
-    } else if (inside && line.startsWith(' ')) {
+    } else if (current && line.startsWith('-')) {
+      current.removed.push({ number: oldNumber, text: line.slice(1) });
+      oldNumber += 1;
+    } else if (current && line.startsWith(' ')) {
       number += 1;
+      oldNumber += 1;
     }
   }
-  return added;
+  return hunks;
 }
 
 function compareFile(baseFile, currentFile) {
@@ -50,7 +58,7 @@ function compareFile(baseFile, currentFile) {
     '--ignore-cr-at-eol', '--diff-algorithm=myers', '-U0', '--', baseFile, currentFile,
   ], { windowsHide: true, timeout: 30_000, maxBuffer: 8 * 1024 * 1024 });
   if (result.error || ![0, 1].includes(result.status)) return null;
-  return result.status === 0 ? [] : addedLines(result.stdout.toString('utf8'));
+  return result.status === 0 ? [] : parseHunks(result.stdout.toString('utf8'));
 }
 
 // `git show <head>:<path>` exits non-zero both for a path the start commit lacks (a new file: every line is added)
@@ -62,7 +70,7 @@ function headReadable(repoRoot, head) {
   return !result.error && result.status === 0;
 }
 
-function scanPath({ name, entry, baseline, headKnown, runDir, repoRoot, gaps }) {
+function scanPath({ name, entry, baseline, headKnown, runDir, repoRoot, gaps, classify }) {
   const currentFile = path.join(repoRoot, name);
   let current;
   try {
@@ -121,23 +129,27 @@ function scanPath({ name, entry, baseline, headKnown, runDir, repoRoot, gaps }) 
   }
 
   if (!base.length) {
-    return current.toString('utf8').split('\n').map((text, index) => ({ number: index + 1, text }));
+    const added = current.toString('utf8').split('\n').map((text, index) => ({ number: index + 1, text }));
+    classify?.({ name, entry, current, base, hunks: [{ removed: [], added }] });
+    return added;
   }
-  let added;
+  let hunks;
   try {
-    added = compareFile(baseFile, currentFile);
+    hunks = compareFile(baseFile, currentFile);
   } finally {
     if (temporary) fs.unlinkSync(baseFile);
   }
-  if (added === null) {
+  if (hunks === null) {
     gaps.push(`${name}: diff failed`);
     return [];
   }
-  return added;
+  classify?.({ name, entry, current, base, hunks });
+  return hunks.flatMap((hunk) => hunk.added);
 }
 
-export function scanRunFlags({ runDir, repoRoot }) {
+export function scanRunFlags({ runDir, repoRoot, encoding }) {
   const gaps = [];
+  const encodingGaps = [];
   const hits = [];
   try {
     const baseline = readFlagBaseline(runDir);
@@ -151,8 +163,25 @@ export function scanRunFlags({ runDir, repoRoot }) {
       if (!comparison.ok) gaps.push('snapshots not comparable');
       const names = [...new Set([...entries.keys(), ...(comparison.ok ? comparison.changed : [])])].sort();
       const headKnown = headReadable(repoRoot, baseline.head);
+      // OW-089 pass 2b is evidence only; encoding failures cannot interrupt the existing flags scan.
+      const classify = encoding && comparison.ok ? ({ name, entry, current, base, hunks }) => {
+        try {
+          let commit;
+          if (entry?.state === 'copied') {
+            if (!headKnown) throw new Error('start commit unreadable');
+            const result = spawnSync('git', ['-C', repoRoot, 'show', `${baseline.head}:${name}`], {
+              windowsHide: true, timeout: 30_000, maxBuffer: 8 * 1024 * 1024,
+            });
+            if (result.error || result.status === null) throw new Error('start commit content unreadable');
+            commit = result.status === 0 ? result.stdout : Buffer.alloc(0);
+          }
+          mergeEncodingFindings(encoding, scanFileEncoding({ path: name, end: current, start: base, hunks, commit }));
+        } catch {
+          encodingGaps.push(`${name}: encoding classification failed`);
+        }
+      } : undefined;
       for (const name of names) {
-        const added = scanPath({ name, entry: entries.get(name), baseline, headKnown, runDir, repoRoot, gaps });
+        const added = scanPath({ name, entry: entries.get(name), baseline, headKnown, runDir, repoRoot, gaps, classify });
         for (const line of added) {
           if (hits.length < 20 && isFlagLine(line.text)) hits.push(`${name}:${line.number}: ${line.text.trim()}\n`);
         }
@@ -160,6 +189,10 @@ export function scanRunFlags({ runDir, repoRoot }) {
     }
   } finally {
     removeFlagBaselineCopies(runDir);
+  }
+  if (encoding) {
+    encoding.coverage.gaps = [...gaps, ...encodingGaps];
+    encoding.coverage.complete = encoding.coverage.gaps.length === 0;
   }
   return { text: hits.join(''), coverage: { complete: gaps.length === 0, gaps } };
 }

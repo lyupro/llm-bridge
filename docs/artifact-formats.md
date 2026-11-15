@@ -576,6 +576,39 @@ work and ordinary test data from being attributed to the current run.
 The worker deletes `flags-baseline/` immediately after the scan; closing a run as abandoned removes
 it too. The manifest stays and holds no file content.
 
+## `encoding.json`
+
+The worker writes this versioned encoding evidence beside `flags.txt`, during the same file walk and
+before deleting the start copies (OW-089 pass 2b). **Evidence only in this release:** no finding or
+coverage gap changes a run's verdict, reply or guidance. Pass 3 will let tier A decide FAIL under
+decision OW-089 D1; tier B will remain advisory.
+
+| Field | Value |
+| --- | --- |
+| `version` | `1`. |
+| `proven` | Tier A entries `{ path, line, text }`: the added line repairs exactly to a removed line in the same diff hunk. `line` is the one-based end line number; `text` is the added line. |
+| `suspected` | Tier B entries described below, including dirty-start inheritance. |
+| `counts` | `{ proven, suspected }`: true totals before either list is capped. |
+| `truncated` | Whether either list omitted findings; each list keeps at most 50 entries across the run. |
+| `coverage` | `{ complete, gaps }`: the flag scan's coverage gaps, plus encoding-classification failures. A gap is never an accusation. |
+
+Every finding names the repository-relative `path`. Suspicions have a `kind`:
+
+- `candidate`: `{ path, line, kind, index, text, repaired }` for a reversible span on an added
+  line without tier A proof; `text` is the candidate and `repaired` its recovered character.
+- `replacement-char`: `{ path, line, kind, index }` for a literal U+FFFD on an added line.
+- `malformed-utf8`: `{ path, kind, byteOffset }` for invalid end bytes when the start was valid
+  UTF-8 or absent. Malformed end content skips all line checks for that file.
+- `inherited`: `{ path, line, kind, index, text, repaired }` for a candidate occurrence in a
+  dirty-start copy not accounted for by candidate occurrences in the same path at the start commit.
+  Its `line` refers to the start copy, so a blind repeat still exposes earlier corruption.
+
+`index` is a zero-based UTF-16 index within the line; `byteOffset` is a zero-based byte position.
+One trailing CR is stripped from line text for encoding comparisons only, preserving CRLF witnesses
+without changing flags. Only added lines are checked for new findings. Missing baselines and
+incomparable snapshots produce empty findings with incomplete coverage. Encoding classification
+failures become coverage gaps and do not interrupt `flags.txt` or `flags-coverage.txt`.
+
 ## `git-before.txt`, `git-after.txt` and `diff.stat`
 
 Human-readable only: `git status --porcelain` before and after the run and `git diff --stat` after it,

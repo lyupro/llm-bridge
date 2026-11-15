@@ -8,6 +8,7 @@ import path from 'node:path';
 import { git, headSha, branchName, worktreeSnapshot } from './git-state.mjs';
 import { captureFlagBaseline } from './flag-baseline.mjs';
 import { scanRunFlags } from './flag-scan.mjs';
+import { createEncodingReport } from './encoding-scan.mjs';
 
 export function writeBuildBefore({ runDir, repoRoot, isGitRepo }) {
   fs.writeFileSync(path.join(runDir, 'head-before.txt'), `${isGitRepo ? headSha(repoRoot) : ''}\n`);
@@ -23,7 +24,9 @@ export function writeBuildAfter({ runDir, repoRoot, isGitRepo }) {
   fs.writeFileSync(path.join(runDir, 'git-after.txt'), git(repoRoot, ['-c', 'core.quotepath=false', 'status', '--porcelain']).stdout || '');
   fs.writeFileSync(path.join(runDir, 'state-after.txt'), worktreeSnapshot(repoRoot));
   fs.writeFileSync(path.join(runDir, 'diff.stat'), git(repoRoot, ['-c', 'core.quotepath=false', 'diff', '--stat']).stdout || '');
-  const scan = scanRunFlags({ runDir, repoRoot });
+  const encoding = createEncodingReport();
+  const scan = scanRunFlags({ runDir, repoRoot, encoding });
   fs.writeFileSync(path.join(runDir, 'flags.txt'), scan.text);
   fs.writeFileSync(path.join(runDir, 'flags-coverage.txt'), scan.coverage.gaps.map((gap) => `${gap}\n`).join(''));
+  fs.writeFileSync(path.join(runDir, 'encoding.json'), `${JSON.stringify(encoding, null, 2)}\n`);
 }

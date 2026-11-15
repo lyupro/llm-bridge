@@ -60,7 +60,7 @@ export const HOME_WRITE_INVENTORY = Object.freeze([
   outside('src/home/lib/retention.mjs', 'unlinkSync', 1, 'Removes transport files inside run folders under the runs root, which is operator data outside the home writer even when it is runs/ of the home (Plan_77).'),
   outside('src/home/lib/runner/sandbox-diagnosis.mjs', 'openSync', 1, 'Read-only open with the r flag, reading a bounded tail of the Codex sandbox log under CODEX_HOME (Plan_78 B1).'),
   outside('src/home/lib/runner/git-state.mjs', 'openSync', 1, 'Read-only open with the r flag, hashing an untracked file of the worked repository in chunks (Plan_73 B4b).'),
-  outside('src/home/lib/runner/build-evidence.mjs', 'writeFileSync', 11, 'Writes the before and after tree evidence of a build run, flags.txt and flags-coverage.txt inside a run folder.'),
+  outside('src/home/lib/runner/build-evidence.mjs', 'writeFileSync', 12, 'Writes the before and after tree evidence of a build run, flags.txt, flags-coverage.txt and encoding.json inside a run folder.'),
   outside('src/home/lib/runner/codex-cmd.mjs', 'createWriteStream', 2, 'Appends stderr.log and events.jsonl inside a run folder.'),
   outside('src/home/lib/runner/stdout-receipts.mjs', 'createWriteStream', 1, 'Appends stdout-receipts.jsonl inside a run folder.'),
   outside('src/home/lib/runner/resume-launch.mjs', 'writeFileSync', 3, 'Writes frozen inputs, the continuation prompt and the orchestrator\'s resume note inside a resume run folder (Plan_80 E14/D2).'),
