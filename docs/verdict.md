@@ -151,11 +151,19 @@ the first matching branch determines the status. The order is therefore part of 
     only because a letter from another project arrived during the run. A run that started before the
     key existed has an empty list. This check ranks above report matching: a report can name one allowed
     file while concealing several extra ones.
-15. **Build report matches actual work.** `changes[].file` entries are first compared with the current
+15. **Proven build encoding corruption (OW-089 D1).** For `codex-build`, a valid version-1
+    `encoding.json` with `counts.proven > 0` produces `FAIL` with rule `build-encoding-corrupted`.
+    The reason names the total count and the first three recorded `path:line` locations and says
+    the edits were kept in the worktree. This check follows scope and precedes report matching,
+    including success carried from an earlier pass. Missing, unreadable, wrong-version or malformed
+    evidence is ignored: no accusation without evidence. Tier B suspicions never change status;
+    the successful build reply adds one `Encoding: <n> suspected — <first locations>; check before accepting`
+    row, separate from `Flags:`, using up to three recorded locations (byte offsets for malformed UTF-8).
+16. **Build report matches actual work.** `changes[].file` entries are first compared with the current
     run's delta. If there are no matches, service paths are rejected before examining the chain. The
     declared files are then searched in the accumulated diff from the chain's first `state-before.txt`
     through the current `state-after.txt`.
-16. **Success.** A match only with accumulated work returns `OK` and `carried: true`; normal completion
+17. **Success.** A match only with accumulated work returns `OK` and `carried: true`; normal completion
     returns `OK` without a reason.
 
 ## Transport and data
@@ -334,6 +342,11 @@ next step. Its texts live only in the `next-action` diagnostic
 (`src/home/lib/order-diagnostics/next-action.mjs`): the producer chooses one variant per cause,
 not a variant derived from the exit code. The dispatcher returns the row verbatim with the rest;
 it is addressed to the orchestrator, never an instruction to the dispatcher.
+
+A result-carrying `FAIL` with `reason_rule: build-encoding-corrupted` selects `fail-build-encoding`
+(OW-089 D1). The edits remain in the tree; do not repeat the order unchanged, since a repeat starts
+from the corrupted text. Repair the named lines by re-reading the file as UTF-8 in a new pass under
+a `continue:` grant, or accept the work as it stands if that text was intended.
 
 The row is third in post-run replies, second in a runner-recorded failure (`writeFailure()`, right
 after its `FAIL — ` headline), and last in pre-start refusals. If a refusal producer supplies

@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Each build run writes `encoding.json` with proven mojibake replacements and suspected encoding
+  damage, including dirty-start inheritance (`6f51fef`, `0ee5e05`; OW-089).
+
+### Changed
+
+- Build runs start Codex with `PYTHONUTF8=1`, and the build prompt asks for UTF-8 reads and writes
+  (`4a2e6c5`; OW-089).
+
+### Fixed
+
+- Proven mojibake replacements now fail a build after scope checking and before report matching,
+  with rule `build-encoding-corrupted` and their own `fail-build-encoding` Action row; edits stay
+  in the tree for repair in a new pass under `continue:` or acceptance if intended. Suspicions
+  add a separate `Encoding:` row to successful build replies without changing status; missing or
+  unusable evidence is ignored (`4e2c930`; OW-089 D1).
+
 ## [0.8.0] - 2026-11-14
 
 ### Added

@@ -20,6 +20,7 @@ A started run records its lifecycle and output in its run folder:
 - `result.json`: structured scout, build or advisor result; build includes `summary`, `changes`, `verify_command`, `verify_passed`, `leftovers` and `report_markdown`.
 - `review.json`: the review agent's structured result instead of `result.json`. {{review-required-fields}}.
 - `report.md`: the full report; the runner expands a build result's `report_markdown` into this file.
+- `encoding.json`: build encoding evidence; tier A proves an existing line was replaced with its mojibake image and causes `FAIL`, keeping the edits in the tree. Read the named locations and the Action row before repair or acceptance. Tier B is suspicion only: the successful build reply's separate `Encoding:` row asks you to check before accepting and never changes status. Missing or unusable evidence is ignored.
 - `events.jsonl` and `stderr.log`: transport evidence for progress, deadline or startup failures.
 - `raw.log`: transport evidence when present; retention may remove it.
 

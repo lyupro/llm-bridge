@@ -579,9 +579,13 @@ it too. The manifest stays and holds no file content.
 ## `encoding.json`
 
 The worker writes this versioned encoding evidence beside `flags.txt`, during the same file walk and
-before deleting the start copies (OW-089 pass 2b). **Evidence only in this release:** no finding or
-coverage gap changes a run's verdict, reply or guidance. Pass 3 will let tier A decide FAIL under
-decision OW-089 D1; tier B will remain advisory.
+before deleting the start copies (OW-089). Tier A now decides `FAIL` under decision OW-089 D1:
+for `codex-build`, valid version-1 evidence with `counts.proven > 0` fails after the scope check
+and before report matching, with rule `build-encoding-corrupted`. The reason names the total and
+the first three recorded `path:line` locations; the edits stay in the worktree. Tier B never changes
+status: the successful build reply shows one `Encoding: <n> suspected — <first locations>; check before accepting`
+row, separate from `Flags:`, with up to three recorded locations (byte offsets for malformed UTF-8).
+A missing, unreadable, wrong-version or malformed file is ignored; a coverage gap is not an accusation.
 
 | Field | Value |
 | --- | --- |
