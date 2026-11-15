@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-11-16
+
 ### Added
 
 - On Windows the launch sandbox probe now runs Python inside the Codex sandbox under the run's
