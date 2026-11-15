@@ -10,7 +10,7 @@ import { unsafeForCmd } from '../../src/home/lib/runner/codex-cmd.mjs';
 import { resumePrompt } from '../../src/home/lib/runner/prompts.mjs';
 import { CLEAN_ENV, RUN_ENV, loadRunEnv } from '../../src/home/lib/runner/run-env.mjs';
 import { DEFAULTS, disableFlags } from '../../src/home/lib/run-config.mjs';
-import { platformSandboxArgs } from '../../src/home/lib/runner/sandbox-flags.mjs';
+import { platformSandboxArgs, UTF8_SHELL_POLICY } from '../../src/home/lib/runner/sandbox-flags.mjs';
 import { workerOrder } from '../../src/home/lib/runner/worker-order.mjs';
 
 loadRunEnv();
@@ -33,7 +33,7 @@ for (const agent of agents) {
           'exec', 'resume', threadId, '--json', ...CLEAN_ENV,
           '--ignore-user-config', '-c', 'model_reasoning_effort=high',
           ...(hasSpeed ? ['-c', `service_tier=${profile.speed}`] : []),
-          '-c', 'agents.enabled=false', ...platformSandboxArgs(),
+          '-c', 'agents.enabled=false', ...platformSandboxArgs(), ...UTF8_SHELL_POLICY,
           ...(hasModel ? ['-m', profile.model] : []),
           '-c', 'sandbox_mode=read-only', '--skip-git-repo-check',
           '--output-schema', path.join(runDir, 'schema.json'),

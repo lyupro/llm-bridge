@@ -1,5 +1,5 @@
 /**
- * Platform flags a delegated run needs before its sandbox can start a process at all.
+ * Flags a delegated run needs to execute sandboxed commands with the required environment.
  *
  * codex-cli 0.149.0 on Windows runs sandboxed commands under a restricted token, and which token
  * it builds is `windows.sandbox` — `elevated` or `unelevated`. The unelevated form refuses
@@ -18,10 +18,23 @@
  * The value carries no quotes on purpose: unsafeForCmd() refuses any argument containing `"`,
  * because the whole command line goes through cmd.exe. Codex parses `elevated` as a bare TOML
  * literal, and rejects an unknown variant loudly, so the unquoted form is checked, not assumed.
+ *
+ * OW-089 D3 (2026-11-15): the elevated Windows sandbox rebuilt the command environment and
+ * dropped spawn's PYTHONUTF8=1 (Python utf8_mode=0); the shell policy override reached it
+ * (utf8_mode=1). Every platform gets this pair so readers and writers share the UTF-8 policy.
+ * Single quotes preserve the TOML string without double quotes, percent signs or whitespace
+ * that would be refused or rewritten by the cmd.exe transport.
  */
 export const WINDOWS_SANDBOX = ['-c', 'windows.sandbox=elevated'];
+
+export const UTF8_SHELL_POLICY = Object.freeze(['-c', "shell_environment_policy.set.PYTHONUTF8='1'"]);
 
 /** Empty off Windows: no other platform has this setting, and passing it would be an error. */
 export function platformSandboxArgs(platform = process.platform) {
   return platform === 'win32' ? [...WINDOWS_SANDBOX] : [];
+}
+
+/** Shared run policy: platform sandbox flags first, then the platform-independent UTF-8 pair. */
+export function runSandboxArgs(platform = process.platform) {
+  return [...platformSandboxArgs(platform), ...UTF8_SHELL_POLICY];
 }

@@ -16,7 +16,7 @@
 import path from 'node:path';
 import { agentRole } from '../agents.mjs';
 import { CLEAN_ENV, RUN_ENV } from './run-env.mjs';
-import { platformSandboxArgs } from './sandbox-flags.mjs';
+import { runSandboxArgs } from './sandbox-flags.mjs';
 
 /**
  * Which model runs a role, and how deep it reasons.
@@ -101,7 +101,7 @@ export function resumeArgs({ agent, profile, threadId, runDir, isolationFlags })
     `model_reasoning_effort=${profile.effort}`,
     ...(profile.speed ? ['-c', `service_tier=${profile.speed}`] : []),
     ...NO_SUBAGENTS,
-    ...platformSandboxArgs(),
+    ...runSandboxArgs(),
     ...(profile.model ? ['-m', profile.model] : []),
     '-c',
     'sandbox_mode=read-only',
@@ -133,7 +133,7 @@ export function codexArgs(opts, runDir, isGitRepo) {
       effort,
       ...speedArgs,
       ...NO_SUBAGENTS,
-      ...platformSandboxArgs(),
+      ...runSandboxArgs(),
       ...modelArgs,
       '--sandbox',
       sandboxMode,
@@ -158,7 +158,7 @@ export function codexArgs(opts, runDir, isGitRepo) {
       effort,
       ...speedArgs,
       ...NO_SUBAGENTS,
-      ...platformSandboxArgs(),
+      ...runSandboxArgs(),
       ...modelArgs,
       '--sandbox',
       sandboxMode,
@@ -192,7 +192,7 @@ export function codexArgs(opts, runDir, isGitRepo) {
     effort,
     ...speedArgs,
     ...NO_SUBAGENTS,
-    ...platformSandboxArgs(),
+    ...runSandboxArgs(),
     ...modelArgs,
     '--sandbox',
     sandboxMode,
