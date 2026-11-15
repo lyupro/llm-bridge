@@ -3,7 +3,8 @@ import { performance } from 'node:perf_hooks';
 import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
 import { sandboxModeFor } from './codex-args.mjs';
 import { codexSpawnSpec, spawnCaptured } from './codex-cmd.mjs';
-import { platformSandboxArgs } from './sandbox-flags.mjs';
+import { runSandboxArgs } from './sandbox-flags.mjs';
+import { witnessSandboxUtf8 } from './sandbox-utf8-witness.mjs';
 import { resolveCodexHome } from '../codex-home.mjs';
 import { snapshotSandboxLogs, diagnoseSandbox, formatSandboxDiagnosis } from './sandbox-diagnosis.mjs';
 
@@ -32,6 +33,7 @@ function inconclusiveReason(result, form) {
 export async function probeSandbox({
   agent, repo, platform = process.platform, run = spawnCaptured, timeoutMs = 30_000,
   codexHome = resolveCodexHome(), clock = () => new Date(),
+  witness = witnessSandboxUtf8,
 }) {
   if (!PROBED_PLATFORMS.has(platform)) return { outcome: 'skipped' };
   const sandbox = sandboxModeFor(agent);
@@ -82,12 +84,19 @@ export async function probeSandbox({
   // On 2026-09-17, -C required --permission-profile instead: cwd must be a process option.
   // D16: no single failure exit code proves a dead sandbox; both forms and a live CLI must agree.
   const flagged = await attempt('flagged', [
-    'sandbox', ...platformSandboxArgs(platform), '-c', `sandbox_mode=${sandbox}`, '--', ...echo,
+    'sandbox', ...runSandboxArgs(platform), '-c', `sandbox_mode=${sandbox}`, '--', ...echo,
   ]);
   const flaggedReason = inconclusiveReason(flagged, 'flagged');
   if (flaggedReason) return finish('inconclusive', flaggedReason);
   if (flagged.status === 0 && flagged.marker) {
-    return finish('alive', orderDiagnosticMessage('sandbox-probe-reason', { variant: 'alive' }));
+    const result = finish('alive', orderDiagnosticMessage('sandbox-probe-reason', { variant: 'alive' }));
+    // OW-089 D3: evidence of the paid-run policy, never a second liveness verdict.
+    try {
+      result.witness = await witness({ agent, repo, platform, run });
+    } catch {
+      result.witness = { status: 'malformed' };
+    }
+    return result;
   }
   // D16: the marker proves a process started, so a nonzero exit cannot prove a dead sandbox.
   if (flagged.marker) {

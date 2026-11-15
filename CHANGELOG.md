@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- On Windows the launch sandbox probe now runs Python inside the Codex sandbox under the run's
+  shell policy and records what it saw in `sandbox_probe.witness`: `PYTHONUTF8`, `utf8_mode`,
+  the interpreter and an explicit status (`observed`, `mismatch`, `no-python`, `timeout`,
+  `malformed`, `skipped`). The witness is evidence only and never changes the probe outcome or
+  the verdict (OW-089 D3).
+
+### Fixed
+
+- `PYTHONUTF8=1` now reaches commands inside the Codex sandbox: the elevated Windows sandbox
+  rebuilt the command environment and dropped the variable set on the Codex process, so Python
+  still decoded files as cp1252. Every role and every resume now passes
+  `-c shell_environment_policy.set.PYTHONUTF8='1'`, and the sandbox probe runs under the same
+  policy (`451f88e`; OW-089 D3).
+
 ## [0.8.1] - 2026-11-15
 
 ### Added

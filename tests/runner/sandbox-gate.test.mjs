@@ -197,7 +197,9 @@ for (const [agent, sandbox] of [['codex-build', 'workspace-write'], ['codex-scou
     assert.equal(probe.outcome, 'alive');
     assert.equal(probe.reason, 'The Codex sandbox started a process.');
     assert.equal(probe.attempts.length, 1);
-    assert.deepEqual(Object.keys(probe).sort(), ['attempts', 'outcome', 'reason']);
+    assert.deepEqual(Object.keys(probe).sort(), ['attempts', 'outcome', 'reason', 'witness']);
+    assert.equal(Object.hasOwn(probe, 'witness'), true);
+    assert.equal(probe.witness.status, 'malformed');
     const attempt = probe.attempts[0];
     assert.equal(attempt.form, 'flagged');
     assert.equal(attempt.status, 0);
@@ -206,12 +208,15 @@ for (const [agent, sandbox] of [['codex-build', 'workspace-write'], ['codex-scou
     assert.ok(Number.isInteger(attempt.ms) && attempt.ms >= 0);
     const invocations = calls(tree.root);
     assert.deepEqual(invocations.slice(0, 2), [['--version'], ['login', 'status']]);
-    assert.deepEqual(invocations.slice(2).map((args) => args[0]), ['sandbox']);
+    assert.deepEqual(invocations.slice(2).map((args) => args[0]), ['sandbox', 'sandbox']);
     const flagged = invocations[2];
     assert.ok(flagged.includes('-c'));
     assert.ok(flagged.includes(`sandbox_mode=${sandbox}`), JSON.stringify(flagged));
     assert.ok(flagged.includes('windows.sandbox=elevated'), JSON.stringify(flagged));
     assert.deepEqual(flagged.slice(flagged.indexOf('--')), ['--', 'cmd', '/d', '/c', 'echo', SANDBOX_PROBE_MARKER]);
+    const witness = invocations[3];
+    assert.ok(witness.includes(`sandbox_mode=${sandbox}`), JSON.stringify(witness));
+    assert.deepEqual(witness.slice(witness.indexOf('--'), -1), ['--', 'powershell.exe', '-NoProfile', '-Command']);
     assertSilentProbe(output);
   });
 }
@@ -248,8 +253,10 @@ if (args[0] === 'sandbox') {
       .filter((entry) => entry.isDirectory()).map((entry) => entry.name), ['other-live-run']);
     const invocations = calls(tree.root);
     assert.deepEqual(invocations.slice(0, 2), [['--version'], ['login', 'status']]);
-    assert.deepEqual(invocations.slice(2).map((args) => args[0]), ['sandbox']);
+    assert.deepEqual(invocations.slice(2).map((args) => args[0]), ['sandbox', 'sandbox']);
     assert.ok(invocations[2].includes('-c'));
+    assert.deepEqual(invocations[3].slice(invocations[3].indexOf('--'), -1),
+      ['--', 'powershell.exe', '-NoProfile', '-Command']);
   } finally {
     holder.kill();
     await holderExited;

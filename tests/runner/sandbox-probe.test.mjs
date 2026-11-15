@@ -6,6 +6,7 @@ import path from 'node:path';
 import { withTempTree } from '../temp-tree.mjs';
 import { sandboxModeFor } from '../../src/home/lib/runner/codex-args.mjs';
 import { codexSpawnSpec } from '../../src/home/lib/runner/codex-cmd.mjs';
+import { UTF8_SHELL_POLICY } from '../../src/home/lib/runner/sandbox-flags.mjs';
 import {
   SANDBOX_PROBE_MARKER as MARKER, PROBED_PLATFORMS, probeSandbox, sandboxRefusal,
 } from '../../src/home/lib/runner/sandbox-probe.mjs';
@@ -43,7 +44,7 @@ async function probe(replies, options = {}) {
   return withTempTree('sandbox-probe-', async (codexHome) => {
     const { run, calls } = fixture(replies);
     const result = await probeSandbox({ agent: 'codex-scout', repo, platform: 'win32', codexHome,
-      ...options, run });
+      witness: async () => ({ status: 'observed' }), ...options, run });
     if (result.outcome !== 'dead') assert.equal(Object.hasOwn(result, 'diagnosis'), false);
     return { result, calls };
   });
@@ -79,7 +80,7 @@ for (const [agent, mode] of [
     assert.equal(result.attempts[0].marker, true);
     assert.equal(calls[0].command, process.env.ComSpec || 'cmd.exe');
     assert.deepEqual(calls[0].args, ['/d', '/s', '/c',
-      `"codex sandbox -c windows.sandbox=elevated -c sandbox_mode=${mode} -- cmd /d /c echo ${MARKER}"`]);
+      `"codex sandbox -c windows.sandbox=elevated ${UTF8_SHELL_POLICY.join(' ')} -c sandbox_mode=${mode} -- cmd /d /c echo ${MARKER}"`]);
     assert.deepEqual(calls[0].options, {
       windowsVerbatimArguments: true, windowsHide: true,
       cwd: repo, encoding: 'utf8', timeout: 30_000,
@@ -205,7 +206,7 @@ test('Linux is judged with direct POSIX commands for every form', async () => {
   assert.equal(result.outcome, 'dead');
   assertAttempts(result, calls, ['flagged', 'control', 'version']);
   assert.deepEqual(calls.map(({ args }) => args), [
-    ['sandbox', '-c', 'sandbox_mode=read-only', '--', 'echo', MARKER],
+    ['sandbox', ...UTF8_SHELL_POLICY, '-c', 'sandbox_mode=read-only', '--', 'echo', MARKER],
     ['sandbox', '--', 'echo', MARKER], ['--version'],
   ]);
   for (const call of calls) {
@@ -215,7 +216,7 @@ test('Linux is judged with direct POSIX commands for every form', async () => {
   const alive = await probe({ flagged: success }, { platform: 'linux', agent: 'codex-build', repo: '/repo' });
   assert.equal(alive.result.outcome, 'alive');
   assert.deepEqual(alive.calls.map(({ args }) => args), [
-    ['sandbox', '-c', 'sandbox_mode=workspace-write', '--', 'echo', MARKER],
+    ['sandbox', ...UTF8_SHELL_POLICY, '-c', 'sandbox_mode=workspace-write', '--', 'echo', MARKER],
   ]);
 });
 
@@ -298,6 +299,7 @@ test('a promise-returning injected run still proves the sandbox alive', async ()
     const { run, calls } = fixture({ flagged: success });
     const result = await probeSandbox({
       agent: 'codex-scout', repo, platform: 'win32', codexHome,
+      witness: async () => ({ status: 'observed' }),
       run: (...args) => Promise.resolve(run(...args)),
     });
     assert.equal(result.outcome, 'alive');
