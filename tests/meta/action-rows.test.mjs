@@ -14,16 +14,19 @@ function assertAction(rows, variant) {
   assert.equal(rows[2], expected);
 }
 
-for (const [status, result_ok, variant, situation] of [
+for (const [status, result_ok, variant, situation, reason_rule] of [
   ['CAPACITY', false, 'capacity'], ['LIMIT', false, 'limit'],
   ['UNAVAILABLE', false, 'unavailable'], ['OK', true, null],
+  ['FAIL', true, 'fail-build-encoding', undefined, 'build-encoding-corrupted'],
+  ['FAIL', false, 'fail-no-result', undefined, 'build-encoding-corrupted'],
+  ['FAIL', true, 'fail-result', undefined, 'another-rule'],
   ...[undefined, null, 0, '', false, true, 1, 'filled'].map((value) =>
     ['FAIL', value, value ? 'fail-result' : 'fail-no-result']),
   ...[undefined, null, 0, '', false, true, 1, 'filled'].map((value) =>
     ['FAIL', value, value ? 'fail-result' : 'fail-output-limit', { kind: 'output-limit' }]),
 ]) {
   test(`post-run Action variant for ${status} with result_ok=${JSON.stringify(result_ok)}, situation=${situation?.kind}`, () => {
-    const meta = { status, result_ok, situation };
+    const meta = { status, result_ok, situation, reason_rule };
     assert.equal(postRunActionVariant(meta), variant);
     if (status === 'FAIL') assert.equal(failActionVariant(meta), variant);
   });

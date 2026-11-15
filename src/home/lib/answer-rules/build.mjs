@@ -63,6 +63,13 @@ export const RULES = Object.freeze({
     message: ({ files }) => `out-of-scope changes (${files.length}): ${show(files)}`,
     data: Object.freeze(['files']),
   }),
+  'build-encoding-corrupted': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'Do not replace an existing line with a mis-decoded copy of itself; read and write text as UTF-8. A line whose repaired form equals a line the run removed fails the run, and the edits stay in the tree.',
+    message: ({ count, locations }) => `${count} proven mojibake replacements at ${locations}; edits were kept in the worktree (encoding.json)`,
+    data: Object.freeze(['count', 'locations']),
+  }),
   'build-report-names-nothing': Object.freeze({
     phases: DEFAULT,
     when: 'always',

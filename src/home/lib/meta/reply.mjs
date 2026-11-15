@@ -20,6 +20,7 @@ import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
 import { unavailableRows } from './unavailable-rows.mjs';
 import { stopRows } from './stop-rows.mjs';
 import { alreadyDecidedRow } from './already-decided-row.mjs';
+import { readEncodingEvidence } from './encoding-verdict.mjs';
 
 /** What the run itself changed, and what the tooling around it changed while it worked. */
 const runChanges = (runDir) => {
@@ -80,6 +81,10 @@ function buildReply(ctx) {
   const paths = touchedPaths.slice(0, 3).join(', ');
   const flags = readText(path.join(ctx.runDir, 'flags.txt')).split(/\r?\n/).filter(Boolean);
   const gaps = readText(path.join(ctx.runDir, 'flags-coverage.txt')).split(/\r?\n/).filter((gap) => gap.trim());
+  const encoding = readEncodingEvidence(ctx.runDir);
+  const suspected = encoding?.suspected.map((entry) => entry.kind === 'malformed-utf8'
+    ? `${entry.path}:byte ${entry.byteOffset} malformed UTF-8`
+    : `${entry.path}:${entry.line} ${entry.kind === 'replacement-char' ? 'U+FFFD' : `${entry.text}\u2192${entry.repaired}`}`);
   // A multi-line verification is several commands, and collapsing them into one 60-character
   // line cut the last one mid-word: the reply named a command nobody could run.
   const commands = String(r.verify_command ?? '')
@@ -113,6 +118,9 @@ function buildReply(ctx) {
     `Flags: ${flags.length ? `${flags.length} TODO/skip — ${line(flags.slice(0, 3).join(' | '), 140)}` : 'none'}`,
     ...(gaps.length
       ? [`Flags coverage: incomplete — ${line(gaps[0], 120)}${gaps.length > 1 ? ` (+${gaps.length - 1} more)` : ''}`]
+      : []),
+    ...(encoding?.counts.suspected
+      ? [`Encoding: ${encoding.counts.suspected} suspected — ${line(suspected.join(' | '), 140)}; check before accepting`]
       : []),
     `Report: ${ctx.file('report.md')} · Log: ${readCommand(ctx.runDir)}`,
   ];
@@ -204,6 +212,8 @@ export function failActionVariant(meta) {
   if (meta.result_ok && meta.reason_rule === 'scout-commands-run'
     && meta.web_searches?.chain?.completed > 0
     && meta.web_searches.binding === null) return 'fail-scout-web-unmarked';
+  // OW-089 D1: an unchanged repeat starts from the corruption, so it needs its own repair guidance.
+  if (meta.result_ok && meta.reason_rule === 'build-encoding-corrupted') return 'fail-build-encoding';
   if (meta.result_ok) return 'fail-result';
   return meta.situation?.kind === 'output-limit' ? 'fail-output-limit' : 'fail-no-result';
 }

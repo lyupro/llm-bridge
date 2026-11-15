@@ -26,6 +26,8 @@ const cases = [
     'result declares an unknown outcome “DONE”, expected "done" or "fail"'],
   ['build-out-of-scope', { files: ['a', 'b', 'c', 'd'] },
     'out-of-scope changes (4): a, b, c'],
+  ['build-encoding-corrupted', { count: 60, locations: 'src/a.mjs:1, src/a.mjs:2, src/a.mjs:3' },
+    '60 proven mojibake replacements at src/a.mjs:1, src/a.mjs:2, src/a.mjs:3; edits were kept in the worktree (encoding.json)'],
   ['build-report-names-nothing', { touched: ['src/a.mjs', 'src/b.mjs', 'src/c.mjs', 'src/d.mjs'] },
     'wrong work was done: tree changed (4: src/a.mjs, src/b.mjs, src/c.mjs), but the report names no changes'],
   ['build-report-service-directories', { service: ['.git/config', '.claude/settings.json', '.omx/state.json', '.codex/config.toml'] },
@@ -38,7 +40,7 @@ const cases = [
 ];
 
 test('every build rule has an independently written, byte-exact judge reason', () => {
-  assert.equal(cases.length, 12);
+  assert.equal(cases.length, 13);
   assert.deepEqual(cases.map(([key]) => key), Object.keys(rules));
   assert.equal(WRONG_WORK, 'wrong work was done: ');
   for (const [key, values, expected] of cases) {
@@ -85,6 +87,11 @@ test('build instructions state the work, verification, outcome and report bounda
   assert.match(rules['build-outcome-missing'].rule, /requires outcome.*missing, null or empty outcome fails/);
   assert.match(rules['build-outcome-unknown'].rule, /exactly "done" or "fail".*different case or surrounding whitespace/);
   assert.match(rules['build-out-of-scope'].rule, /Every changed file must match the order's scope/);
+  assert.match(rules['build-encoding-corrupted'].rule, /Do not replace an existing line with a mis-decoded copy of itself/);
+  assert.match(rules['build-encoding-corrupted'].rule, /read and write text as UTF-8/);
+  assert.match(rules['build-encoding-corrupted'].rule, /A line whose repaired form equals a line the run removed fails the run/);
+  assert.match(rules['build-encoding-corrupted'].rule, /edits stay in the tree/);
+  assert.deepEqual(rules['build-encoding-corrupted'].data, ['count', 'locations']);
   assert.match(rules['build-report-names-nothing'].rule, /report naming no changes fails when task files changed/);
   assert.match(rules['build-report-service-directories'].rule, /never a path inside a service directory such as \.git\/ or \.claude\//);
   assert.match(rules['build-report-mismatch'].rule, /files the run actually changed, or files changed by earlier runs of this same task/);

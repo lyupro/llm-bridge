@@ -31,6 +31,7 @@ import { reasonFrom } from './reason.mjs';
 import { adviceGap } from './advice-status.mjs';
 import { contextOnlyGap } from './context-only.mjs';
 import { webResearchGap } from './web-research.mjs';
+import { encodingGap } from './encoding-verdict.mjs';
 import { readExecutionFact, scoutExecutionGap } from './execution-fact.mjs';
 import { compareSnapshots } from './snapshot-format.mjs';
 import { readRunSnapshots, snapshotRefusal } from './run-snapshots.mjs';
@@ -368,6 +369,9 @@ function resolveVerdict({ resultOk, exit, agent, result, runDir, events, executi
   // run that forced this check was green on all of them while Codex spent the quota
   // quarantining someone else's session file.
   if (agent === 'codex-build') {
+    // OW-089 D1: scope wins; proven mojibake must also block the carried OK below.
+    const encoding = encodingGap(runDir);
+    if (encoding) return { status: 'FAIL', reason: encoding.reason, rule: encoding.key };
     const verdict = reportVersusWork(runDir, result, chainContextOf(runDir));
     if (!verdict.ok) {
       // Hooks on is the known cause of this exact failure, so the reason says so instead
