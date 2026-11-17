@@ -26,8 +26,9 @@ export const JUDGED_AGENTS = [
       { file: 'verdict.mjs', functionNames: ['commitDuringRun', 'branchDuringRun', 'reportVersusWork'] },
       { file: 'outcome.mjs', functionNames: ['outcomeGap'] },
       { file: 'encoding-verdict.mjs', functionNames: ['encodingGap'] },
+      { file: 'write-refusal-verdict.mjs', functionNames: ['writeRefusalGap'] },
     ],
-    entries: ['commitDuringRun', 'branchDuringRun', 'outcomeGap', 'encodingGap', 'reportVersusWork'],
+    entries: ['commitDuringRun', 'branchDuringRun', 'outcomeGap', 'encodingGap', 'writeRefusalGap', 'reportVersusWork'],
     emitter: 'buildReason',
   },
 ].map((judge) => ({

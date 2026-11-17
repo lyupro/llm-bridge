@@ -214,6 +214,8 @@ export function failActionVariant(meta) {
     && meta.web_searches.binding === null) return 'fail-scout-web-unmarked';
   // OW-089 D1: an unchanged repeat starts from the corruption, so it needs its own repair guidance.
   if (meta.result_ok && meta.reason_rule === 'build-encoding-corrupted') return 'fail-build-encoding';
+  // OW-092 D1: the refusal can explain the failure even when no usable result survived.
+  if (meta.reason_rule === 'build-scope-write-refused') return 'fail-build-write-refusal';
   if (meta.result_ok) return 'fail-result';
   return meta.situation?.kind === 'output-limit' ? 'fail-output-limit' : 'fail-no-result';
 }

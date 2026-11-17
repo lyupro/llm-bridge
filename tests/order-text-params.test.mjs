@@ -168,6 +168,9 @@ for (const name of ['order-rules', 'order-diagnostics']) {
         fs.mkdirSync(path.join(installed, 'runner'));
         fs.copyFileSync(${JSON.stringify(fileURLToPath(new URL('runner/question-kind.mjs', lib)))},
           path.join(installed, 'runner', 'question-kind.mjs'));
+      } else {
+        fs.copyFileSync(${JSON.stringify(fileURLToPath(new URL('troubleshooting-cases.mjs', lib)))},
+          path.join(installed, 'troubleshooting-cases.mjs'));
       }
       const owner = path.join(installed, '${name}', '${name === 'order-rules' ? 'call' : 'cli-flags'}.mjs');
       const source = fs.readFileSync(owner, 'utf8');

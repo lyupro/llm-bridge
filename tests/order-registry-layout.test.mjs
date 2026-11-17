@@ -125,6 +125,7 @@ test('the real rule entry point refuses a synthetic duplicate across place modul
 
 test('the real diagnostic entry point refuses a synthetic duplicate across category modules', async (t) => {
   const { installedLib, entryPoint } = copyRegistry(t, 'order-diagnostics');
+  fs.copyFileSync(path.join(lib, 'troubleshooting-cases.mjs'), path.join(installedLib, 'troubleshooting-cases.mjs'));
   fs.writeFileSync(path.join(installedLib, 'order-diagnostics', 'filesystem.mjs'),
     "export const DIAGNOSTICS = Object.freeze({\n" +
     "  'no-wait-grant-conflict': Object.freeze({ category: 'filesystem', message: () => 'duplicate' }),\n" +

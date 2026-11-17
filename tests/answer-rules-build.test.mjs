@@ -16,6 +16,8 @@ const cases = [
     'branch moved despite prohibition: main → detached HEAD'],
   ['build-branch-moved', { before: 'main', after: 'feature/build' },
     'branch moved despite prohibition: main → feature/build'],
+  ['build-scope-write-refused', { files: ['src/a.mjs', 'src/b.mjs', 'src/c.mjs', 'src/d.mjs'] },
+    'sandbox refused to write 4 in-scope path(s) (src/a.mjs, src/b.mjs, src/c.mjs). See write_refusal in meta.json'],
   ['build-verify-failed', { command: 'npm test' },
     'verification “npm test” failed; changes remain in the tree'],
   ['build-outcome-fail', { summary: 'The ordered module is absent.' },
@@ -40,7 +42,7 @@ const cases = [
 ];
 
 test('every build rule has an independently written, byte-exact judge reason', () => {
-  assert.equal(cases.length, 13);
+  assert.equal(cases.length, 14);
   assert.deepEqual(cases.map(([key]) => key), Object.keys(rules));
   assert.equal(WRONG_WORK, 'wrong work was done: ');
   for (const [key, values, expected] of cases) {
@@ -82,6 +84,8 @@ test('build instructions state the work, verification, outcome and report bounda
   assert.match(rules['build-commit'].rule, /Do not make a commit or otherwise change HEAD during the run/);
   assert.match(rules['build-branch-detached'].rule, /Do not detach HEAD during the run/);
   assert.match(rules['build-branch-moved'].rule, /Do not create a new branch or switch branches/);
+  assert.match(rules['build-scope-write-refused'].rule, /refuses a write inside the order scope.*keep partial edits and report the refused paths/);
+  assert.deepEqual(rules['build-scope-write-refused'].data, ['files']);
   assert.match(rules['build-verify-failed'].rule, /verify_passed: false fails the run and leaves the changes in the tree/);
   assert.match(rules['build-outcome-fail'].rule, /requested work was not carried out.*summary/);
   assert.match(rules['build-outcome-missing'].rule, /requires outcome.*missing, null or empty outcome fails/);

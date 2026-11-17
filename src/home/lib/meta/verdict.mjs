@@ -32,6 +32,8 @@ import { adviceGap } from './advice-status.mjs';
 import { contextOnlyGap } from './context-only.mjs';
 import { webResearchGap } from './web-research.mjs';
 import { encodingGap } from './encoding-verdict.mjs';
+import { detectWriteRefusal } from './write-refusal.mjs';
+import { writeRefusalGap } from './write-refusal-verdict.mjs';
 import { readExecutionFact, scoutExecutionGap } from './execution-fact.mjs';
 import { compareSnapshots } from './snapshot-format.mjs';
 import { readRunSnapshots, snapshotRefusal } from './run-snapshots.mjs';
@@ -248,10 +250,11 @@ function branchDuringRun(runDir) {
  * transport error is FAIL, because diagnostic text cannot turn a quoted limit into LIMIT.
  */
 export function resolveStatus(input) {
-  return { rule: null, ...resolveVerdict(input) };
+  const writeRefusal = input.agent === 'codex-build' ? detectWriteRefusal(input.runDir) : null;
+  return { rule: null, ...resolveVerdict({ ...input, writeRefusal }), ...(writeRefusal && { writeRefusal }) };
 }
 
-function resolveVerdict({ resultOk, exit, agent, result, runDir, events, execution }) {
+function resolveVerdict({ resultOk, exit, agent, result, runDir, events, execution, writeRefusal }) {
   const eventData = events ?? readEvents(runDir);
   execution ??= readExecutionFact(runDir, eventData);
   // First, as the empty raw.log check was before it: a run that never started cannot be graded
@@ -297,6 +300,11 @@ function resolveVerdict({ resultOk, exit, agent, result, runDir, events, executi
   // Plan_80 E13/O9: a result produced outside the resumed turn's read-only sandbox is untrusted.
   const witness = sandboxWitnessGap(runDir, { resultOk });
   if (witness) return { status: 'FAIL', reason: witness };
+  // OW-092 D1: prefer a witnessed refusal to generic failure reasons, and allow recovery.
+  if (agent === 'codex-build') {
+    const gap = writeRefusalGap(writeRefusal, { resultOk, exit, result, runDir });
+    if (gap) return { status: 'FAIL', reason: gap.reason, rule: gap.key };
+  }
   if (!resultOk) {
     return { status: 'FAIL', reason: reasonFrom(runDir, eventData) || `result is empty, exit=${exit}` };
   }

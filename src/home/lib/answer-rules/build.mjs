@@ -28,6 +28,13 @@ export const RULES = Object.freeze({
     message: ({ before, after }) => `branch moved despite prohibition: ${before || 'detached HEAD'} → ${after}`,
     data: Object.freeze(['before', 'after']),
   }),
+  'build-scope-write-refused': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'If the sandbox refuses a write inside the order scope and the build cannot finish, keep partial edits and report the refused paths.',
+    message: ({ files }) => `sandbox refused to write ${files.length} in-scope path(s) (${show(files)}). See write_refusal in meta.json`,
+    data: Object.freeze(['files']),
+  }),
   'build-verify-failed': Object.freeze({
     phases: DEFAULT,
     when: 'always',

@@ -19,6 +19,8 @@ for (const [status, result_ok, variant, situation, reason_rule] of [
   ['UNAVAILABLE', false, 'unavailable'], ['OK', true, null],
   ['FAIL', true, 'fail-build-encoding', undefined, 'build-encoding-corrupted'],
   ['FAIL', false, 'fail-no-result', undefined, 'build-encoding-corrupted'],
+  ['FAIL', true, 'fail-build-write-refusal', undefined, 'build-scope-write-refused'],
+  ['FAIL', false, 'fail-build-write-refusal', undefined, 'build-scope-write-refused'],
   ['FAIL', true, 'fail-result', undefined, 'another-rule'],
   ...[undefined, null, 0, '', false, true, 1, 'filled'].map((value) =>
     ['FAIL', value, value ? 'fail-result' : 'fail-no-result']),

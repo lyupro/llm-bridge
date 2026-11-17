@@ -97,7 +97,7 @@ export function collect(runDir, agent, exitCode) {
     const index = args.indexOf(flag);
     return index >= 0 && typeof args[index + 1] === 'string' ? args[index + 1] : null;
   };
-  const { status, reason, rule, carried } = resolveStatus({
+  const { status, reason, rule, carried, writeRefusal } = resolveStatus({
     resultOk,
     exit,
     agent,
@@ -137,6 +137,7 @@ export function collect(runDir, agent, exitCode) {
     status,
     reason,
     reason_rule: rule,
+    ...(agent === 'codex-build' ? { write_refusal: writeRefusal ?? null } : {}),
     // Plan_80 A4: preserve the runner's observation; an older run was never observed.
     stop: launched.stop ?? null,
     // An OK earned by an earlier pass of the same task reads differently from an OK earned

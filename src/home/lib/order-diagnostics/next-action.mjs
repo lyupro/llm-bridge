@@ -1,5 +1,9 @@
 /** OW-075: one place for the next-step row of every non-OK outcome;
  * a new outcome adds a variant here, not a bullet in the rules core. */
+import { TROUBLESHOOTING_CASES } from '../troubleshooting-cases.mjs';
+
+const writeRefusalCase = TROUBLESHOOTING_CASES.find(({ id }) => id === 'T01');
+
 const NEXT_ACTION_TEXT = Object.freeze({
   'capacity': "Action: wait or change this role's model (/llm-bridge:model), then repeat the same order once with a retry: grant; never resume: this run; a second CAPACITY for the same order goes to the next executor",
   'limit': 'Action: the ChatGPT quota window is spent; do not retry or resume through this bridge, hand the order to the next executor; for a build, check the Worktree row first',
@@ -7,6 +11,11 @@ const NEXT_ACTION_TEXT = Object.freeze({
   'fail-result': 'Action: the run returned a result that did not pass; read the report and git status before deciding; a repeat of this pass needs your retry: grant, the next pass your continue: grant',
   'fail-scout-web-unmarked': "Action: the report is filled and readable; the scout answered from web searches but the questions were not marked [web-research]; an unchanged repeat fails the same way; read the report, and if the questions really are about outside sources, have the orderer mark them [web-research] and send a new order under a new order id",
   'fail-build-encoding': 'Action: the run finished but replaced existing lines with their mojibake image, named in the reason and encoding.json; the edits are kept in the worktree; do not repeat the order unchanged, a repeat starts from the corrupted text; repair the named lines (re-read the file as UTF-8) in a new pass under a continue: grant, or accept the work as it stands if that text was intended',
+  'fail-build-write-refusal': 'Action: keep the partial edits in the worktree. Do not repeat the order unchanged. '
+    + 'Show the operator the in-scope refused paths from meta.json and their containing folders. '
+    + `Check each folder owner and ACL using llm-bridge guidance troubleshooting, case ${writeRefusalCase.id}. `
+    + 'Use the administrator repair only on affected subfolders after the checks confirm the case. '
+    + 'Then continue the missing work under a continue: grant',
   'fail-output-limit': "Action: the model's output limit ended the turn before an answer; do not resume this run, the same thread hits the same limit; narrow the order (fewer files, fewer questions, a shorter answer) or lower the role's effort (/llm-bridge:model), then repeat it once with a retry: grant carrying the revised task, or under a new order id",
   'fail-no-result': 'Action: the run left no usable result; read the log and git status before deciding; repeat only through a grant this reply offers or the operator approves, never take over the task yourself',
   'usage': 'Action: nothing was started and no quota was spent; fix the task file or the call as the refusal says, then call again',

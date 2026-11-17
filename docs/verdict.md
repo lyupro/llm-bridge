@@ -54,22 +54,29 @@ the first matching branch determines the status. The order is therefore part of 
    and unconfirmed witnesses only print a row; they do not fail the run.
    An automatic continuation child (recognised by its recovery marker) with a filled result also
    fails when the witness is not `observed`; manual resume runs keep the row-only behaviour.
-8. **The result is absent or unfilled.** `FAIL`, with the reason selected in this order: first the model's
+8. **Sandbox write refusal inside build scope (OW-092 D1).** After the startup, history, deadline,
+   transport and sandbox-witness checks, a build with an unusable result, a nonzero exit, failed
+   verification or a contracted `outcome: "fail"` gets `FAIL` (runner exit 1) and the
+   `build-scope-write-refused` rule if the detector found a refused path inside the repository and
+   order scope. The refusal explains the unsuccessful build before generic reasons do. A recovered
+   build can still finish `OK`. The detector records refusal evidence in `meta.json#write_refusal`
+   without inferring the folder owner or ACL.
+9. **The result is absent or unfilled.** `FAIL`, with the reason selected in this order: first the model's
    last complaint about the job content (`item.completed` with `item.type: "error"`), then a transport
    error from events, and only then `stderr.log`. The order follows from the live probe on 2026-08-05:
    a healthy run has execpolicy refusals in `stderr.log`, and the previous parser presented an arbitrary
    blocked call as the cause of failure. There is no separate quota search here: check 6 is the only
    source of `LIMIT`.
-9. **Nonzero exit with a filled result.** This is `FAIL`. Having JSON does not cancel a process failure.
-10. **Failed build verification.** `verify_passed === false` produces `FAIL` even if the changes and
+10. **Nonzero exit with a filled result.** This is `FAIL`. Having JSON does not cancel a process failure.
+11. **Failed build verification.** `verify_passed === false` produces `FAIL` even if the changes and
    schema are correct. This check must come before scope and report matching: a failed mandatory command
    is already sufficient for failure.
-11. **Declared build outcome.** The executor reports in the mandatory `outcome` field whether the
+12. **Declared build outcome.** The executor reports in the mandatory `outcome` field whether the
     requested work was completed: `fail` produces `FAIL` with the reason from `summary`. The check comes
     after verification and before scope: unfinished work matters more than where it was left, while a
     failed mandatory command remains the louder failure. Only runs whose own `schema.json` required the
     field are judged by it — see “Run age” below.
-12. **Scout coverage.** First, the execution fact counts this run plus its proven resume ancestry in
+13. **Scout coverage.** First, the execution fact counts this run plus its proven resume ancestry in
     the same Codex thread (`meta.commands_executed.chain`; see [artifact formats](artifact-formats.md)).
     An unprovable ancestry fails with its provenance reason; a chain that executed nothing still
     fails unless all questions are startup-context or web-research, preserving the 2026-09-16 dead sandbox protection for repository questions.
@@ -116,7 +123,7 @@ the first matching branch determines the status. The order is therefore part of 
     Mixed orders retain each kind's own check: commands for repository questions, `startup:<source>`
     for startup questions, and web binding for web questions. A question needing both repository and
     external research stays unmarked and requires commands.
-13. **Advisor contract.** After scout checks and before the build-only scope check, the advisor judge
+14. **Advisor contract.** After scout checks and before the build-only scope check, the advisor judge
     validates the result against `advisor-task.json` and the phase context. Command evidence uses the
     execution fact for this run plus its proven resume ancestry in the same Codex thread
     (`meta.commands_executed.chain`; see [artifact formats](artifact-formats.md)).
@@ -142,7 +149,7 @@ the first matching branch determines the status. The order is therefore part of 
     In prose, an address counts as a citation when its left side (before the final line suffix) contains
     `/` or `\`, or names an existing file directly in the repository root; it must still resolve inside
     task scope and within a valid line range. Other `word:number` text is ordinary prose.
-14. **Build edits outside scope.** `environmentPaths` are subtracted from the tree delta first, then the
+15. **Build edits outside scope.** `environmentPaths` are subtracted from the tree delta first, then the
     remaining paths are compared with `scope.txt`. A path matching `env.json.environmentNewFilePaths`
     also leaves the run's work only when validated snapshots show it absent before the compared pair
     and present after it as a new untracked file with a hash, and the order's scope does not match it.
@@ -151,7 +158,7 @@ the first matching branch determines the status. The order is therefore part of 
     only because a letter from another project arrived during the run. A run that started before the
     key existed has an empty list. This check ranks above report matching: a report can name one allowed
     file while concealing several extra ones.
-15. **Proven build encoding corruption (OW-089 D1).** For `codex-build`, a valid version-1
+16. **Proven build encoding corruption (OW-089 D1).** For `codex-build`, a valid version-1
     `encoding.json` with `counts.proven > 0` produces `FAIL` with rule `build-encoding-corrupted`.
     The reason names the total count and the first three recorded `path:line` locations and says
     the edits were kept in the worktree. This check follows scope and precedes report matching,
@@ -159,11 +166,11 @@ the first matching branch determines the status. The order is therefore part of 
     evidence is ignored: no accusation without evidence. Tier B suspicions never change status;
     the successful build reply adds one `Encoding: <n> suspected — <first locations>; check before accepting`
     row, separate from `Flags:`, using up to three recorded locations (byte offsets for malformed UTF-8).
-16. **Build report matches actual work.** `changes[].file` entries are first compared with the current
+17. **Build report matches actual work.** `changes[].file` entries are first compared with the current
     run's delta. If there are no matches, service paths are rejected before examining the chain. The
     declared files are then searched in the accumulated diff from the chain's first `state-before.txt`
     through the current `state-after.txt`.
-17. **Success.** A match only with accumulated work returns `OK` and `carried: true`; normal completion
+18. **Success.** A match only with accumulated work returns `OK` and `carried: true`; normal completion
     returns `OK` without a reason.
 
 ## Transport and data
@@ -280,7 +287,7 @@ runs without these fields are linked by slug as before.
 An empty `changes[]` with an empty delta is allowed — the runner does not know whether the job required
 edits, and zero changes can be a legitimate outcome. The former cost of this rule (a run that did
 nothing because the task was impossible received `OK`) is addressed not here but by the declared
-outcome: check 11 turns red on the `outcome` field before report matching. The rule itself remains the
+outcome: check 12 turns red on the `outcome` field before report matching. The rule itself remains the
 same — the runner does not invent the job's intent. An empty report with a nonempty delta, or a report
 matching neither the current delta nor the chain's accumulated work, produces `FAIL` for “wrong work
 was done.” Service paths are checked before chain lookup so an earlier run cannot legitimize work in
@@ -347,6 +354,11 @@ A result-carrying `FAIL` with `reason_rule: build-encoding-corrupted` selects `f
 (OW-089 D1). The edits remain in the tree; do not repeat the order unchanged, since a repeat starts
 from the corrupted text. Repair the named lines by re-reading the file as UTF-8 in a new pass under
 a `continue:` grant, or accept the work as it stands if that text was intended.
+
+A `FAIL` with `reason_rule: build-scope-write-refused` selects `fail-build-write-refusal`
+even when the result is unusable. The row directs the orchestrator to keep partial edits,
+report the refused paths and containing folders, and check the owner and ACL under
+`llm-bridge guidance troubleshooting` case T01 before any affected-subfolder repair and continuation.
 
 The row is third in post-run replies, second in a runner-recorded failure (`writeFailure()`, right
 after its `FAIL — ` headline), and last in pre-start refusals. If a refusal producer supplies
