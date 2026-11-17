@@ -202,7 +202,8 @@ function connection(target, action) {
     assert.equal(address, target.address);
     const socket = new EventEmitter();
     socket.destroy = () => {};
-    setImmediate(() => action(socket));
+    // OW-095: Run after listener registration. A macrotask can lose to the answer timer.
+    queueMicrotask(() => action(socket));
     return socket;
   };
 }
