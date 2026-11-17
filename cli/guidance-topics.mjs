@@ -5,4 +5,5 @@ export const GUIDANCE_TOPICS = Object.freeze({
   budget: 'Run deadline and slicing.',
   records: 'Finding and reading runs.',
   concurrency: 'Parallel and writing runs.',
+  troubleshooting: 'Known failures by case id.',
 });

@@ -134,6 +134,10 @@ llm-bridge update
 
 Transport files from runs at least **30 days** old are pruned automatically when a new run starts. Configuration can change or disable that retention policy; reports, accounting, and worktree snapshots are retained.
 
+## Troubleshooting
+
+Known failures are documented with stable case ids. Agents read the guide with `llm-bridge guidance troubleshooting`. See [Troubleshooting](src/home/guidance/troubleshooting.md).
+
 ## Command reference
 
 | Command | Purpose |

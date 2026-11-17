@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Troubleshooting guidance with stable case ids, linked from the rules core and README and available through `llm-bridge guidance troubleshooting`.
+
 ## [0.8.2] - 2026-11-16
 
 ### Added

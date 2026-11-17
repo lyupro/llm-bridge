@@ -10,6 +10,7 @@ code: a `scope` phase, then `advise`).
   Pre-start refusals spend no quota.
 - Before every task file, run `llm-bridge guidance order` and follow it: it lists the enforced rules.
   Other topics, via `llm-bridge guidance <topic>`: `advisor` (two phases, the `continue:` grant),
+  `troubleshooting` (known failures by case id),
   `budget` (run deadline, slicing), `records` (finding and reading runs), `concurrency` (parallel and writing
   runs); `llm-bridge guidance` lists them. If it fails, stop and show its output to the operator — never guess
   the contract.
