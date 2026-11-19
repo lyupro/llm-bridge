@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHomeWriter } from '../src/home/lib/home-write.mjs';
-import { publishJsonAtomic, writeHomeJsonAtomic, writeRunJsonAtomic } from '../src/home/lib/atomic-json.mjs';
+import { publishJsonAtomic, writeHomeJsonAtomic, writeRunBytesAtomic, writeRunJsonAtomic } from '../src/home/lib/atomic-json.mjs';
 import { withTempTree } from './temp-tree.mjs';
 
 function assertNoTemporary(directory) {
@@ -323,5 +323,15 @@ test('the run atomic writer creates and replaces real JSON records without leavi
     assert.equal(typeof result.directoryFlushed, 'boolean');
     if (process.platform === 'win32') assert.equal(result.directoryFlushed, false);
     assertNoTemporary(path.dirname(file));
+  });
+});
+
+test('the run byte writer publishes the exact bytes without JSON serialization', async () => {
+  await withTempTree('atomic-run-bytes-', async (tree) => {
+    const file = path.join(tree, 'artifact');
+    const bytes = Buffer.from([0, 255, 10, 128]);
+    writeRunBytesAtomic(file, bytes);
+    assert.deepEqual(fs.readFileSync(file), bytes);
+    assertNoTemporary(tree);
   });
 });

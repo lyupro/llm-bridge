@@ -32,6 +32,7 @@ import { readExecutionFact } from './meta/execution-fact.mjs';
 import { webResearchBinding } from './meta/web-research.mjs';
 import { writeStatus } from './meta/run-state.mjs';
 import { resolveStatus } from './meta/verdict.mjs';
+import { publishArbiterReport } from './meta/arbiter-publication.mjs';
 import { assessStop } from './meta/stop-assessment.mjs';
 import { consecutiveEmptyResumes } from './meta/empty-resumes.mjs';
 import { AGENTS, capacityReply, failReply, limitReply, unavailableReply, withProfileRow } from './meta/reply.mjs';
@@ -97,7 +98,7 @@ export function collect(runDir, agent, exitCode) {
     const index = args.indexOf(flag);
     return index >= 0 && typeof args[index + 1] === 'string' ? args[index + 1] : null;
   };
-  const { status, reason, rule, carried, writeRefusal } = resolveStatus({
+  const verdict = resolveStatus({
     resultOk,
     exit,
     agent,
@@ -106,6 +107,20 @@ export function collect(runDir, agent, exitCode) {
     events,
     execution: executionFact,
   });
+  const { carried, writeRefusal } = verdict;
+  let { status, reason, rule } = verdict;
+  let reportSha256;
+  // OW-097 D4 requires the verified report to exist before an OK meta can attest to its bytes.
+  if (agent === 'codex-arbiter' && status === 'OK') {
+    const publication = publishArbiterReport({ runDir, result });
+    if (publication.ok) {
+      reportSha256 = publication.sha256;
+    } else {
+      status = 'FAIL';
+      reason = publication.reason;
+      rule = null;
+    }
+  }
 
   const before = readText(path.join(runDir, 'state-before.txt'));
   const after = readText(path.join(runDir, 'state-after.txt'));
@@ -137,6 +152,7 @@ export function collect(runDir, agent, exitCode) {
     status,
     reason,
     reason_rule: rule,
+    ...(reportSha256 === undefined ? {} : { report_sha256: reportSha256 }),
     ...(agent === 'codex-build' ? { write_refusal: writeRefusal ?? null } : {}),
     // Plan_80 A4: preserve the runner's observation; an older run was never observed.
     stop: launched.stop ?? null,

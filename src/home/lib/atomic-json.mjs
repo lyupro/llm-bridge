@@ -1,5 +1,5 @@
 /**
- * Publishes a JSON record whole or not at all: a temporary file in the target's directory renamed over it.
+ * Publishes a record whole or not at all: a temporary file in the target's directory renamed over it.
  *
  * Plan_62 B2 wrote this twice, once per state module; two copies of one write discipline drift apart the
  * first time either is fixed. Callers hold their own lock — this does not serialize concurrent writers
@@ -33,7 +33,10 @@ function flushDirectory(directory, operations) {
 }
 
 export function publishJsonAtomic(file, record, operations) {
-  const contents = `${JSON.stringify(record, null, 2)}\n`;
+  return publishAtomic(file, `${JSON.stringify(record, null, 2)}\n`, operations);
+}
+
+function publishAtomic(file, contents, operations) {
   const directory = path.dirname(file);
   operations.mkdir(directory, { recursive: true });
 
@@ -78,8 +81,8 @@ export function publishJsonAtomic(file, record, operations) {
   return { directoryFlushed: operations.platform !== 'win32' && flushDirectory(directory, operations) };
 }
 
-function writeText(descriptor, text) {
-  const bytes = Buffer.from(text, 'utf8');
+function writeContents(descriptor, contents) {
+  const bytes = Buffer.isBuffer(contents) ? contents : Buffer.from(contents, 'utf8');
   let offset = 0;
   while (offset < bytes.length) {
     const written = fs.writeSync(descriptor, bytes, offset, bytes.length - offset);
@@ -89,7 +92,7 @@ function writeText(descriptor, text) {
 }
 
 const descriptorOperations = {
-  write: writeText,
+  write: writeContents,
   fsync(descriptor) { return fs.fsyncSync(descriptor); },
   close(descriptor) { return fs.closeSync(descriptor); },
   openDirectory(directory, flags) { return fs.openSync(directory, flags); },
@@ -109,12 +112,19 @@ export function writeHomeJsonAtomic(writer, id, file, record) {
   });
 }
 
+const runOperations = {
+  ...descriptorOperations,
+  mkdir(directory, options) { return fs.mkdirSync(directory, options); },
+  open(temporary, flags) { return fs.openSync(temporary, flags); },
+  rename(temporary, target) { return fs.renameSync(temporary, target); },
+  unlink(temporary) { return fs.unlinkSync(temporary); },
+};
+
 export function writeRunJsonAtomic(file, record) {
-  return publishJsonAtomic(file, record, {
-    ...descriptorOperations,
-    mkdir(directory, options) { return fs.mkdirSync(directory, options); },
-    open(temporary, flags) { return fs.openSync(temporary, flags); },
-    rename(temporary, target) { return fs.renameSync(temporary, target); },
-    unlink(temporary) { return fs.unlinkSync(temporary); },
-  });
+  return publishJsonAtomic(file, record, runOperations);
+}
+
+// OW-097 D4 uses the run-record write discipline for the exact bytes that collection verifies.
+export function writeRunBytesAtomic(file, bytes) {
+  return publishAtomic(file, bytes, runOperations);
 }
