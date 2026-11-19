@@ -149,7 +149,13 @@ the first matching branch determines the status. The order is therefore part of 
     In prose, an address counts as a citation when its left side (before the final line suffix) contains
     `/` or `\`, or names an existing file directly in the repository root; it must still resolve inside
     task scope and within a valid line range. Other `word:number` text is ordinary prose.
-15. **Build edits outside scope.** `environmentPaths` are subtracted from the tree delta first, then the
+15. **Arbiter contract (OW-097 D4).** At the same point, the arbiter judge reads the repository
+    from `status.json#repo` and the frozen task and evidence from version 1 of `arbiter-input.json`.
+    Missing or invalid inputs fail the contract with a reason naming the file. A judge `TypeError`
+    fails with `result.json is missing required fields or has an unexpected shape (…)`.
+    The capture records and completeness come from one read of `events.jsonl`. The judge reports
+    incomplete capture when the result claims probes, and a rejected result fails with the judge's reasons.
+16. **Build edits outside scope.** `environmentPaths` are subtracted from the tree delta first, then the
     remaining paths are compared with `scope.txt`. A path matching `env.json.environmentNewFilePaths`
     also leaves the run's work only when validated snapshots show it absent before the compared pair
     and present after it as a new untracked file with a hash, and the order's scope does not match it.
@@ -158,7 +164,7 @@ the first matching branch determines the status. The order is therefore part of 
     only because a letter from another project arrived during the run. A run that started before the
     key existed has an empty list. This check ranks above report matching: a report can name one allowed
     file while concealing several extra ones.
-16. **Proven build encoding corruption (OW-089 D1).** For `codex-build`, a valid version-1
+17. **Proven build encoding corruption (OW-089 D1).** For `codex-build`, a valid version-1
     `encoding.json` with `counts.proven > 0` produces `FAIL` with rule `build-encoding-corrupted`.
     The reason names the total count and the first three recorded `path:line` locations and says
     the edits were kept in the worktree. This check follows scope and precedes report matching,
@@ -166,11 +172,11 @@ the first matching branch determines the status. The order is therefore part of 
     evidence is ignored: no accusation without evidence. Tier B suspicions never change status;
     the successful build reply adds one `Encoding: <n> suspected — <first locations>; check before accepting`
     row, separate from `Flags:`, using up to three recorded locations (byte offsets for malformed UTF-8).
-17. **Build report matches actual work.** `changes[].file` entries are first compared with the current
+18. **Build report matches actual work.** `changes[].file` entries are first compared with the current
     run's delta. If there are no matches, service paths are rejected before examining the chain. The
     declared files are then searched in the accumulated diff from the chain's first `state-before.txt`
     through the current `state-after.txt`.
-18. **Success.** A match only with accumulated work returns `OK` and `carried: true`; normal completion
+19. **Success.** A match only with accumulated work returns `OK` and `carried: true`; normal completion
     returns `OK` without a reason.
 
 ## Transport and data

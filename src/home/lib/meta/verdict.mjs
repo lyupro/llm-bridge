@@ -6,7 +6,6 @@
  * an outcome its own run does not support. Every branch in resolveStatus() exists because
  * a real run satisfied every schema while doing something other than the job.
  */
-import fs from 'node:fs';
 import path from 'node:path';
 import {
   SERVICE_RE,
@@ -29,6 +28,8 @@ import { transportGap } from './transport.mjs';
 import { sandboxWitnessGap } from './sandbox-witness.mjs';
 import { reasonFrom } from './reason.mjs';
 import { adviceGap } from './advice-status.mjs';
+import { arbitrationGap } from './arbiter-status.mjs';
+import { branchDuringRun, commitDuringRun } from './history-during-run.mjs';
 import { contextOnlyGap } from './context-only.mjs';
 import { webResearchGap } from './web-research.mjs';
 import { encodingGap } from './encoding-verdict.mjs';
@@ -213,38 +214,6 @@ export function scoutCoverage(runDir, result) {
 }
 
 /**
- * A commit made under an explicit ban. HEAD is snapshotted either side of the run, so this
- * is a fact rather than an interpretation: one build run went to commit while the task said
- * not to, and only the sandbox (a read-only `.git`) stopped it — the contract said nothing.
- */
-function commitDuringRun(runDir) {
-  const before = readText(path.join(runDir, 'head-before.txt')).trim();
-  const after = readText(path.join(runDir, 'head-after.txt')).trim();
-  if (!before || !after || before === after) return null;
-  return buildReason('build-commit', { before, after });
-}
-
-/**
- * A branch moved under an explicit ban. Branch names are snapshotted either side of the run,
- * so the artifacts prove whether it stayed on the same ref or left the repository detached.
- *
- * Existence is checked rather than emptiness, because here an empty file is data — detached
- * HEAD — and a missing one is silence. Both snapshots have to be present for the comparison
- * to mean anything: a run whose launcher predates this check, or whose worker died before
- * writing its half, would otherwise be accused of detaching a branch it never touched.
- */
-function branchDuringRun(runDir) {
-  const beforeFile = path.join(runDir, 'branch-before.txt');
-  const afterFile = path.join(runDir, 'branch-after.txt');
-  if (!fs.existsSync(beforeFile) || !fs.existsSync(afterFile)) return null;
-  const before = readText(beforeFile).trim();
-  const after = readText(afterFile).trim();
-  if (before === after) return null;
-  if (before && !after) return buildReason('build-branch-detached', { before });
-  return buildReason('build-branch-moved', { before, after });
-}
-
-/**
  * Status comes from artifacts, never from intent. A current run with an events stream but no
  * events and silent stderr is abandoned at startup; an empty result with no structured
  * transport error is FAIL, because diagnostic text cannot turn a quoted limit into LIMIT.
@@ -345,6 +314,11 @@ function resolveVerdict({ resultOk, exit, agent, result, runDir, events, executi
   // Place the advisor judge before the build-only scope check, alongside the other agent contracts.
   if (agent === 'codex-advisor') {
     const gap = adviceGap(runDir, result, eventData, execution);
+    if (gap) return { status: 'FAIL', reason: gap };
+  }
+  // OW-097 D4: earlier run failures keep precedence over the arbiter judge.
+  if (agent === 'codex-arbiter') {
+    const gap = arbitrationGap(runDir, result);
     if (gap) return { status: 'FAIL', reason: gap };
   }
   // Files the task never authorised. Checked before the mismatch below, because a run that

@@ -299,8 +299,10 @@ function mutatedBuild(file, before, after) {
     ? { ...entry, source: entry.source.replace(before, after) } : entry);
 }
 
-test('build producer guard rejects unknown literal keys in either judge file', () => {
-  for (const [file, key] of [['verdict.mjs', 'build-commit'], ['outcome.mjs', 'build-outcome-fail']]) {
+test('build producer guard rejects unknown literal keys in every judge file', () => {
+  // OW-097 wiring order 5 moved the history checks out of verdict.mjs to make room for the arbiter branch.
+  for (const [file, key] of [['verdict.mjs', 'build-out-of-scope'], ['history-during-run.mjs', 'build-commit'],
+    ['outcome.mjs', 'build-outcome-fail']]) {
     const edited = mutatedBuild(file, `'${key}'`, "'build-unknown'");
     assert.ok(build.check(edited, build.catalogKeys).includes('unknown catalog key: build-unknown'));
   }

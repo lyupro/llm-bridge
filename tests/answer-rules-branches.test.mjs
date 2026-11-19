@@ -300,13 +300,12 @@ test('branch guard requires every registered entry to be called in its own agent
   }
 });
 
-test('the OW-097 wiring deferral only excuses an absent arbiter branch', () => {
-  const table = JUDGED_AGENTS.map((judge) => ({ ...judge, branchDeferred: false }));
-  assert.ok(branchProblems(source, table, ANSWER_RULES).includes('judged agent without branch: codex-arbiter'));
-  const edited = mutated(scoutBranch, "if (agent === 'codex-arbiter') { return { status: 'FAIL', reason: 'x' }; }\n" + scoutBranch);
-  const problems = problemsOf(edited);
-  assert.ok(problems.includes("branch reason bypasses catalog: codex-arbiter: 'x'"));
-  assert.ok(problems.includes('judge entry not called: codex-arbiter: judgeArbitration'));
+test('the OW-097 arbiter branch passes the guard and rejects a non-catalog reason', () => {
+  assert.ok(source.includes("if (agent === 'codex-arbiter') {"));
+  assert.deepEqual(problemsOf(source), []);
+  const branch = "const gap = arbitrationGap(runDir, result);\n    if (gap) return { status: 'FAIL', reason: gap };";
+  const edited = mutated(branch, branch.replace('reason: gap', "reason: 'x'"));
+  assert.ok(problemsOf(edited).includes("branch reason bypasses catalog: codex-arbiter: 'x'"));
 });
 
 test('host reason exceptions are closed frozen maps with decision evidence', () => {

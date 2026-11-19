@@ -11,10 +11,9 @@ export const JUDGED_AGENTS = [
   },
   {
     agent: 'codex-arbiter',
-    files: [{ file: 'arbiter-verdict.mjs' }],
-    entries: ['judgeArbitration'],
+    files: [{ file: 'arbiter-verdict.mjs' }, { file: 'arbiter-status.mjs' }],
+    entries: ['arbitrationGap'],
     emitter: null,
-    branchDeferred: true, // OW-097 B4 connects the judge to resolveStatus.
   },
   {
     agent: 'codex-scout',
@@ -30,7 +29,8 @@ export const JUDGED_AGENTS = [
   {
     agent: 'codex-build',
     files: [
-      { file: 'verdict.mjs', functionNames: ['commitDuringRun', 'branchDuringRun', 'reportVersusWork'] },
+      { file: 'history-during-run.mjs', functionNames: ['commitDuringRun', 'branchDuringRun'] },
+      { file: 'verdict.mjs', functionNames: ['reportVersusWork'] },
       { file: 'outcome.mjs', functionNames: ['outcomeGap'] },
       { file: 'encoding-verdict.mjs', functionNames: ['encodingGap'] },
       { file: 'write-refusal-verdict.mjs', functionNames: ['writeRefusalGap'] },
