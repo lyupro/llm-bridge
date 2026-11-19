@@ -16,6 +16,7 @@ import { readResumeInputs } from './resume-inputs.mjs';
 import { normalizeRepoPath } from './project-dir.mjs';
 import { continuationRefusal, retryRefusal, resumeRefusal, readyGrantLines } from './continuation.mjs';
 import { advisorTaskOrRefuse } from './advise-carry.mjs';
+import { arbiterInputOrRefuse } from './arbiter-launch.mjs';
 import { scopeRunRefusal } from './preflight.mjs';
 import { orderInputName } from '../order-schema.mjs';
 import { orderRuleMessage } from '../order-rules.mjs';
@@ -141,5 +142,8 @@ export async function passGate({ opts, taskText, header, projectRunsRoot, repoRo
     }), orderDiagnosticMessage('run-not-created')].join(' '), { action: 'grant-decision' });
   }
 
-  return { taskHash, chain, startedChain, continuationGrant, advisorTask, retryOf, resumedFrom, resumeInputs };
+  // OW-097 D4: only a fresh launch freezes inputs. Attach and resume use the existing pass.
+  const arbiterInput = !resumedFrom && opts.agent === 'codex-arbiter' ?
+    arbiterInputOrRefuse({ taskText, projectRunsRoot, repoRoot }) : null;
+  return { taskHash, chain, startedChain, continuationGrant, advisorTask, arbiterInput, retryOf, resumedFrom, resumeInputs };
 }

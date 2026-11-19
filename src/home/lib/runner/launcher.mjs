@@ -19,6 +19,7 @@ import { TASK_HASH_SCHEME } from '../meta/chain.mjs';
 import { orderInputName } from '../order-schema.mjs';
 import { orderLabelReason, orderRuleMessage } from '../order-rules.mjs';
 import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
+import { writeRunJsonAtomic } from '../atomic-json.mjs';
 import { EXIT } from './exit-codes.mjs';
 import { passGate } from './pass-gate.mjs';
 import { setRun } from './run-context.mjs';
@@ -27,6 +28,7 @@ import { parseArgs, die, withActionRow } from './args.mjs';
 import { settleTaskInput } from './task-input.mjs';
 import { questionsFromTexts, questionListLines } from './question-kind.mjs';
 import { adviseSection, decisionLedgerSection } from './advise-carry.mjs';
+import { arbiterInputSection } from './arbiter-launch.mjs';
 import { schemaFor } from './schemas.mjs';
 import { INSTRUCTIONS } from './prompts.mjs';
 import { git, branchName, worktreeSnapshot, reviewScope } from './git-state.mjs';
@@ -150,7 +152,7 @@ export async function launcher(argv = process.argv.slice(2)) {
     // The pass gate lives in pass-gate.mjs, Plan_75 P0.
     const gate = await passGate({ opts, taskText, header, projectRunsRoot, repoRoot, beforeWait: claim.release });
     if ('exitCode' in gate) return gate.exitCode;
-    const { taskHash, chain, startedChain, continuationGrant, advisorTask, retryOf, resumedFrom, resumeInputs } = gate;
+    const { taskHash, chain, startedChain, continuationGrant, advisorTask, arbiterInput, retryOf, resumedFrom, resumeInputs } = gate;
 
     // Plan_60 D2: a signed-out Codex answers UNAVAILABLE (exit 5) before the paid sandbox probe;
     // a PATH miss, after one retry, is the free readiness-unconfirmed refusal (exit 1, Plan_78 D5).
@@ -212,6 +214,7 @@ export async function launcher(argv = process.argv.slice(2)) {
       task_hash: taskHash,
       task_hash_scheme: TASK_HASH_SCHEME,
       repo: repoRoot,
+      ...(arbiterInput ? { source_revision: arbiterInput.revision } : {}),
       started_at: new Date().toISOString(),
       // Which run of this task started the chain — the base every later pass is measured
       // against. Absent means this is the first pass.
@@ -251,6 +254,7 @@ export async function launcher(argv = process.argv.slice(2)) {
       if (advisorTask) {
         fs.writeFileSync(path.join(runDir, 'advisor-task.json'), `${JSON.stringify(advisorTask, null, 2)}\n`);
       }
+      if (arbiterInput) writeRunJsonAtomic(path.join(runDir, 'arbiter-input.json'), arbiterInput.input);
 
       if (opts.agent === 'codex-build') {
         fs.writeFileSync(path.join(runDir, 'scope.txt'), `${opts.scopePatterns.join('\n')}\n`);
@@ -274,6 +278,8 @@ export async function launcher(argv = process.argv.slice(2)) {
       if (scopeResults) sections.push(scopeResults);
       const ledger = decisionLedgerSection(advisorTask);
       if (ledger) sections.push(ledger);
+      const priorAdvice = arbiterInput && arbiterInputSection(arbiterInput.input);
+      if (priorAdvice) sections.push(priorAdvice);
       if (questions.length) {
         sections.push(
           [

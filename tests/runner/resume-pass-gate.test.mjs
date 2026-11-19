@@ -116,6 +116,8 @@ test('resume advise carries its original OK scope and returns only resume proven
   assert.equal(result.retryOf, null);
   assert.deepEqual(result.continuationGrant, { run: S, reason: REASON });
   assert.equal(result.advisorTask, null);
+  // OW-097 D4: only a fresh arbiter launch freezes inputs; a resume never builds them.
+  assert.equal(result.arbiterInput, null);
   assert.equal(result.resumeInputs.thread_id, THREAD);
   assert.deepEqual(result.resumeInputs.files, {
     'task-original.md': TASK, 'schema.json': '{"type":"object"}\n',
@@ -123,7 +125,7 @@ test('resume advise carries its original OK scope and returns only resume proven
   });
   assert.deepEqual(result.startedChain, [S, A]);
   assert.deepEqual(Object.keys(result).sort(), [
-    'advisorTask', 'chain', 'continuationGrant', 'resumeInputs', 'resumedFrom', 'retryOf', 'startedChain', 'taskHash',
+    'advisorTask', 'arbiterInput', 'chain', 'continuationGrant', 'resumeInputs', 'resumedFrom', 'retryOf', 'startedChain', 'taskHash',
   ]);
   assert.deepEqual(fs.readdirSync(tree.projectRunsRoot), [S, A]);
 });

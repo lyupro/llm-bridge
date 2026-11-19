@@ -17,8 +17,8 @@ import { encodeSnapshot } from '../meta/snapshot-format.mjs';
 
 export const MAX_LOG = 256 * 1024 * 1024;
 
-export const git = (repo, args) =>
-  spawnSync('git', ['-C', repo, ...args], { encoding: 'utf8', maxBuffer: MAX_LOG, windowsHide: true });
+export const git = (repo, args, env) =>
+  spawnSync('git', ['-C', repo, ...args], { encoding: 'utf8', maxBuffer: MAX_LOG, windowsHide: true, env });
 
 /**
  * Prefix of the run folders as seen from inside the repository, or null when they live
