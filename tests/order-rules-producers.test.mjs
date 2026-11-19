@@ -33,6 +33,8 @@ const advisorCases = [
   [options, 'Paths: add a "## Paths" section with repository-relative paths.'],
   [options + '## Paths\n',
     'Paths line 4 "## Paths": add at least one repository-relative path as a list item.'],
+  [validTask + '### Position\n',
+    'Position line 6 "### Position": this arbitration order belongs to codex-arbiter.'],
 ];
 
 for (const [text, expected] of advisorCases) {
@@ -145,6 +147,8 @@ test('move record read and parse errors preserve their causes and absence stays 
 for (const [builder, key, selector, message] of [
   [orderRuleMessage, 'advisor-task-options', 'violation', 'unknown advisor-task-options violation: unknown'],
   [orderRuleMessage, 'advisor-task-paths', 'violation', 'unknown advisor-task-paths violation: unknown'],
+  [orderRuleMessage, 'arbiter-task-shape', 'violation', 'unknown arbiter-task-shape violation: unknown'],
+  [orderRuleMessage, 'arbiter-prior-run', 'violation', 'unknown arbiter-prior-run violation: unknown'],
   [orderDiagnosticMessage, 'codex-unavailable-handoff', 'variant', 'unknown codex-unavailable-handoff variant: unknown'],
   [orderDiagnosticMessage, 'runs-move-record-invalid', 'violation', 'unknown runs-move-record-invalid violation: unknown'],
 ]) {
@@ -154,7 +158,10 @@ for (const [builder, key, selector, message] of [
 }
 
 test('producer entries belong to their task/header places and diagnostic categories', () => {
-  for (const key of ['advisor-task-options', 'advisor-task-paths', 'advice-retired-root']) {
+  for (const key of [
+    'advisor-task-options', 'advisor-task-paths', 'advice-retired-root',
+    'advisor-task-arbiter-input', 'arbiter-task-shape', 'arbiter-prior-run',
+  ]) {
     assert.equal(ORDER_RULES[key].topic, 'order');
     assert.ok(ORDER_RULES[key].rule.trim());
   }

@@ -8,6 +8,7 @@ import { guidance } from '../../cli/guidance.mjs';
 import { GUIDANCE_TOPICS } from '../../cli/guidance-topics.mjs';
 import { COMMANDS } from '../../cli/command-registry.mjs';
 import { main } from '../../bin/llm-bridge.mjs';
+import { makeHomeImage } from '../home-image.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
 function homeFixture(t) {
@@ -218,6 +219,15 @@ test('advisor guidance distinguishes failed-pass repairs from phase grants (Plan
   assert.match(text, /`resume: <run folder> — <reason>`[^.]*own Codex thread/);
   assert.match(text, /`resume-grant-usable`/);
   assert.match(text, /Neither `retry:` nor `resume:` authorizes the next phase/);
+});
+
+test('installed order guidance lists the OW-097 arbitration rules', async (t) => {
+  const home = await makeHomeImage(t);
+  const result = await guidance(['order'], { env: { LLM_BRIDGE_HOME: home } });
+  assert.equal(result.exitCode, 0, result.output);
+  assert.match(result.output, /- `advisor-task-arbiter-input`:.*Trigger, Position or Prior runs.*codex-arbiter/);
+  assert.match(result.output, /- `arbiter-task-shape`:.*## Trigger.*## Position.*## Prior runs/);
+  assert.match(result.output, /- `arbiter-prior-run`:.*OK codex-advisor advise runs.*different option/);
 });
 
 test('records guidance follows the newest resumed run and preserves the review template (Plan_80 E4)', () => {

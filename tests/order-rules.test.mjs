@@ -26,6 +26,7 @@ test('registry maps and entries are frozen and have exactly their contracted fie
     'advisor-advise-continuation', 'build-advice-required', 'advise-scope-run-required',
     'run-phase-required', 'writing-run-exclusive', 'order-launch-exclusive', 'order-id-owner',
     'advisor-task-options', 'advisor-task-paths', 'advice-retired-root',
+    'advisor-task-arbiter-input', 'arbiter-task-shape', 'arbiter-prior-run',
     'scope-pattern-refusal',
     'agent-call-model', 'agent-call-teammate', 'dispatcher-call-shape', 'dispatcher-task-file-help',
     'dispatcher-call-refusal', 'dispatcher-call-summary',

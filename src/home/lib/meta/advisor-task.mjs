@@ -1,16 +1,30 @@
-/** Parses blind advisor task choices so Plan_59 D5 rejects biased or ambiguous inputs before review. */
+/** Parses blind advisor task choices and guards their input boundary under Plan_59 D5 and OW-097. */
 import { orderRuleMessage } from '../order-rules.mjs';
 import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
 
 const OPTION = /^\s*-\s+([a-z0-9][a-z0-9-]*):\s*(.*)$/;
 const PREFERENCE = /recommend|prefer|рекоменд|предпочт|\(✓\)|★/iu;
+const ARBITER_HEADING = /^(trigger|position|prior[ \t]+runs)$/i;
+
+function arbiterHeading(value, next) {
+  const atx = value.match(/^ {0,3}#{1,6}[ \t]+(.+?)[ \t]*$/);
+  const name = atx ? atx[1].replace(/[ \t]+#+$/, '') : value.trim();
+  if (ARBITER_HEADING.test(name) && (atx || /^ {0,3}(?:=+|-+)[ \t]*$/.test(next))) return name;
+  return null;
+}
 
 function sections(text) {
   if (typeof text !== 'string') throw new TypeError(orderDiagnosticMessage('advisor-task-text-required'));
   const found = { options: { header: null, lines: [] }, paths: { header: null, lines: [] } };
+  const lines = text.split(/\r\n|\n|\r/);
+  let arbiter = null;
   let current = null;
-  for (const [index, value] of text.split(/\r\n|\n|\r/).entries()) {
+  for (const [index, value] of lines.entries()) {
     const line = { number: index + 1, value };
+    if (!arbiter) {
+      const name = arbiterHeading(value, lines[index + 1]);
+      if (name) arbiter = { name, ...line };
+    }
     const heading = value.match(/^\s{0,3}(#{1,2})\s+(.+?)\s*$/);
     if (heading) {
       const name = heading[2].replace(/\s+#+$/, '').toLowerCase();
@@ -20,7 +34,7 @@ function sections(text) {
       current.lines.push(line);
     }
   }
-  return found;
+  return { ...found, arbiter };
 }
 
 function optionsFrom(lines) {
@@ -43,7 +57,10 @@ export function parseAdvisorTask(text) {
 }
 
 export function advisorTaskRefusal(text) {
-  const { options, paths } = sections(text);
+  const { options, paths, arbiter } = sections(text);
+  if (arbiter) return orderRuleMessage('advisor-task-arbiter-input', {
+    heading: arbiter.name, lineNo: arbiter.number, line: arbiter.value,
+  });
   if (!options.header) return orderRuleMessage('advisor-task-options', { violation: 'missing' });
   const ids = new Set();
   for (const line of options.lines) {
