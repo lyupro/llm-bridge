@@ -14,6 +14,7 @@ const rawSinks = new Set([
   'copyFileSync', 'copyFile', 'openSync', 'open', 'createWriteStream',
 ]);
 const allowed = new Map([
+  ['cli/report-export.mjs', 'Creates the OW-097 report copy inside the repository; only reads run records.'],
   ['src/home/lib/run-codex.mjs', 'Appends crash diagnostics to stderr.log; only reads meta.json.'],
   ['src/home/lib/runner/project-dir.mjs', 'Writes the ownership marker .project.json; only reads status.json.'],
   ['src/home/lib/runner/recovery-launch.mjs', 'Copies frozen environment bytes to env.json; only reads run records.'],

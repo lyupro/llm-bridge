@@ -16,6 +16,8 @@ export const HOME_WRITE_INVENTORY = Object.freeze([
   outside('cli/probe-rig.mjs', 'mkdir', 2, 'Creates hook and agent directories inside the throwaway probe rig.'),
   outside('cli/probe-rig.mjs', 'writeFile', 3, 'Writes hook, agent, and settings fixtures inside the throwaway probe rig.'),
   outside('cli/prune.mjs', 'rmSync', 1, 'Deletes the explicitly selected run or archived transport target.'),
+  outside('cli/report-export.mjs', 'mkdirSync', 1, 'Creates missing export parents inside the recorded repository for OW-097 D1.'),
+  outside('cli/report-export.mjs', 'writeFileSync', 1, 'Exclusively creates the OW-097 D1 report copy inside the recorded repository for plan citations.'),
   outside('cli/runs-move-copy.mjs', 'mkdirSync', 1, 'Recreates run folders inside the staging copy this command created (Plan_77 B5a/F1); run records are operator data outside the home writer.'),
   outside('cli/runs-move-copy.mjs', 'copyFileSync', 1, 'Copies the run store into the runs folder and removes only the copy it created when verification fails (Plan_77 B5a); run records are operator data outside the home writer.'),
   outside('cli/runs-move-copy.mjs', 'rmSync', 1, 'Copies the run store into the runs folder and removes only the copy it created when verification fails (Plan_77 B5a); run records are operator data outside the home writer.'),

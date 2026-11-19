@@ -158,6 +158,7 @@ Known failures are documented with stable case ids. Agents read the guide with `
 | `prune <project> [<run>] [--purge] [--older-than <age>] [-f] [--json]`<br>`prune --all-projects [--older-than <age>] [-f] [--json]` | Plan or perform operator-confirmed cleanup, for one project or across the whole run store. |
 | `unlock [<project>\|--all]`<br>`unlock --lifecycle [--clear]`<br>`unlock --rules [--clear]` | Close records whose runner is gone, or show who holds the lock that serializes install, update and uninstall of this home; `--rules` inspects or clears the shared rules-directory lock under `CODEX_HOME` (default `~/.codex`); `--clear` removes that lock only when it is a file left by a holder proven dead (macOS; Windows and Linux locks are released by the kernel). |
 | `read <run>` | Render a run's structured event stream. |
+| `report export <run> <path>` | Copy a successful arbiter report to a Markdown path in the run's repository. Repeating the export succeeds if the file has identical bytes. |
 | `stop <run>` | Stop a run and record a `FAIL` verdict. |
 
 The command is `llm-bridge`. Run `llm-bridge --help` for exact forms, or `-h` after

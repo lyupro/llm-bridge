@@ -438,6 +438,7 @@ llm-bridge projects              # projects: runs, size, usage, live now, latest
 llm-bridge projects llm-bridge # runs for one project: agent, verdict, tokens, size
 llm-bridge projects --json       # same for a machine
 llm-bridge read <run>             # progress of one run from its events
+llm-bridge report export <run> <path> # copy a successful arbiter report into its repository, even after transport pruning
 ```
 
 The “live now” column is computed by the same module used by the response guard and worktree lock—

@@ -24,6 +24,7 @@ import { inventoryConfirm } from './inventory-confirm.mjs';
 import { model } from './model.mjs';
 import { projects } from './projects.mjs';
 import { read } from './read.mjs';
+import { handleReport, REPORT_EXPORT_HELP } from './report-export.mjs';
 import { runCodex } from './run-launcher.mjs';
 import { runsMove } from './runs-move.mjs';
 import { removeOldStore } from './runs-move-remove.mjs';
@@ -360,6 +361,13 @@ ${SETTINGS_SUMMARY}`);
       io.log(result.output);
       return result.exitCode;
     },
+  },
+  {
+    name: 'report',
+    ...REPORT_EXPORT_HELP,
+    section: 'public',
+    actions: { export: REPORT_EXPORT_HELP },
+    handler: handleReport,
   },
   {
     name: 'stop',
