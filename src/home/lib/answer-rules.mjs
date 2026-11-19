@@ -1,13 +1,20 @@
 /** OW-068 / Plan_80 E21: rules a filled answer must satisfy after the run, distinct from order-rules for a task file before the run. */
 import { RULES as ADVISOR_RULES } from './answer-rules/advisor.mjs';
+import { RULES as ARBITER_RULES } from './answer-rules/arbiter.mjs';
 import { RULES as BUILD_RULES } from './answer-rules/build.mjs';
 import { RULES as SCOUT_RULES } from './answer-rules/scout.mjs';
 import { QUESTION_KIND } from './runner/question-kind.mjs';
 
-export const ANSWER_RULES = Object.freeze({ 'codex-advisor': ADVISOR_RULES, 'codex-scout': SCOUT_RULES, 'codex-build': BUILD_RULES });
+export const ANSWER_RULES = Object.freeze({
+  'codex-advisor': ADVISOR_RULES,
+  'codex-arbiter': ARBITER_RULES,
+  'codex-scout': SCOUT_RULES,
+  'codex-build': BUILD_RULES,
+});
 // The phases each judged agent runs in; an agent added to ANSWER_RULES without a row here is refused at load.
 const AGENT_PHASES = Object.freeze({
   'codex-advisor': Object.freeze(['scope', 'advise']),
+  'codex-arbiter': Object.freeze(['default']),
   'codex-scout': Object.freeze(['default']),
   'codex-build': Object.freeze(['default']),
 });

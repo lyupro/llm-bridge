@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ARBITER_SCHEMA } from '../../src/home/lib/runner/arbiter-schema.mjs';
-import { EVIDENCE_LOCATION } from '../../src/home/lib/runner/schemas.mjs';
+import { EVIDENCE_LOCATION } from '../../src/home/lib/runner/evidence-location.mjs';
 
 function assertClosed(schema, field) {
   if (schema.type === 'object') {

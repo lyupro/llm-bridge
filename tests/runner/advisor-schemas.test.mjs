@@ -5,7 +5,8 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { advisorSchema, EVIDENCE_LOCATION, PHASE_SCHEMAS, SCHEMAS, schemaFor } from '../../src/home/lib/runner/schemas.mjs';
+import { EVIDENCE_LOCATION } from '../../src/home/lib/runner/evidence-location.mjs';
+import { advisorSchema, PHASE_SCHEMAS, SCHEMAS, schemaFor } from '../../src/home/lib/runner/schemas.mjs';
 import { INSTRUCTIONS } from '../../src/home/lib/runner/prompts.mjs';
 import { validAdvice, validScope } from '../meta/advisor-fixtures.mjs';
 

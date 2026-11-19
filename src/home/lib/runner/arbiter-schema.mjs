@@ -1,5 +1,5 @@
 /** Defines the OW-097 structured arbiter result chosen by the advise run named in `advice:`. */
-import { EVIDENCE_LOCATION } from './schemas.mjs';
+import { EVIDENCE_LOCATION } from './evidence-location.mjs';
 
 export const ARBITER_SCHEMA = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',

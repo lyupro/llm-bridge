@@ -1,5 +1,5 @@
+/** Selects the output schema for each role so the runner and prompt use the same answer contract. */
 /**
- * The shape each agent's answer must have, one JSON schema per agent.
  * Plan_59 D10 adds alternatives, rated assumptions, risk outcomes, pre-mortems and open questions.
  * Plan_68 D6 removes recommendation.text's hidden character cap after the 2026-09-27
  * `…cli/install.mjs:` + U+0000 and 2026-09-28 `…(docs/plans/Plan_` + `恋` truncation incidents.
@@ -7,8 +7,11 @@
  * Handed to `codex exec --output-schema`, so a run that answers in the wrong shape is
  * rejected by Codex itself rather than discovered later by write-meta.mjs. Keyed by agent
  * next to INSTRUCTIONS in prompts.mjs: the two are the same choice made twice, and looking
- * either of them up by agent name is what keeps the three agents from drifting apart.
+ * either of them up by agent name is what keeps the contracts from drifting apart.
  */
+import { ARBITER_SCHEMA } from './arbiter-schema.mjs';
+import { EVIDENCE_LOCATION } from './evidence-location.mjs';
+
 const SCOUT_SCHEMA = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   type: 'object',
@@ -149,24 +152,6 @@ const REVIEW_SCHEMA = {
       },
     },
     next_steps: { type: 'array', items: { type: 'string' } },
-  },
-};
-
-// The 2026-09-24_094352_plan62-g1-dispatcher-gate run folded 3-5 citations into one advisor
-// address; like the 2026-07-31 build changes[].file precedent, constrain a single location here.
-export const EVIDENCE_LOCATION = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['file', 'line_start', 'line_end'],
-  properties: {
-    file: {
-      type: 'string',
-      minLength: 1,
-      pattern: '^[^:;,*?{}\\r\\n]+$',
-      description: 'Exactly one repository-root-relative path. Spaces are allowed; lists, globs, drive letters and line suffixes are not — use a separate location object for each place.',
-    },
-    line_start: { type: 'integer', minimum: 1 },
-    line_end: { type: 'integer', minimum: 1 },
   },
 };
 
@@ -320,6 +305,7 @@ export const PHASE_SCHEMAS = {
 
 // Plan_59: an advisor's phase, not its agent name alone, defines the answer contract.
 export function schemaFor(agent, phase) {
+  if (agent === 'codex-arbiter') return ARBITER_SCHEMA;
   return agent === 'codex-advisor' ? advisorSchema(phase) : SCHEMAS[agent];
 }
 

@@ -10,6 +10,13 @@ export const JUDGED_AGENTS = [
     emitter: null,
   },
   {
+    agent: 'codex-arbiter',
+    files: [{ file: 'arbiter-verdict.mjs' }],
+    entries: ['judgeArbitration'],
+    emitter: null,
+    branchDeferred: true, // OW-097 B4 connects the judge to resolveStatus.
+  },
+  {
     agent: 'codex-scout',
     files: [
       { file: 'verdict.mjs', functionName: 'scoutCoverageGap' },

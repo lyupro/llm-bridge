@@ -140,13 +140,17 @@ function branchProblems(verdictSource, table, rules) {
       if (!catalogReason(reason, bindings, judge)) problems.push(`branch reason bypasses catalog: ${agent}: ${reason.join(' ')}`);
     }
   }
-  for (const { agent, entries } of table) {
+  for (const { agent, entries, branchDeferred } of table) {
+    if (branchDeferred && !branches.some((branch) => branch.agent === agent)) continue;
     for (const entry of entries) {
       if (!calls.get(agent).has(entry)) problems.push(`judge entry not called: ${agent}: ${entry}`);
     }
   }
   for (const agent of Object.keys(rules)) {
-    if (!branches.some((branch) => branch.agent === agent)) problems.push(`judged agent without branch: ${agent}`);
+    if (!branches.some((branch) => branch.agent === agent)
+      && !table.some((judge) => judge.agent === agent && judge.branchDeferred)) {
+      problems.push(`judged agent without branch: ${agent}`);
+    }
   }
   return problems;
 }
@@ -285,14 +289,24 @@ test('branch guard exempts only literal OK status and handles single-statement a
 });
 
 test('branch guard requires every registered entry to be called in its own agent branch', () => {
-  for (const { agent, entries } of JUDGED_AGENTS) {
+  for (const { agent, entries, branchDeferred } of JUDGED_AGENTS) {
     for (const entry of entries) {
       const anchor = new RegExp(`const \\w+ = ${entry}\\([^;]+;`).exec(source)?.[0];
+      if (branchDeferred && !anchor) continue;
       assert.ok(anchor, `mutation anchor missing: ${entry}`);
       const edited = mutated(anchor, anchor.replace(entry, 'unregistered'));
       assert.ok(problemsOf(edited).includes(`judge entry not called: ${agent}: ${entry}`));
     }
   }
+});
+
+test('the OW-097 wiring deferral only excuses an absent arbiter branch', () => {
+  const table = JUDGED_AGENTS.map((judge) => ({ ...judge, branchDeferred: false }));
+  assert.ok(branchProblems(source, table, ANSWER_RULES).includes('judged agent without branch: codex-arbiter'));
+  const edited = mutated(scoutBranch, "if (agent === 'codex-arbiter') { return { status: 'FAIL', reason: 'x' }; }\n" + scoutBranch);
+  const problems = problemsOf(edited);
+  assert.ok(problems.includes("branch reason bypasses catalog: codex-arbiter: 'x'"));
+  assert.ok(problems.includes('judge entry not called: codex-arbiter: judgeArbitration'));
 });
 
 test('host reason exceptions are closed frozen maps with decision evidence', () => {

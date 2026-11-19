@@ -8,17 +8,18 @@ import { tokensOf, closingToken, functionBody } from './source-tokens.mjs';
 
 const checks = {
   'codex-advisor': producerProblems,
+  'codex-arbiter': arbiterProducerProblems,
   'codex-scout': scoutProducerProblems,
   'codex-build': buildProducerProblems,
 };
 const judgedAgents = JUDGED_AGENTS.map((judge) => ({ ...judge, check: checks[judge.agent] }));
-const [advisor, scout, build] = judgedAgents;
+const [advisor, arbiter, scout, build] = judgedAgents;
 const source = advisor.files[0].source + '\n' + fs.readFileSync(
   new URL('../src/home/lib/meta/already-decided.mjs', import.meta.url), 'utf8');
 const catalogKeys = advisor.catalogKeys;
 
 // OW-068 / Plan_80 E21: future failure branches must use the same catalog as the prompt.
-function producerProblems(source, catalogKeys) {
+function producerProblems(source, catalogKeys, { allowAdvisorDispatch = true } = {}) {
   const problems = [];
   const known = new Set(catalogKeys);
   const produced = new Set();
@@ -61,7 +62,8 @@ function producerProblems(source, catalogKeys) {
       // OW-083 B4 adds a ledger dispatcher whose producer is included in the same catalog guard.
       const citationDispatch = /^reason\(problem\.key,\s*\{\s*field,\s*label,\s*\.\.\.problem\.values\s*\}\s*\)$/;
       const ledgerDispatch = /^reason\(problem\.key,\s*problem\.values\)$/;
-      if (!/^reason\('[^']+'(?=\s*[,\)])/.test(arg) && !citationDispatch.test(arg) && !ledgerDispatch.test(arg)) {
+      const advisorDispatch = allowAdvisorDispatch && (citationDispatch.test(arg) || ledgerDispatch.test(arg));
+      if (!/^reason\('[^']+'(?=\s*[,\)])/.test(arg) && !advisorDispatch) {
         problems.push(`reasons.push bypasses catalog: ${arg}`);
       }
     }
@@ -69,6 +71,14 @@ function producerProblems(source, catalogKeys) {
   if (/['"`](?:D3|D4|D5|D10|integrity) /.test(source)) problems.push('handwritten failure reason');
   const returns = [...source.matchAll(/\breturn\s*\{\s*ok\s*:/g)].length;
   if (returns !== 1) problems.push(`expected one verdict return, found ${returns}`);
+  return problems;
+}
+
+function arbiterProducerProblems([{ source }], catalogKeys) {
+  const problems = producerProblems(source, catalogKeys, { allowAdvisorDispatch: false });
+  // The arbiter hands back the collected reasons array, so a replacement must not supply its own text.
+  const returns = /\breturn\s*\{\s*ok:\s*reasons\.length\s*===\s*0,\s*reasons\s*\}/g;
+  if ([...source.matchAll(returns)].length !== 1) problems.push('arbiter verdict must return the collected reasons');
   return problems;
 }
 
@@ -220,6 +230,23 @@ test('producer guard rejects a second verdict return', () => {
 test('producer guard rejects a catalog rule removed from the judge', () => {
   const edited = mutated("reasons.push(reason('advisor-commands-run'));", ';');
   assert.ok(producerProblems(edited, catalogKeys).includes('missing producer: advisor-commands-run'));
+});
+
+test('arbiter producer guard requires literal keys and rejects reasons that bypass the catalog', () => {
+  const [entry] = arbiter.files;
+  const anchor = "reason('arbiter-recommendation-required')";
+  assert.ok(entry.source.includes(anchor));
+  for (const [replacement, problem] of [
+    ["reason('arbiter-unknown')", 'unknown catalog key: arbiter-unknown'],
+    ["reason('arbiter-unknown')", 'missing producer: arbiter-recommendation-required'],
+    ["'handwritten'", "reasons.push bypasses catalog: 'handwritten'"],
+    ['reason(problem.key, problem.values)', 'reasons.push bypasses catalog: reason(problem.key, problem.values)'],
+  ]) {
+    const source = entry.source.replace(anchor, replacement);
+    assert.ok(arbiter.check([{ ...entry, source }], arbiter.catalogKeys).includes(problem));
+  }
+  const source = entry.source.replace('ok: reasons.length === 0, reasons', "ok: false, reasons: ['handwritten']");
+  assert.ok(arbiter.check([{ ...entry, source }], arbiter.catalogKeys).includes('arbiter verdict must return the collected reasons'));
 });
 
 function mutatedScout(file, before, after) {
