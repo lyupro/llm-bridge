@@ -1,4 +1,5 @@
 /** Defines the OW-097 structured arbiter result chosen by the advise run named in `advice:`. */
+import { PROBE_LIMITS, PROBE_TAG_PREFIX } from '../meta/arbiter-probe-receipts.mjs';
 import { EVIDENCE_LOCATION } from './evidence-location.mjs';
 
 export const ARBITER_SCHEMA = {
@@ -76,14 +77,16 @@ export const ARBITER_SCHEMA = {
         },
       },
     },
+    // OW-097 D3 uses a tag because the exact command comes from the runner's event.
     probes: {
       type: 'array',
+      maxItems: PROBE_LIMITS.maxProbes,
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['command', 'purpose', 'finding'],
+        required: ['probe_tag', 'purpose', 'finding'],
         properties: {
-          command: { type: 'string' },
+          probe_tag: { type: 'string', pattern: `^${PROBE_TAG_PREFIX}[0-9a-f]{16}$` },
           purpose: { type: 'string' },
           finding: { type: 'string' },
         },

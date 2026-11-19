@@ -19,7 +19,10 @@ test('registers a valid arbiter catalog with unconditional default-phase rules',
 });
 
 test('every arbiter judge rule produces a message through the catalog with its declared inputs', () => {
-  const fixtures = { field: 'checks[0].evidence[0]', label: 'src/gate.mjs:2', count: 1, codePoint: 'U+0000', id: 'gate' };
+  const fixtures = {
+    field: 'checks[0].evidence[0]', label: 'src/gate.mjs:2', count: 1, codePoint: 'U+0000', id: 'gate',
+    index: 2, tag: 'ARBITER_PROBE_0123456789abcdef', bytes: 16385, max: 16384,
+  };
   for (const [key, entry] of Object.entries(RULES)) {
     const values = Object.fromEntries(entry.data.map((name) => {
       assert.ok(Object.hasOwn(fixtures, name), `${key} has no fixture for ${name}`);

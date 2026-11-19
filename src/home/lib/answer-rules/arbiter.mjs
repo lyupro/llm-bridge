@@ -1,4 +1,6 @@
 /** Defines the OW-097 arbiter answer rules once so its prompt and judge use the same policy. */
+import { PROBE_LIMITS } from '../meta/arbiter-probe-receipts.mjs';
+
 const DEFAULT = Object.freeze(['default']);
 
 export const RULES = Object.freeze({
@@ -113,5 +115,77 @@ export const RULES = Object.freeze({
     rule: 'Include between 1 and 5 scenarios in pre_mortem.',
     message: () => 'pre_mortem: provide between 1 and 5 scenarios.',
     data: Object.freeze([]),
+  }),
+  // OW-097 D3 requires a unique receipt from the current run for every claimed probe.
+  'arbiter-probe-count': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'Keep the probes list within the probe limit.',
+    message: ({ count, max }) => `probes: claimed ${count} probes, with a limit of ${max}.`,
+    data: Object.freeze(['count', 'max']),
+  }),
+  'arbiter-probe-capture-incomplete': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'Base probe claims on a complete command-event capture from the current run.',
+    message: () => 'probes: the command-event capture is incomplete, so probe bindings cannot be verified.',
+    data: Object.freeze([]),
+  }),
+  'arbiter-probe-tag-shape': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'Copy the tag verbatim from the command comment into probe_tag, using the exact prefix and lowercase hex format.',
+    message: ({ index, tag }) => `probes[${index}] ${JSON.stringify(tag)}: the tag has an invalid format.`,
+    data: Object.freeze(['index', 'tag']),
+  }),
+  'arbiter-probe-tag-duplicate': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'List each probe tag only once in the result.',
+    message: ({ index, tag }) => `probes[${index}] ${JSON.stringify(tag)}: the result already claims this tag.`,
+    data: Object.freeze(['index', 'tag']),
+  }),
+  'arbiter-probe-unmatched': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'Include the full tag in the command you actually run for each probe you claim.',
+    message: ({ index, tag }) => `probes[${index}] ${JSON.stringify(tag)}: no command event contains this tag.`,
+    data: Object.freeze(['index', 'tag']),
+  }),
+  'arbiter-probe-incomplete': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'Wait for each probe command to finish before claiming it.',
+    message: ({ index, tag }) => `probes[${index}] ${JSON.stringify(tag)}: the matching command has no completion event.`,
+    data: Object.freeze(['index', 'tag']),
+  }),
+  'arbiter-probe-ambiguous': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'Give each attempt its own tag, including a retry after a failed command.',
+    message: ({ index, tag, count }) => `probes[${index}] ${JSON.stringify(tag)}: ${count} completed command events contain this tag.`,
+    data: Object.freeze(['index', 'tag', 'count']),
+  }),
+  'arbiter-probe-multiple-markers': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'Put only one probe tag in a probe command, including anywhere in its script or arguments.',
+    message: ({ index, tag }) => `probes[${index}] ${JSON.stringify(tag)}: the matching command contains another probe tag.`,
+    data: Object.freeze(['index', 'tag']),
+  }),
+  'arbiter-probe-command-too-long': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: `Keep each probe command within ${PROBE_LIMITS.commandBytes} UTF-8 bytes, allowing for shell wrappers.`,
+    message: ({ index, tag, bytes, max }) => `probes[${index}] ${JSON.stringify(tag)}: the command uses ${bytes} UTF-8 bytes, with a limit of ${max}.`,
+    data: Object.freeze(['index', 'tag', 'bytes', 'max']),
+  }),
+  'arbiter-probe-terminal-invalid': Object.freeze({
+    phases: DEFAULT,
+    when: 'always',
+    rule: 'Report the outcome of each probe from its completed command result. Describe unsuccessful attempts as failures.',
+    message: ({ index, tag }) =>
+      `probes[${index}] ${JSON.stringify(tag)}: the matching completion has an invalid command id, status, exit code or output.`,
+    data: Object.freeze(['index', 'tag']),
   }),
 });

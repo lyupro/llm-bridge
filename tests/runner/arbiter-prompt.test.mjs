@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ANSWER_RULES } from '../../src/home/lib/answer-rules.mjs';
+import { PROBE_LIMITS, PROBE_TAG_PREFIX } from '../../src/home/lib/meta/arbiter-probe-receipts.mjs';
 import { arbiterEvidenceSection } from '../../src/home/lib/runner/arbiter-evidence.mjs';
 import { ARBITER_SCHEMA } from '../../src/home/lib/runner/arbiter-schema.mjs';
 import { INSTRUCTIONS } from '../../src/home/lib/runner/prompts.mjs';
@@ -22,7 +23,12 @@ test('arbiter instructions state the evidence boundary, independence checks, pro
     'Keep any claim you could not verify in `checks` with `verified: false`.',
     'Use short probes only to settle a claim.',
     'You may use `node -e` snippets and read-only git commands on the listed paths that write nothing.',
-    'Never run a test suite, a build or an installer. Record every probe you ran in `probes`.',
+    'Never run a test suite, a build or an installer.',
+    `Use at most ${PROBE_LIMITS.maxProbes} probes. Make up one tag per command: \`${PROBE_TAG_PREFIX}\` followed by 16 lowercase hex digits.`,
+    'Put it in an inert comment in that command: a `//` comment inside the `node -e` script, or a trailing `# …` comment after a read-only git command.',
+    'Use a fresh tag for every command and every attempt, including retries. Never reuse a tag.',
+    'In `probes`, list each probe by its `probe_tag` with its `purpose` and `finding`.',
+    'A probe whose tag is not found in exactly one completed command is rejected.',
     'Recommend one listed option, or a mix only when it is strictly better than every listed option.',
     'For a mix, state which part comes from which option in `mix_rationale`.',
     'Give the cost of every non-recommended option in `rejected` and the residual gap of every option, including the recommended one, in `residual_gaps`.',
@@ -37,10 +43,18 @@ test('arbiter instructions render every catalog rule and the bounds from ARBITER
   const prompt = INSTRUCTIONS[AGENT]({});
   const heading = 'Rules checked after the run (a filled answer that breaks any one is rejected whole):';
   assert.ok(prompt.includes(`\n${heading}\n${Object.values(ANSWER_RULES[AGENT]).map(({ rule }) => `- ${rule}`).join('\n')}\n`));
-  assert.ok(prompt.includes('\nOutput-schema array bounds:\n- recommendation.option_ids: at least 1 item\n- pre_mortem: 1-5 items\n'));
+  assert.ok(prompt.includes([
+    '', 'Output-schema array bounds:', '- recommendation.option_ids: at least 1 item', '- pre_mortem: 1-5 items',
+    `- probes: at most ${PROBE_LIMITS.maxProbes} items`, '',
+  ].join('\n')));
   assert.equal(ARBITER_SCHEMA.properties.pre_mortem.maxItems, 5);
   const file = ARBITER_SCHEMA.properties.checks.items.properties.evidence.items.properties.file;
-  assert.ok(prompt.endsWith(`Output-schema text rules:\n- checks[].evidence[].file: must match the pattern ${file.pattern}`));
+  const tag = ARBITER_SCHEMA.properties.probes.items.properties.probe_tag;
+  assert.ok(prompt.endsWith([
+    'Output-schema text rules:',
+    `- checks[].evidence[].file: must match the pattern ${file.pattern}`,
+    `- probes[].probe_tag: must match the pattern ${tag.pattern}`,
+  ].join('\n')));
 });
 
 test('renders each frozen snapshot in order and quotes every advice line', () => {

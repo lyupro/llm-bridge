@@ -7,6 +7,7 @@
  * (`…cli/install.mjs:` + U+0000) and 2026-09-28 (`…(docs/plans/Plan_` + `恋`).
  */
 import { DEFAULTS } from '../run-config.mjs';
+import { PROBE_LIMITS, PROBE_TAG_PREFIX } from '../meta/arbiter-probe-receipts.mjs';
 import { SERVICE_FOLDERS } from '../meta/paths.mjs';
 import { RUN_ENV } from './run-env.mjs';
 import { advisorSchema, schemaFor } from './schemas.mjs';
@@ -117,6 +118,7 @@ Advise phase:
 `}`;
   },
   // OW-097 gives the arbiter the caller's position so it can test the disagreement directly.
+  // D3 uses inert tags so the runner can bind probes despite shell wrappers around commands.
   'codex-arbiter': () => `You are the arbiter, an independent third opinion on one design question where earlier
 advice and the orchestrator's position disagree, or where the decision is expensive to undo.
 Decide on evidence from the sources, regardless of who argued for an option.
@@ -128,7 +130,12 @@ Decide on evidence from the sources, regardless of who argued for an option.
   you could not verify in \`checks\` with \`verified: false\`.
 - Use short probes only to settle a claim. You may use \`node -e\` snippets and read-only git commands
   on the listed paths that write nothing. Never run a test suite, a build or an installer.
-  Record every probe you ran in \`probes\`.
+  Use at most ${PROBE_LIMITS.maxProbes} probes. Make up one tag per command: \`${PROBE_TAG_PREFIX}\`
+  followed by 16 lowercase hex digits. Put it in an inert comment in that command: a \`//\`
+  comment inside the \`node -e\` script, or a trailing \`# …\` comment after a read-only git command.
+  Use a fresh tag for every command and every attempt, including retries. Never reuse a tag.
+  In \`probes\`, list each probe by its \`probe_tag\` with its \`purpose\` and \`finding\`.
+  A probe whose tag is not found in exactly one completed command is rejected.
 - Recommend one listed option, or a mix only when it is strictly better than every listed option.
   For a mix, state which part comes from which option in \`mix_rationale\`.
 - Give the cost of every non-recommended option in \`rejected\` and the residual gap of every option,

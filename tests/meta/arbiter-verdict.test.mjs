@@ -1,13 +1,16 @@
 /** Guards verdicts for the OW-097 arbitration design chosen by the advise run named in `advice:`. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { registerHooks } from 'node:module';
 import path from 'node:path';
 import { test } from 'node:test';
 import { answerRuleMessage } from '../../src/home/lib/answer-rules.mjs';
+import { PROBE_LIMITS, PROBE_TAG_PREFIX } from '../../src/home/lib/meta/arbiter-probe-receipts.mjs';
 import { parseArbiterTask } from '../../src/home/lib/meta/arbiter-task.mjs';
 import { judgeArbitration } from '../../src/home/lib/meta/arbiter-verdict.mjs';
 import { arbiterEvidence } from '../../src/home/lib/runner/arbiter-evidence.mjs';
 import { makeTempTree } from '../temp-tree.mjs';
+import { COMPLETED_COMMAND } from './test-fixtures.mjs';
 
 const brief = `## Question
 How should we detect a missing order id?
@@ -47,6 +50,25 @@ const snapshot = arbiterEvidence({ projectRunsRoot, ...task });
 assert.equal(snapshot.ok, true, snapshot.refusal);
 const evidence = snapshot.runs;
 
+const PROBE_TAG = `${PROBE_TAG_PREFIX}0123456789abcdef`;
+const OTHER_TAG = `${PROBE_TAG_PREFIX}fedcba9876543210`;
+
+function probe(probe_tag) {
+  return { probe_tag, purpose: 'Locate validation.', finding: 'Found at src/gate.mjs:2.' };
+}
+
+// OW-097 D3 binds the tag from the raw command in the same event shape the runner captures.
+function completedProbe(tag) {
+  return {
+    ...COMPLETED_COMMAND,
+    item: {
+      ...COMPLETED_COMMAND.item,
+      command: `git show HEAD:src/gate.mjs # ${tag}`,
+      aggregated_output: 'read();\nvalidate();\n',
+    },
+  };
+}
+
 function validResult() {
   return {
     recommendation: { option_ids: ['gate'], mix_rationale: '', text: 'Refuse at src/gate.mjs:2.' },
@@ -66,11 +88,11 @@ function validResult() {
       { claim: 'The gate calls validation.', verified: true, evidence: [{ file: 'src/gate.mjs', line_start: 2, line_end: 2 }] },
       { claim: 'Every caller uses the gate.', verified: false, evidence: [] },
     ],
-    probes: [{ command: 'rg -n validate src/gate.mjs', purpose: 'Locate validation.', finding: 'Found at src/gate.mjs:2.' }],
+    probes: [probe(PROBE_TAG)],
   };
 }
 
-const judge = (result) => judgeArbitration({ result, task, evidence, repoRoot });
+const judge = (result) => judgeArbitration({ result, task, evidence, repoRoot, events: [completedProbe(PROBE_TAG)], captureComplete: true });
 const pass = { ok: true, reasons: [] };
 
 function mix(result) {
@@ -79,7 +101,7 @@ function mix(result) {
   return result;
 }
 
-test('accepts a single recommendation, scoped citations, frozen run names and an unverified claim', () => {
+test('accepts a single recommendation, scoped citations, frozen run names, an unverified claim and a bound probe', () => {
   assert.deepEqual(judge(validResult()), pass);
 });
 
@@ -99,7 +121,28 @@ test('accepts five scenarios and an empty review for an irreversible brief witho
   const result = validResult();
   result.pre_mortem = Array.from({ length: 5 }, () => ({ ...result.pre_mortem[0] }));
   result.prior_advice_review = [];
-  assert.deepEqual(judgeArbitration({ result, task: irreversible, evidence: [], repoRoot }), pass);
+  assert.deepEqual(judgeArbitration({
+    result, task: irreversible, evidence: [], repoRoot, events: [completedProbe(PROBE_TAG)], captureComplete: true,
+  }), pass);
+});
+
+test('requires an array of command events and a boolean capture state even with no probes', () => {
+  const result = validResult();
+  result.probes = [];
+  const inputs = { result, task, evidence, repoRoot };
+  assert.throws(() => judgeArbitration({ ...inputs, captureComplete: true }), { name: 'TypeError', message: /\bevents\b/ });
+  assert.throws(() => judgeArbitration({ ...inputs, events: {}, captureComplete: true }), TypeError);
+  assert.throws(() => judgeArbitration({ ...inputs, events: [] }), { name: 'TypeError', message: /\bcaptureComplete\b/ });
+  assert.throws(() => judgeArbitration({ ...inputs, events: [], captureComplete: 'true' }), TypeError);
+  assert.deepEqual(judgeArbitration({ ...inputs, events: [], captureComplete: false }), pass);
+});
+
+test('accepts a probe with a recorded command failure', () => {
+  const result = validResult();
+  result.probes[0].finding = 'The probe failed to read the file.';
+  const event = completedProbe(PROBE_TAG);
+  Object.assign(event.item, { status: 'failed', exit_code: 1, aggregated_output: 'fatal: unknown revision' });
+  assert.deepEqual(judgeArbitration({ result, task, evidence, repoRoot, events: [event], captureComplete: true }), pass);
 });
 
 const cases = [
@@ -166,6 +209,68 @@ for (const [name, mutate, key, values] of cases) {
     assert.deepEqual(judge(result), { ok: false, reasons: [answerRuleMessage('codex-arbiter', key, values)] });
   });
 }
+
+const marker = { index: 0, tag: PROBE_TAG };
+const maxProbes = PROBE_LIMITS.maxProbes;
+const maxCommandBytes = PROBE_LIMITS.commandBytes;
+const citationShapedTag = 'src/audit.mjs:1';
+const probeCases = [
+  ['too many probes', (inputs) => {
+    const tags = Array.from({ length: maxProbes + 1 }, (_, index) => `${PROBE_TAG_PREFIX}${index.toString(16).padStart(16, '0')}`);
+    inputs.result.probes = tags.map(probe);
+    inputs.events = tags.map(completedProbe);
+  }, 'arbiter-probe-count', { count: maxProbes + 1, max: maxProbes }],
+  ['incomplete capture', (inputs) => { inputs.captureComplete = false; }, 'arbiter-probe-capture-incomplete', {}],
+  ['a malformed tag that looks like a citation', ({ result }) => { result.probes[0].probe_tag = citationShapedTag; },
+    'arbiter-probe-tag-shape', { index: 0, tag: citationShapedTag }],
+  ['a duplicate tag in the result', ({ result }) => result.probes.push(probe(PROBE_TAG)),
+    'arbiter-probe-tag-duplicate', { index: 1, tag: PROBE_TAG }],
+  ['an unmatched tag', ({ events }) => { events[0] = completedProbe(OTHER_TAG); }, 'arbiter-probe-unmatched', marker],
+  ['a tag seen only in a started command', ({ events }) => {
+    events[0].type = 'item.started';
+    Object.assign(events[0].item, { status: 'in_progress', exit_code: null, aggregated_output: '' });
+  }, 'arbiter-probe-incomplete', marker],
+  ['two completed commands with the same tag', ({ events }) => {
+    const retry = completedProbe(PROBE_TAG);
+    retry.item.id = 'item_4';
+    events.push(retry);
+  }, 'arbiter-probe-ambiguous', { ...marker, count: 2 }],
+  ['multiple tags in one command', ({ events }) => { events[0].item.command += ` ${OTHER_TAG}`; },
+    'arbiter-probe-multiple-markers', marker],
+  ['an oversized command', ({ events }) => {
+    events[0].item.command = `${events[0].item.command} `.padEnd(maxCommandBytes + 1, 'x');
+  }, 'arbiter-probe-command-too-long', { ...marker, bytes: maxCommandBytes + 1, max: maxCommandBytes }],
+  ['an invalid completion', ({ events }) => { events[0].item.exit_code = null; }, 'arbiter-probe-terminal-invalid', marker],
+];
+
+for (const [name, mutate, key, values] of probeCases) {
+  test(`rejects ${name} with its own reason`, () => {
+    const inputs = { result: validResult(), task, evidence, repoRoot, events: [completedProbe(PROBE_TAG)], captureComplete: true };
+    mutate(inputs);
+    assert.deepEqual(judgeArbitration(inputs), { ok: false, reasons: [answerRuleMessage('codex-arbiter', key, values)] });
+  });
+}
+
+test('throws a RangeError for an unknown binder key even when it names a citation problem', async () => {
+  const judgeUrl = new URL('../../src/home/lib/meta/arbiter-verdict.mjs?unknown-probe-problem', import.meta.url).href;
+  const binder = "export const bindArbiterProbes = () => ({ problems: [{ key: 'citation-path', values: {} }] });";
+  // D3's binder emits only known keys. Replace just its import to exercise the judge's fail-loud branch.
+  const hooks = registerHooks({
+    resolve(specifier, context, nextResolve) {
+      if (context.parentURL === judgeUrl && specifier === './arbiter-probe-receipts.mjs') {
+        return { url: `data:text/javascript,${encodeURIComponent(binder)}`, shortCircuit: true };
+      }
+      return nextResolve(specifier, context);
+    },
+  });
+  try {
+    const { judgeArbitration: judgeWithUnknownKey } = await import(judgeUrl);
+    const inputs = { result: validResult(), task, evidence, repoRoot, events: [], captureComplete: true };
+    assert.throws(() => judgeWithUnknownKey(inputs), { name: 'RangeError', message: /Unknown arbiter probe problem "citation-path"/ });
+  } finally {
+    hooks.deregister();
+  }
+});
 
 test('reports unreadable structured evidence through its catalog rule', (t) => {
   const result = validResult();
