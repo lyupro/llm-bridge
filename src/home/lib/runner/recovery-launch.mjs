@@ -73,8 +73,9 @@ export function reserveRecoveryChild({
   if (childDir !== planned) fields = fieldsFor(childDir);
   const reservedAt = now().toISOString();
   const copied = {};
+  // OW-097 D4: recovery replays the parent's evidence against its original revision.
   for (const key of ['agent', 'slug', 'order_id', 'phase', 'task_hash', 'task_hash_scheme', 'repo',
-    'advice', 'continues', 'continued_from', 'sandbox_probe']) {
+    'advice', 'continues', 'continued_from', 'sandbox_probe', 'source_revision']) {
     if (Object.hasOwn(status, key)) copied[key] = status[key];
   }
   // A12/A15: a crash must leave an admissible child before publishing its order or parent link.

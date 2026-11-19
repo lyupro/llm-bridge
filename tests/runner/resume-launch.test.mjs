@@ -38,6 +38,7 @@ function recordRun(runDir, agent, phase) {
   const status = {
     agent, phase, order_id: 'ow066-resume-launch', repo: path.dirname(runDir),
     task_hash: 'frozen-task-hash',
+    ...(agent === 'codex-arbiter' ? { source_revision: null } : {}),
   };
   fs.writeFileSync(path.join(runDir, 'status.json'), JSON.stringify(status), 'utf8');
   fs.writeFileSync(path.join(runDir, 'worker.json'), JSON.stringify({ profile: PROFILE }), 'utf8');
@@ -58,6 +59,7 @@ function namedRun(root, agent, phase) {
   if (agent === 'codex-advisor' && ['scope', 'advise'].includes(phase)) {
     files['advisor-task.json'] = '{ "question" : "frozen design", "options" : [], "decisions" : "docs/decisions.md" }\n';
   }
+  if (agent === 'codex-arbiter') files['arbiter-input.json'] = '\ufeff{\r\n "evidence" : ["caf\u00e9"]\r\n}\r\n';
   if (agent === 'codex-scout') files['questions.json'] = '[  { "id" : "Q1" }  ]\n';
   if (agent === 'codex-review') files['scope.txt'] = 'src/example.mjs\nspace in name.mjs\n';
   for (const [name, text] of Object.entries(files)) {
@@ -81,6 +83,7 @@ function emptyRun(root, name = 'resume') {
 for (const [agent, phase, extra] of [
   ['codex-advisor', 'scope', 'advisor-task.json'],
   ['codex-advisor', 'advise', 'advisor-task.json'],
+  ['codex-arbiter', 'advice', 'arbiter-input.json'],
   ['codex-scout', 'scout', 'questions.json'],
   ['codex-review', 'review', 'scope.txt'],
 ]) {

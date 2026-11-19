@@ -10,7 +10,9 @@ import { writeRunJsonAtomic } from '../../src/home/lib/atomic-json.mjs';
 import { arbiterTaskRefusal } from '../../src/home/lib/meta/arbiter-task.mjs';
 import { RunnerUsageError } from '../../src/home/lib/runner/args.mjs';
 import { arbiterEvidenceSection } from '../../src/home/lib/runner/arbiter-evidence.mjs';
-import { arbiterInputOrRefuse, arbiterInputSection, sourceRevision } from '../../src/home/lib/runner/arbiter-launch.mjs';
+import {
+  arbiterInputOrRefuse, arbiterInputSection, arbiterStatusFields, sourceRevision,
+} from '../../src/home/lib/runner/arbiter-launch.mjs';
 import { EXIT } from '../../src/home/lib/runner/exit-codes.mjs';
 import { git } from '../../src/home/lib/runner/git-state.mjs';
 import { validAdvice } from '../meta/advisor-fixtures.mjs';
@@ -184,6 +186,16 @@ test('refuses to launch when the source revision cannot be resolved', (t) => {
   assert.deepEqual(fs.readdirSync(projectRunsRoot), [PRIOR_RUN]);
 });
 
+test('arbiter status records the fresh or inherited revision, including null', () => {
+  for (const revision of ['ab'.repeat(20), null]) {
+    assert.deepEqual(arbiterStatusFields({ arbiterInput: { revision } }), { source_revision: revision });
+    assert.deepEqual(arbiterStatusFields({ resumeInputs: { agent: 'codex-arbiter', source_revision: revision } }),
+      { source_revision: revision });
+  }
+  assert.deepEqual(arbiterStatusFields({}), {});
+  assert.deepEqual(arbiterStatusFields({ resumeInputs: { agent: 'codex-advisor' } }), {});
+});
+
 test('the OW-097 D4 launch saves the source and input before assembling the prompt', () => {
   // Guard the wiring while arbiter is still unavailable through public admission.
   const read = (name) => fs.readFileSync(new URL(`../../src/home/lib/runner/${name}.mjs`, import.meta.url), 'utf8');
@@ -192,7 +204,7 @@ test('the OW-097 D4 launch saves the source and input before assembling the prom
 
   const launcher = read('launcher');
   assert.match(launcher.slice(launcher.indexOf('writeStatus(runDir,'), launcher.indexOf('console.log(`RUN=')),
-    /\.\.\.\(arbiterInput \? \{ source_revision: arbiterInput\.revision \} : \{\}\)/);
+    /\.\.\.arbiterStatusFields\(\{ arbiterInput, resumeInputs \}\)/);
   const steps = [
     'await passGate(',
     'await probeSandbox(',

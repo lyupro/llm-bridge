@@ -1,6 +1,7 @@
 /** Plan_80 E17/A12/A15: frozen automatic continuation reservations. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { registerHooks } from 'node:module';
 import path from 'node:path';
 import test, { mock } from 'node:test';
 import { withTempTree } from '../temp-tree.mjs';
@@ -134,6 +135,50 @@ test('writes child status first, frozen artifacts and order next, parent link la
     assert.equal(directories(root).length, 2);
     unchanged(root, options, directories(root), before);
   });
+});
+
+test('arbiter recovery inherits its frozen input and source revision, including null', async () => {
+  // OW-097 D4 lands before registration. Stub argument construction only for this import
+  // so the fixture exercises the real reservation and artifact writer past that boundary.
+  const recoveryUrl = new URL('../../src/home/lib/runner/recovery-launch.mjs?arbiter-fixture', import.meta.url).href;
+  const resumeUrl = JSON.stringify(new URL('./resume-launch.mjs', recoveryUrl).href);
+  const stub = `data:text/javascript,${encodeURIComponent(`
+    import { resumeWorkerFields as readOnlyFields } from ${resumeUrl};
+    export { writeResumeArtifacts } from ${resumeUrl};
+    export const resumeWorkerFields = (options) => readOnlyFields({
+      ...options, inputs: { ...options.inputs, agent: 'codex-advisor' },
+    });
+  `)}`;
+  const hook = registerHooks({ resolve(specifier, context, nextResolve) {
+    const target = context.parentURL === recoveryUrl && specifier === './resume-launch.mjs' ? stub : specifier;
+    return nextResolve(target, context);
+  } });
+  let reserveArbiter;
+  try {
+    ({ reserveRecoveryChild: reserveArbiter } = await import(recoveryUrl));
+  } finally {
+    hook.deregister();
+  }
+
+  for (const source_revision of ['ab'.repeat(20), null]) {
+    await withTempTree('recovery-arbiter-', (root) => {
+      const options = parentRun(root);
+      const { parentDir } = options;
+      const role = { agent: 'codex-arbiter', phase: 'advice' };
+      patch(parentDir, 'status.json', { ...role, source_revision });
+      patch(parentDir, 'worker.json', role);
+      const input = 'arbiter-input.json';
+      fs.writeFileSync(path.join(parentDir, input), '\ufeff{\r\n "evidence" : ["caf\u00e9"]\r\n}\r\n', 'utf8');
+
+      const refusal = reserveRecoveryChild(options);
+      assert.equal(refusal.reason, 'arguments-invalid');
+      assert.match(refusal.details.message, /unknown agent for sandbox mode: codex-arbiter/);
+      const result = reserveArbiter(options);
+      assert.equal(result.reserved, true, JSON.stringify(result));
+      assert.equal(json(result.childDir, 'status.json').source_revision, source_revision);
+      assert.deepEqual(fs.readFileSync(path.join(result.childDir, input)), fs.readFileSync(path.join(parentDir, input)));
+    });
+  }
 });
 
 const refusals = [

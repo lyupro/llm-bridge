@@ -56,6 +56,16 @@ export function readResumeInputs(runDir) {
   if (status?.agent === 'codex-advisor' && ['scope', 'advise'].includes(status.phase)) {
     artifacts.push({ name: 'advisor-task.json', json: true, shape: isObject });
   }
+  const isArbiter = status?.agent === 'codex-arbiter';
+  if (isArbiter) {
+    // OW-097 D4: replay is tied to the evidence and revision frozen by the parent.
+    artifacts.push({ name: 'arbiter-input.json', json: true, shape: isObject });
+    const revision = status.source_revision;
+    if (!Object.hasOwn(status, 'source_revision')) reasons.push('source-revision-missing');
+    else if (revision !== null && (typeof revision !== 'string' || !/^[0-9a-f]{40}$/.test(revision))) {
+      reasons.push('source-revision-malformed');
+    }
+  }
   if (status?.agent === 'codex-review') artifacts.push({ name: 'scope.txt' });
 
   const files = {};
@@ -91,6 +101,7 @@ export function readResumeInputs(runDir) {
       repo: status.repo,
       task_hash: status.task_hash,
       task_hash_scheme: status.task_hash_scheme,
+      ...(isArbiter ? { source_revision: status.source_revision } : {}),
       continued_from: status.continued_from ?? null,
       profile,
       thread_id,

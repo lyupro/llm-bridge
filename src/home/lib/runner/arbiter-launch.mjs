@@ -76,3 +76,10 @@ export function arbiterInputOrRefuse({ taskText, projectRunsRoot, repoRoot }) {
 export function arbiterInputSection(input) {
   return arbiterEvidenceSection(input.evidence);
 }
+
+export function arbiterStatusFields({ arbiterInput, resumeInputs }) {
+  // OW-097 D4: the parent revision remains authoritative even when it recorded no commit.
+  if (arbiterInput) return { source_revision: arbiterInput.revision };
+  if (resumeInputs?.agent === 'codex-arbiter') return { source_revision: resumeInputs.source_revision };
+  return {};
+}

@@ -10,7 +10,7 @@ import { resumeArgs } from './codex-args.mjs';
 import { resumePrompt } from './prompts.mjs';
 
 const ARTIFACT_NAMES = new Set([
-  'task-original.md', 'schema.json', 'questions.json', 'advisor-task.json', 'scope.txt',
+  'task-original.md', 'schema.json', 'questions.json', 'advisor-task.json', 'arbiter-input.json', 'scope.txt',
 ]);
 
 export function resumeSituationKind(namedRunDir) {

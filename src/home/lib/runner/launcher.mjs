@@ -28,7 +28,7 @@ import { parseArgs, die, withActionRow } from './args.mjs';
 import { settleTaskInput } from './task-input.mjs';
 import { questionsFromTexts, questionListLines } from './question-kind.mjs';
 import { adviseSection, decisionLedgerSection } from './advise-carry.mjs';
-import { arbiterInputSection } from './arbiter-launch.mjs';
+import { arbiterInputSection, arbiterStatusFields } from './arbiter-launch.mjs';
 import { schemaFor } from './schemas.mjs';
 import { INSTRUCTIONS } from './prompts.mjs';
 import { git, branchName, worktreeSnapshot, reviewScope } from './git-state.mjs';
@@ -214,7 +214,7 @@ export async function launcher(argv = process.argv.slice(2)) {
       task_hash: taskHash,
       task_hash_scheme: TASK_HASH_SCHEME,
       repo: repoRoot,
-      ...(arbiterInput ? { source_revision: arbiterInput.revision } : {}),
+      ...arbiterStatusFields({ arbiterInput, resumeInputs }),
       started_at: new Date().toISOString(),
       // Which run of this task started the chain — the base every later pass is measured
       // against. Absent means this is the first pass.

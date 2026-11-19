@@ -12,6 +12,8 @@ const profile = {
 const task = '# Frozen operator task\r\n\r\nKeep conventions and scope: café, задача.\r\n';
 const schema = '\ufeff{\r\n  "type" : "object", "properties": {}\r\n}\r\n';
 const advisorTask = '{\r\n "questions": [], "scope": {"run":"old-scope","missing_paths":[]}\r\n}\r\n';
+const arbiterInput = '\ufeff{\r\n "evidence" : ["caf\u00e9"]\r\n}\r\n';
+const revision = 'ab'.repeat(20);
 const questions = '\ufeff[\r\n { "id": "Q1", "text": "Frozen question?" }\r\n]\r\n';
 const scope = 'Frozen scope\r\ngit diff old-base\r\nsrc/frozen.mjs\r\n';
 
@@ -86,7 +88,7 @@ for (const repo of [undefined, '', '   ']) {
 // Plan_80 E13/O3: replay includes the frozen prompt and scope, never today's reconstructed order.
 test('complete advisor advise run returns every frozen field and exact original bytes', async () => {
   await withTempTree('resume-inputs-', (root) => {
-    const { runDir, status } = fixture(root);
+    const { runDir, status } = fixture(root, { source_revision: revision });
     assert.deepEqual(readResumeInputs(runDir), {
       ok: true,
       inputs: {
@@ -98,6 +100,37 @@ test('complete advisor advise run returns every frozen field and exact original 
     });
   });
 });
+
+for (const source_revision of [revision, null]) {
+  test(`arbiter replay keeps its frozen inputs and source revision (${source_revision})`, async () => {
+    await withTempTree('resume-inputs-', (root) => {
+      const { runDir } = fixture(root, { agent: 'codex-arbiter', source_revision });
+      write(runDir, 'arbiter-input.json', arbiterInput);
+      const result = readResumeInputs(runDir);
+      assert.equal(result.ok, true);
+      assert.equal(result.inputs.source_revision, source_revision);
+      assert.deepEqual(Buffer.from(result.inputs.files['arbiter-input.json'], 'utf8'),
+        fs.readFileSync(path.join(runDir, 'arbiter-input.json')));
+    });
+  });
+}
+
+for (const [source_revision, raw, reason] of [
+  [revision, undefined, 'artifact-missing:arbiter-input.json'],
+  [revision, '{', 'artifact-malformed:arbiter-input.json'],
+  [revision, '[]', 'artifact-malformed:arbiter-input.json'],
+  [undefined, arbiterInput, 'source-revision-missing'],
+  ...[revision.toUpperCase(), revision.slice(1), `${revision}\n`, 42].map((value) =>
+    [value, arbiterInput, 'source-revision-malformed']),
+]) {
+  test(`arbiter replay refuses ${reason} (${JSON.stringify([source_revision, raw])})`, async () => {
+    await withTempTree('resume-inputs-', (root) => {
+      const { runDir } = fixture(root, { agent: 'codex-arbiter', source_revision });
+      if (raw !== undefined) write(runDir, 'arbiter-input.json', raw);
+      expectReasons(runDir, [reason]);
+    });
+  });
+}
 
 for (const [agent, name, raw] of [
   ['codex-scout', 'questions.json', questions], ['codex-review', 'scope.txt', scope],
