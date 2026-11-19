@@ -5,13 +5,12 @@
  * arithmetic — starting a process and deciding what it is asked to do are different jobs, and
  * only this half needs to know the run's configuration.
  *
- * The flag sets are the ones the three agent files carried before, verbatim. Sandboxes especially
- * must not drift: codex-scout and codex-review are read-only through an explicit --sandbox
- * read-only, and codex-build needs workspace-write and must NOT get --ignore-user-config. What
- * --ignore-user-config buys the two read-only agents is isolation from the operator's config,
- * never the sandbox itself — reading it as the read-only guarantee is how the 2026-08-23 breakage
- * stayed misdiagnosed as "read-only is broken" (see sandbox-flags.mjs for what actually stops a
- * run from starting a process on Windows).
+ * Sandboxes especially must not drift: codex-scout, codex-review, codex-advisor and
+ * codex-arbiter (OW-097 D1) use explicit read-only sandboxes. Codex-build needs workspace-write
+ * and must NOT get --ignore-user-config. The 2026-08-23 breakage stayed misdiagnosed as
+ * "read-only is broken" because --ignore-user-config was mistaken for the sandbox guarantee.
+ * It isolates the run from the operator's config. See sandbox-flags.mjs for what stops a run
+ * from starting a process on Windows.
  */
 import path from 'node:path';
 import { agentRole } from '../agents.mjs';
@@ -63,7 +62,8 @@ export function runProfile(opts) {
 // Plan_57: the preflight must probe the same permissions that the role will request.
 export function sandboxModeFor(agent) {
   if (agent === 'codex-build') return 'workspace-write';
-  if (agent === 'codex-scout' || agent === 'codex-review' || agent === 'codex-advisor') return 'read-only';
+  if (agent === 'codex-scout' || agent === 'codex-review' || agent === 'codex-advisor' ||
+      agent === 'codex-arbiter') return 'read-only';
   throw new Error(`unknown agent for sandbox mode: ${agent}`);
 }
 
@@ -123,7 +123,8 @@ export function codexArgs(opts, runDir, isGitRepo) {
   // Plan_56 D35: there is no identifier for ordinary speed; an unpinned tier adds no override.
   const speedArgs = profile.speed ? ['-c', `service_tier=${profile.speed}`] : [];
   // Plan_59: advisor uses schema-backed plain exec with the same read-only isolation as scout.
-  if (opts.agent === 'codex-scout' || opts.agent === 'codex-advisor') {
+  // OW-097 D1: arbiter needs the same isolation for read-only probes and its own output schema.
+  if (opts.agent === 'codex-scout' || opts.agent === 'codex-advisor' || opts.agent === 'codex-arbiter') {
     return [
       'exec',
       '--json',

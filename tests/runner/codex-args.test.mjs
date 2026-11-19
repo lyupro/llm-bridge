@@ -2,10 +2,35 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { codexArgs, runProfile } from '../../src/home/lib/runner/codex-args.mjs';
-import { loadRunEnv } from '../../src/home/lib/runner/run-env.mjs';
+import path from 'node:path';
+import { codexArgs, runProfile, sandboxModeFor } from '../../src/home/lib/runner/codex-args.mjs';
+import { CLEAN_ENV, loadRunEnv } from '../../src/home/lib/runner/run-env.mjs';
+import { runSandboxArgs } from '../../src/home/lib/runner/sandbox-flags.mjs';
 
 loadRunEnv();
+
+test('OW-097 D1 gives arbiter probes read-only access', () => {
+  assert.equal(sandboxModeFor('codex-arbiter'), 'read-only');
+});
+
+test('sandboxModeFor rejects unknown agents', () => {
+  assert.throws(() => sandboxModeFor('codex-unknown'), /unknown agent for sandbox mode/);
+});
+
+for (const isGitRepo of [true, false]) {
+  test(`OW-097 D1 builds isolated arbiter arguments with isGitRepo=${isGitRepo}`, () => {
+    const opts = { agent: 'codex-arbiter', repo: '/repo', effort: 'high', models: {} };
+    const args = codexArgs(opts, '/run', isGitRepo);
+    assert.deepEqual(args, [
+      'exec', '--json', ...CLEAN_ENV, '--ignore-user-config',
+      '-c', 'model_reasoning_effort=high',
+      '-c', 'agents.enabled=false', ...runSandboxArgs(),
+      '--sandbox', 'read-only', ...(isGitRepo ? [] : ['--skip-git-repo-check']),
+      '-C', '/repo', '--output-schema', path.join('/run', 'schema.json'),
+      '-o', path.join('/run', 'result.json'), '-',
+    ]);
+  });
+}
 
 for (const role of ['scout', 'build', 'review', 'advisor']) {
   const agent = `codex-${role}`;

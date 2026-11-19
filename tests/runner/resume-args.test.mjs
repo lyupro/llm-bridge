@@ -49,6 +49,14 @@ for (const agent of agents) {
   }
 }
 
+test('OW-097 D1 keeps resumed arbiter probes read-only and captures the result', () => {
+  const args = resumeArgs({
+    agent: 'codex-arbiter', profile: { effort: 'high' }, threadId, runDir, isolationFlags: CLEAN_ENV,
+  });
+  assert.ok(args.includes('sandbox_mode=read-only'));
+  assert.equal(args[args.indexOf('-o') + 1], path.join(runDir, 'result.json'));
+});
+
 test('resume uses only the frozen profile even when live and supplied models differ', () => {
   const previousModels = RUN_ENV.models;
   const profile = Object.freeze({ model: randomUUID(), effort: 'high', speed: randomUUID() });
