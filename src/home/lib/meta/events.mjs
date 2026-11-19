@@ -55,17 +55,17 @@ const compact = (value, max = 300) =>
  * before the CLI said one word leaves an empty stream, and telling the operator that such a
  * run "predates the change" sends them looking for the wrong thing entirely.
  */
-function readLines(runDir) {
-  if (!runDir) return { exists: false, events: [], lines: null };
+export function readLines(runDir) {
+  if (!runDir) return { exists: false, events: [], lines: null, text: null };
   let text;
   try {
     text = fs.readFileSync(path.join(runDir, 'events.jsonl'), 'utf8');
   } catch {
-    return { exists: false, events: [], lines: null };
+    return { exists: false, events: [], lines: null, text: null };
   }
   const lines = eventLines(text);
   const events = lines.filter((line) => !line.malformed && record(line.event)).map((line) => line.event);
-  return { exists: true, events, lines };
+  return { exists: true, events, lines, text };
 }
 
 /**

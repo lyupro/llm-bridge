@@ -7,9 +7,25 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { readEvents } from '../../src/home/lib/meta/events.mjs';
+import { readEvents, readLines } from '../../src/home/lib/meta/events.mjs';
 import { buildResult, makeRun } from './test-fixtures.mjs';
 import { collect } from '../../src/home/lib/write-meta.mjs';
+
+test('readLines exposes the original text alongside parsed records and malformed lines', () => {
+  const text = '\uFEFF{"type":"turn.started"}\r\n\r\n42\r\nbroken';
+  const dir = makeRun({ events: text });
+
+  assert.deepEqual(readLines(dir), {
+    exists: true,
+    text,
+    events: [{ type: 'turn.started' }],
+    lines: [
+      { raw: '{"type":"turn.started"}', event: { type: 'turn.started' }, malformed: false },
+      { raw: '42', event: 42, malformed: false },
+      { raw: 'broken', event: null, malformed: true },
+    ],
+  });
+});
 
 test('sums turn usage, preserves the full usage object, and reads thread id', () => {
   const dir = makeRun({
