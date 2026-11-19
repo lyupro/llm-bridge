@@ -3,6 +3,7 @@ import { EXIT } from './exit-codes.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { readJsonFileSync } from '../json-file.mjs';
+import { arbiterReportMismatch } from '../meta/arbiter-report-hash.mjs';
 import { workerMayBeAlive } from '../meta/run-liveness.mjs';
 import { automaticChildMarker, startedRuns } from '../meta/pre-start.mjs';
 import { recoverySuccessor } from '../meta/recovery-successor.mjs';
@@ -180,8 +181,7 @@ export async function attach({
     if (fs.existsSync(replyPath)) {
       announceSavedReply(runDir, orderId, entry.status.started_at);
       const reply = fs.readFileSync(replyPath, 'utf8').replace(/\s+$/, '');
-      console.log(savedAdviseReply(reply, runDir, entry.status));
-      return afterReply(entry, followSuccessor, true);
+      return afterReply(entry, followSuccessor, true, reply);
     }
     // A successor can already be dead when the anchor's saved answer is read.
     if (!followSuccessor && !workerMayBeAlive({ runDir, status: entry.status })) {
@@ -200,15 +200,23 @@ export async function attach({
     announceLiveAttach(runDir, orderId, entry.status.started_at);
     const replyText = await waitForReply(runDir, entry.status.pid, entry.status);
     if (replyText !== null) {
-      console.log(replyText);
-      return afterReply(entry, followSuccessor, false);
+      return afterReply(entry, followSuccessor, false, replyText);
     }
     return answerDeath(entry, runDir);
   }
 
-  function afterReply(entry, followSuccessor, cached) {
+  function reportRejected(runDir, meta) {
+    const reason = arbiterReportMismatch({ runDir, meta });
+    if (reason === null) return false;
+    console.log(`FAIL — arbiter report check failed: ${reason}\nRun: ${runDir}`);
+    return true;
+  }
+
+  function afterReply(entry, followSuccessor, cached, reply) {
     const runDir = path.join(runsRoot, entry.run);
     const meta = readJsonFile(path.join(runDir, 'meta.json'));
+    if (cached && reportRejected(runDir, meta)) return EXIT.FAIL;
+    console.log(cached ? savedAdviseReply(reply, runDir, entry.status) : reply);
     const code = exitCodeFor(meta?.status);
     if (followSuccessor) {
       // Plan_80 E18: the worker publishes the pointer before reply.txt, possibly during our wait.
@@ -237,6 +245,7 @@ export async function attach({
     // excluded above; assigning an abandoned verdict is pass 2 of Plan_11 and remains separate.
     const meta = readJsonFile(path.join(runDir, 'meta.json'));
     if (meta) {
+      if (reportRejected(runDir, meta)) return EXIT.FAIL;
       const variant = postRunActionVariant(meta);
       console.log(
         [

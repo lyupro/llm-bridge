@@ -6,6 +6,7 @@ import { performance } from 'node:perf_hooks';
 import { setTimeout as delay } from 'node:timers/promises';
 import { CLI_NAMES } from '../src/home/lib/cli-names.mjs';
 import { readJsonFileSync } from '../src/home/lib/json-file.mjs';
+import { arbiterReportMismatch } from '../src/home/lib/meta/arbiter-report-hash.mjs';
 import { resolveRunFolder } from './run-lookup.mjs';
 
 const COMMAND = `${CLI_NAMES[0]} report export`;
@@ -90,6 +91,8 @@ export async function reportExport({ run, destination, cwd = process.cwd(), runs
     const source = path.join(runDir, 'report.md');
     if (!entryAt(source)?.isFile()) throw new Error('Run must contain report.md as a regular file.');
     const report = fs.readFileSync(source);
+    const mismatch = arbiterReportMismatch({ runDir, meta, reportBytes: report });
+    if (mismatch) throw new Error(mismatch);
 
     const { repo } = readJsonFileSync(path.join(runDir, 'status.json')) ?? {};
     if (typeof repo !== 'string' || !path.isAbsolute(repo)) {

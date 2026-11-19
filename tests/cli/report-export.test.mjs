@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +15,7 @@ const exec = promisify(execFile);
 const reportBytes = Buffer.from('\uFEFF# Arbitration\r\nRésumé.\r\n', 'utf8');
 const runName = '2026-11-19_150000_report-export';
 
-function fixture(t, { agent = 'codex-arbiter', verdict = 'OK', report = reportBytes, runsInRepo = false } = {}) {
+function fixture(t, { agent = 'codex-arbiter', verdict = 'OK', report = reportBytes, runsInRepo = false, missingHash = false } = {}) {
   const root = makeTempTree('report-export-');
   t.after(() => removeTempTree(root));
   const repo = path.join(root, 'project');
@@ -23,7 +24,8 @@ function fixture(t, { agent = 'codex-arbiter', verdict = 'OK', report = reportBy
   const { dir: projectRuns } = resolveProjectRunsDir(runsRoot, repo);
   const run = path.join(projectRuns, runName);
   fs.mkdirSync(run);
-  fs.writeFileSync(path.join(run, 'meta.json'), JSON.stringify({ agent, status: verdict }), 'utf8');
+  const report_sha256 = !missingHash && report !== null ? createHash('sha256').update(report).digest('hex') : undefined;
+  fs.writeFileSync(path.join(run, 'meta.json'), JSON.stringify({ agent, status: verdict, report_sha256 }), 'utf8');
   fs.writeFileSync(path.join(run, 'status.json'), JSON.stringify({ agent, repo, state: 'finished' }), 'utf8');
   fs.writeFileSync(path.join(run, 'events.jsonl'), '{}\n', 'utf8');
   if (report !== null) fs.writeFileSync(path.join(run, 'report.md'), report);
@@ -106,6 +108,7 @@ for (const [label, options, reason] of [
   ['a non-arbiter run', { agent: 'codex-advisor' }, /codex-arbiter/],
   ['a non-OK verdict', { verdict: 'FAIL' }, /OK verdict in meta\.json/],
   ['a missing report', { report: null }, /report\.md as a regular file/],
+  ['an OK verdict without a report hash', { missingHash: true }, /meta\.json has no report_sha256/],
 ]) {
   test(`export refuses ${label}`, async (t) => {
     const { exportTo, repo } = fixture(t, options);
@@ -113,6 +116,22 @@ for (const [label, options, reason] of [
     assert.deepEqual(fs.readdirSync(repo), []);
   });
 }
+
+test('export refuses edited report bytes even if the source is restored after reading', async (t) => {
+  const { exportTo, repo, run } = fixture(t);
+  const source = path.join(run, 'report.md');
+  fs.appendFileSync(source, 'Edited.\n', 'utf8');
+  const read = fs.readFileSync;
+  t.mock.method(fs, 'readFileSync', (file, ...options) => {
+    const bytes = read(file, ...options);
+    if (file === source) fs.writeFileSync(source, reportBytes);
+    return bytes;
+  });
+
+  refusal(await exportTo('plans/decision.md'), /report\.md no longer matches meta\.json#report_sha256/);
+  assert.deepEqual(read(source), reportBytes);
+  assert.deepEqual(fs.readdirSync(repo), []);
+});
 
 test('export refuses a report path that is a directory', async (t) => {
   const { exportTo, run, repo } = fixture(t, { report: null });
