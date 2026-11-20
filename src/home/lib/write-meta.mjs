@@ -72,10 +72,11 @@ export { AGENTS, writeStatus };
 export const projectFolder = (repoRoot) => path.basename(repoRoot).replace(/^\.+/, '') || 'repo';
 
 /**
- * Reads the run directory, writes meta.json, returns {meta, reply}. `reply` is the
- * exact text a dispatcher is allowed to return.
+ * Reads the run directory, writes meta.json, resolves to {meta, reply}. `reply` is the
+ * exact text a dispatcher is allowed to return. Async because a refused build awaits the
+ * folder-rights measurement before meta.json is published (OW-092 D4).
  */
-export function collect(runDir, agent, exitCode) {
+export async function collect(runDir, agent, exitCode) {
   const cfg = AGENTS[agent];
   if (!cfg) throw new Error(`unknown agent: ${agent} (expected one of ${Object.keys(AGENTS).join(', ')})`);
 
