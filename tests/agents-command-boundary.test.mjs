@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { replacePlaceholders } from '../cli/manifest.mjs';
 import { canonicalRunCommand, renderRunCommandTemplate } from '../src/home/lib/dispatcher-command.mjs';
+import { AGENTS } from '../src/home/lib/meta/reply.mjs';
 import { orderSpellings } from './order-spelling-scan.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -60,7 +61,8 @@ function assertSafeAgentDefinition(source, name) {
 
 test('every shipped agent command crosses the llm-bridge run boundary without internal paths', async () => {
   const names = (await fs.readdir(AGENTS_DIR)).filter((name) => name.endsWith('.md')).sort();
-  assert.equal(names.length, 4, 'All four shipped agent definitions must be checked.');
+  assert.deepEqual(names, Object.keys(AGENTS).map((name) => `${name}.md`).sort(),
+    'Shipped dispatcher definitions must match the reply registry.');
   for (const name of names) {
     const source = await fs.readFile(path.join(AGENTS_DIR, name), 'utf8');
     const rendered = replacePlaceholders(source, INSTALLATION_ROOT);
@@ -76,8 +78,9 @@ test('every shipped agent command crosses the llm-bridge run boundary without in
   }
 });
 
-test('the four dispatcher prompts retry the identical command without --no-wait', async () => {
-  for (const name of ['codex-build.md', 'codex-scout.md', 'codex-review.md', 'codex-advisor.md']) {
+test('every dispatcher prompt retries the identical command without --no-wait', async () => {
+  for (const agent of Object.keys(AGENTS)) {
+    const name = `${agent}.md`;
     const source = replacePlaceholders(await fs.readFile(path.join(AGENTS_DIR, name), 'utf8'), INSTALLATION_ROOT);
     assert.doesNotMatch(source, /--no-wait/, `${name} must not offer --no-wait.`);
     assert.match(source, /run the identical command again/, `${name} must explain the identical-command retry.`);

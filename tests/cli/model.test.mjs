@@ -25,7 +25,7 @@ function fixture(t, models) {
 
 function configuredProfiles() {
   return Object.fromEntries(roles.map((role, index) => [role, {
-    model: randomUUID(), effort: ['low', 'max', 'high', 'medium'][index],
+    model: randomUUID(), effort: ['low', 'max', 'high', 'medium'][index % 4],
   }]));
 }
 

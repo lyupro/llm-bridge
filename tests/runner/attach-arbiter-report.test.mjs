@@ -39,3 +39,26 @@ for (const hasReply of [true, false]) {
     });
   }
 }
+
+test('attach fails when a dead arbiter left a report without a verdict', async (t) => {
+  const runsRoot = fixture(t);
+  const repo = path.join(runsRoot, 'repo');
+  run(runsRoot, '2026-08-04_090000_async-start', running(repo, { agent: 'codex-arbiter' }), {
+    'report.md': '# Unjudged report\n',
+  });
+
+  // OW-097 D4 requires a recorded verdict even when the worker wrote its report before dying.
+  const beforeWait = () => {
+    const kill = process.kill;
+    t.mock.method(process, 'kill', (pid, signal) => {
+      if (pid === process.pid && signal === 0) throw Object.assign(new Error('Process gone'), { code: 'ESRCH' });
+      return kill.call(process, pid, signal);
+    });
+  };
+  const { code, lines } = await attaching(order(runsRoot, repo, { beforeWait }));
+
+  assert.equal(code, EXIT.FAIL);
+  const output = lines.join('\n');
+  assert.match(output, /run worker process died without recording a verdict/);
+  assert.doesNotMatch(output, /^OK/m);
+});

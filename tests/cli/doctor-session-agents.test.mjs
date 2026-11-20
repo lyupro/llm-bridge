@@ -13,6 +13,8 @@ import { codexProbe, ownPackage, runsRootFixture, honestInstalledFixture } from 
 
 const NOW = Date.parse('2026-10-27T12:00:00Z');
 const CUTOFF = NOW - 9 * 24 * 60 * 60 * 1000;
+// OW-097: these historical host listings captured only the dispatchers shipped at recording time.
+const HISTORICAL_AGENTS = ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor'];
 const freshStat = () => ({ mtimeMs: NOW });
 const scope = (verified, unknown, skipped) => `transcript modified within the last 9 days: ${verified} verified complete; `
   + `${unknown} not verifiable; ${skipped} skipped (older than 9 days or transcript unavailable; not assessed)`;
@@ -43,13 +45,13 @@ test('initial late listing warns with session, cwd, listing time and every missi
   const stateDir = makeTempTree('doctor-session-agents-');
   const fixture = await transcriptFixture(stateDir, { initialOnly: true });
   await writeWitness(stateDir, { [fixture.sessionId]: witnessed(fixture, 'C:/project') });
-  const row = await sessionAgentsCheck({ stateDir });
+  const row = await sessionAgentsCheck({ stateDir, agents: HISTORICAL_AGENTS });
   assert.equal(row.key, 'sessionAgents');
   assert.equal(row.status, 'warn');
   assert.ok(row.value.includes(fixture.sessionId.slice(0, 8)));
   assert.ok(row.value.includes('C:/project'));
   assert.ok(row.value.includes(fixture.observedAt));
-  for (const name of Object.keys(AGENTS)) assert.ok(row.value.includes(name));
+  for (const name of HISTORICAL_AGENTS) assert.ok(row.value.includes(name));
   assert.ok(row.value.endsWith(scope(0, 0, 0)));
   assert.ok(row.value.includes(`restart that window if it is still open; ${scope(0, 0, 0)}`));
 });
@@ -59,7 +61,7 @@ for (const healthy of [false, true]) {
     const stateDir = makeTempTree('doctor-session-agents-');
     const fixture = await transcriptFixture(stateDir, { healthy });
     await writeWitness(stateDir, { [fixture.sessionId]: witnessed(fixture) });
-    assert.deepEqual(await sessionAgentsCheck({ stateDir }), {
+    assert.deepEqual(await sessionAgentsCheck({ stateDir, agents: HISTORICAL_AGENTS }), {
       key: 'sessionAgents', status: 'ok',
       value: scope(1, 0, 0),
     });
@@ -107,7 +109,7 @@ test('mixed absent, healthy and skipped sessions name only the absent session', 
   });
   const calls = [];
   const { sessionAgentTypes } = await import('../../src/home/lib/agent-listing.mjs');
-  const row = await sessionAgentsCheck({ stateDir, now: NOW,
+  const row = await sessionAgentsCheck({ stateDir, now: NOW, agents: HISTORICAL_AGENTS,
     stat: (file) => ({ mtimeMs: file === 'old' ? CUTOFF - 1 : NOW }),
     readListing: (options) => {
       calls.push(options.sessionId);
@@ -132,7 +134,7 @@ test('unknown and failed listing reads are counted separately while proven absen
   });
   const { sessionAgentTypes } = await import('../../src/home/lib/agent-listing.mjs');
   const calls = [];
-  const row = await sessionAgentsCheck({ stateDir, now: NOW, stat: freshStat, readListing: async (options) => {
+  const row = await sessionAgentsCheck({ stateDir, now: NOW, agents: HISTORICAL_AGENTS, stat: freshStat, readListing: async (options) => {
     calls.push(options.sessionId);
     if (options.transcriptPath === 'failed') throw new Error('read failed');
     if (options.transcriptPath === 'unknown') return { state: 'unknown', reason: 'no-listing-record' };
@@ -167,7 +169,7 @@ test('all present plus unknown sessions count only proven complete listings', as
   await writeWitness(stateDir, {
     [healthy.sessionId]: witnessed(healthy), 'unknown-session': { transcriptPath: path.join(stateDir, 'gone.jsonl') },
   });
-  const row = await sessionAgentsCheck({ stateDir, now: NOW, stat: freshStat });
+  const row = await sessionAgentsCheck({ stateDir, now: NOW, agents: HISTORICAL_AGENTS, stat: freshStat });
   assert.equal(row.status, 'ok');
   assert.equal(row.value, scope(1, 1, 0));
 });

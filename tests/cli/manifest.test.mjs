@@ -143,7 +143,7 @@ test('placeholder becomes an absolute POSIX agents path', () => {
 });
 
 
-test('dispatcher protocol placeholder renders for all four dispatcher definitions', () => {
+test('dispatcher protocol placeholder renders for every dispatcher definition', () => {
   for (const agent of ORDER_AGENTS) {
     const definition = `---\nname: ${agent}\n---\n\n{{CODEX_DISPATCHER_PROTOCOL}}`;
     assert.equal(replacePlaceholders(definition, PACKAGE_ROOT),

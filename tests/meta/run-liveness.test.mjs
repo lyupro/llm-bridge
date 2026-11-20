@@ -209,6 +209,14 @@ test('an unverified process stays fail-open even with readable meta', (t) => {
   });
 });
 
+test('a dead arbiter with only a report is abandoned', (t) => {
+  const runDir = fixture(t);
+  const status = { ...running, agent: 'codex-arbiter' };
+  // OW-097 D4 requires meta.json to distinguish a finished run from an abandoned one.
+  fs.writeFileSync(path.join(runDir, 'report.md'), '# Unjudged report\n', 'utf8');
+  assert.equal(runLiveness({ runDir, status, now, kill: noProcess }).state, 'abandoned');
+});
+
 for (const identity of [IDENTITY_DEAD, IDENTITY_FOREIGN]) {
   for (const [label, contents, state] of [
     ['absent', undefined, 'abandoned'],

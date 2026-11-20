@@ -13,7 +13,9 @@ import { check } from './doctor-format.mjs';
 // Operator decision 2026-10-27: doctor runs only by hand.
 const TRANSCRIPT_WINDOW_MS = 9 * 24 * 60 * 60 * 1000;
 
-export async function sessionAgentsCheck({ stateDir, readListing = sessionAgentTypes, stat = fs.statSync, now = Date.now() }) {
+export async function sessionAgentsCheck({
+  stateDir, readListing = sessionAgentTypes, stat = fs.statSync, now = Date.now(), agents = Object.keys(AGENTS),
+}) {
   let witness;
   try {
     witness = readLoadWitness({ stateDir });
@@ -46,7 +48,7 @@ export async function sessionAgentsCheck({ stateDir, readListing = sessionAgentT
         continue;
       }
       const listing = await readListing({ transcriptPath: session.transcriptPath, sessionId });
-      const presence = Object.keys(AGENTS).map((name) => [name, dispatcherPresence(listing, name)]);
+      const presence = agents.map((name) => [name, dispatcherPresence(listing, name)]);
       if (presence.some(([, state]) => state === 'unknown')) {
         notVerifiable++;
         continue;
