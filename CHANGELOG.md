@@ -21,6 +21,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   for folders it confirmed, no repair when it did not confirm the case, a manual check when it could not measure.
   A `Folder check:` row shows the level (OW-092).
 
+### Fixed
+
+- `llm-bridge guidance` takes its topic list from the registry installed in the brand home
+  (`lib/guidance-topics.mjs`) instead of a package constant, so a package older or newer than the home no longer
+  refuses a topic the installed rules name (`Unknown guidance topic "arbiter"` with package 0.8.2 and a newer
+  home). A home without the registry answers exit 1 with its path and `run llm-bridge update`, and
+  `{{order-rules:all}}` fails on a rule whose topic is not registered instead of dropping it (OW-097).
+
 ## [0.8.2] - 2026-11-16
 
 ### Added

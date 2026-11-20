@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { renderGuidance } from '../../cli/guidance-render.mjs';
 import { AGENTS } from '../../src/home/lib/agents.mjs';
+import { GUIDANCE_TOPICS } from '../../src/home/lib/guidance-topics.mjs';
 import { ORDER_RULES } from '../../src/home/lib/order-rules.mjs';
 import { SHELL_UNSAFE_SEQUENCES } from '../../src/home/lib/shell-unsafe.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
@@ -20,7 +21,7 @@ function homeFixture(t) {
 function writeModule(root, file, source) {
   const target = path.join(root, 'lib', file);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, source);
+  fs.writeFileSync(target, source, 'utf8');
 }
 
 function budgetFixture(t, extra = {}) {
@@ -39,8 +40,8 @@ function budgetFixture(t, extra = {}) {
   return { root, registry, configPath: path.join(path.dirname(root), 'isolated-config.json') };
 }
 
-async function assertRenderFailure(text, root, topic, placeholder, reason) {
-  await assert.rejects(renderGuidance(text, { root, topic }), (error) => {
+async function assertRenderFailure(text, root, topic, placeholder, reason, topics = GUIDANCE_TOPICS) {
+  await assert.rejects(renderGuidance(text, { root, topic, topics }), (error) => {
     assert.ok(error.message.includes(`topic "${topic}"`));
     assert.ok(error.message.includes(`placeholder "${placeholder}"`));
     assert.match(error.message, reason);
@@ -53,7 +54,12 @@ const codeList = (values) => values.map((value) =>
 
 test('plain text preserves BOM, whitespace and line endings without loading modules', async (t) => {
   const text = '\uFEFF# plain\r\n\r\nDetailed rules — naïve.  \r\n';
-  assert.equal(await renderGuidance(text, { root: homeFixture(t), topic: 'advisor' }), text);
+  assert.equal(await renderGuidance(text, { root: homeFixture(t), topic: 'advisor', topics: GUIDANCE_TOPICS }), text);
+});
+
+test('guidance rendering requires the topic registry even for plain text', async (t) => {
+  await assert.rejects(renderGuidance('# plain', { root: homeFixture(t), topic: 'order', topics: undefined }),
+    /topics is required/);
 });
 
 test('every occurrence of a known placeholder uses the owned list', async (t) => {
@@ -63,7 +69,7 @@ test('every occurrence of a known placeholder uses the owned list', async (t) =>
   fs.copyFileSync(new URL('../../src/home/lib/shell-unsafe.mjs', import.meta.url), target);
   const text = '{{shell-unsafe-sequences}}\n{{shell-unsafe-sequences}}';
   const expected = codeList(SHELL_UNSAFE_SEQUENCES);
-  assert.equal(await renderGuidance(text, { root, topic: 'order' }), `${expected}\n${expected}`);
+  assert.equal(await renderGuidance(text, { root, topic: 'order', topics: GUIDANCE_TOPICS }), `${expected}\n${expected}`);
 });
 
 test('shell values come from the given installed root rather than the clone', async (t) => {
@@ -71,14 +77,15 @@ test('shell values come from the given installed root rather than the clone', as
   const values = ['installed-second', 'installed-first'];
   writeModule(root, 'shell-unsafe.mjs', `export const SHELL_UNSAFE_SEQUENCES = ${JSON.stringify(values)};`);
   assert.notDeepEqual(values, SHELL_UNSAFE_SEQUENCES);
-  assert.equal(await renderGuidance('{{shell-unsafe-sequences}}', { root, topic: 'order' }), codeList(values));
+  assert.equal(await renderGuidance('{{shell-unsafe-sequences}}', { root, topic: 'order', topics: GUIDANCE_TOPICS }),
+    codeList(values));
 });
 
 test('backtick values use spaced double delimiters without opening a code fence', async (t) => {
   const root = homeFixture(t);
   const values = ['`', 'before`after', '&&'];
   writeModule(root, 'shell-unsafe.mjs', `export const SHELL_UNSAFE_SEQUENCES = ${JSON.stringify(values)};`);
-  const output = await renderGuidance('{{shell-unsafe-sequences}}', { root, topic: 'order' });
+  const output = await renderGuidance('{{shell-unsafe-sequences}}', { root, topic: 'order', topics: GUIDANCE_TOPICS });
   assert.equal(output, '`` ` ``, `` before`after ``, `&&`');
   assert.doesNotMatch(output, /`{3}/);
 });
@@ -89,7 +96,7 @@ test('both review field lists come from the given installed schema', async (t) =
   const finding = ['installed-body', 'installed-title'];
   const schema = { required: fields, properties: { findings: { items: { required: finding } } } };
   writeModule(root, 'runner/schemas.mjs', `export const SCHEMAS = ${JSON.stringify({ 'codex-review': schema })};`);
-  assert.equal(await renderGuidance('{{review-required-fields}}', { root, topic: 'records' }),
+  assert.equal(await renderGuidance('{{review-required-fields}}', { root, topic: 'records', topics: GUIDANCE_TOPICS }),
     `Top-level fields: ${codeList(fields)}; finding fields: ${codeList(finding)}`);
 });
 
@@ -145,9 +152,10 @@ test('order rule placeholders use the installed root and preserve registry order
   assert.notDeepEqual(rules, ORDER_RULES);
   const expected = '- `installed-second`: Second by name, first in the registry.\n' +
     '- `installed-first`: First by name, second in the registry.';
-  assert.equal(await renderGuidance('{{order-rules:advisor}}\n{{order-rules:advisor}}', { root, topic: 'advisor' }),
+  assert.equal(await renderGuidance('{{order-rules:advisor}}\n{{order-rules:advisor}}',
+    { root, topic: 'advisor', topics: GUIDANCE_TOPICS }),
     `${expected}\n${expected}`);
-  assert.equal(await renderGuidance('{{order-rules:all}}', { root, topic: 'order' }),
+  assert.equal(await renderGuidance('{{order-rules:all}}', { root, topic: 'order', topics: GUIDANCE_TOPICS }),
     'Topic `order`:\n- `other-topic`: Only in the all block.\n\nTopic `advisor`:\n' + expected);
 });
 
@@ -161,9 +169,24 @@ test('all order rules follow the guidance topic order and omit topics without ru
     'order-rule': { topic: 'order', rule: 'Order rule.' },
   };
   writeModule(root, 'order-rules.mjs', `export const ORDER_RULES = ${JSON.stringify(rules)};`);
-  assert.equal(await renderGuidance('{{order-rules:all}}', { root, topic: 'order' }),
-    ['order', 'advisor', 'budget', 'records', 'concurrency'].map((topic) =>
+  const topicOrder = ['order', 'records', 'advisor', 'arbiter', 'concurrency', 'budget'];
+  const topics = Object.fromEntries(topicOrder.map((topic) => [topic, GUIDANCE_TOPICS[topic]]));
+  assert.equal(await renderGuidance('{{order-rules:all}}', { root, topic: 'order', topics }),
+    topicOrder.filter((topic) => topic !== 'arbiter').map((topic) =>
       `Topic \`${topic}\`:\n- \`${topic}-rule\`: ${rules[`${topic}-rule`].rule}`).join('\n\n'));
+});
+
+test('all order rules fail with the key of a rule whose owner is absent from the topic registry', async (t) => {
+  const root = homeFixture(t);
+  writeModule(root, 'order-rules.mjs', `export const ORDER_RULES = {
+    'order-rule': { topic: 'order', rule: 'An included rule.' },
+    'arbiter-rule': { topic: 'arbiter', rule: 'A rule with an unregistered owner.' },
+  };`);
+  const topics = { order: GUIDANCE_TOPICS.order };
+  await assertRenderFailure('{{order-rules:all}}', root, 'order', '{{order-rules:all}}',
+    /order rule "arbiter-rule" uses unregistered topic "arbiter"/, topics);
+  await assertRenderFailure('{{order-rules:arbiter}}', root, 'order', '{{order-rules:arbiter}}',
+    /unknown order rule topic "arbiter"/, topics);
 });
 
 test('unknown order rule topics including inherited names fail with their topic and token', async (t) => {
@@ -209,7 +232,7 @@ test('budget rows follow the installed registry and effective host phase sources
     scout: AGENTS['codex-scout'].budget, build: 7.5, review: {}, advisor: { advise: 12 },
     'unrelated-role': { prepare: 3 },
   } }));
-  const output = await renderGuidance('{{agent-budgets}}', { root, topic: 'budget', configPath });
+  const output = await renderGuidance('{{agent-budgets}}', { root, topic: 'budget', configPath, topics: GUIDANCE_TOPICS });
   assert.equal(output, [
     `Budgets the runner enforces on this host. \`host config\` values come from ${configPath}.`,
     '', '| Agent | Phase | Minutes | Source |', '| --- | --- | --- | --- |',
@@ -224,14 +247,14 @@ test('budget rows follow the installed registry and effective host phase sources
     '| installed-single-phase | \u2014 | 6 | package |',
   ].join('\n'));
   assert.equal(await renderGuidance('{{agent-budgets}}\n{{agent-budgets}}',
-    { root, topic: 'budget', configPath }), `${output}\n${output}`);
+    { root, topic: 'budget', configPath, topics: GUIDANCE_TOPICS }), `${output}\n${output}`);
 });
 
 test('a missing config renders every package budget from the installed registry', async (t) => {
   const { root, registry, configPath } = budgetFixture(t, {
     'extra-budget-agent': { role: 'extra-budget-role', budget: 8 },
   });
-  const output = await renderGuidance('{{agent-budgets}}', { root, topic: 'budget', configPath });
+  const output = await renderGuidance('{{agent-budgets}}', { root, topic: 'budget', configPath, topics: GUIDANCE_TOPICS });
   const rows = [];
   for (const [agent, { budget }] of Object.entries(registry)) {
     const phases = typeof budget === 'number' ? { default: budget } : budget;
@@ -247,7 +270,7 @@ test('broken configs fail with budget topic and placeholder context instead of d
   for (const content of ['{"budgets":', '{"budgets":{"advisor":7}}']) {
     const { root, configPath } = budgetFixture(t);
     fs.writeFileSync(configPath, content);
-    await assert.rejects(renderGuidance('{{agent-budgets}}', { root, topic: 'budget', configPath }),
+    await assert.rejects(renderGuidance('{{agent-budgets}}', { root, topic: 'budget', configPath, topics: GUIDANCE_TOPICS }),
       (error) => {
         assert.equal(Object.hasOwn(error, 'hostConfig'), true);
         assert.equal(error.hostConfig, true);
@@ -263,7 +286,7 @@ test('broken configs fail with budget topic and placeholder context instead of d
 test('a missing installed agent module is not a host config failure', async (t) => {
   const root = homeFixture(t);
   const configPath = path.join(root, 'config.json');
-  await assert.rejects(renderGuidance('{{agent-budgets}}', { root, topic: 'budget', configPath }),
+  await assert.rejects(renderGuidance('{{agent-budgets}}', { root, topic: 'budget', configPath, topics: GUIDANCE_TOPICS }),
     (error) => {
       assert.equal(Object.hasOwn(error, 'hostConfig'), false);
       assert.equal(error.hostConfig, undefined);

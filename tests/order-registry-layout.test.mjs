@@ -144,6 +144,8 @@ test('the real diagnostic entry point refuses a synthetic duplicate across categ
 test('llm-bridge guidance order prints every registered key from a copied real registry and its place modules', (t) => {
   const { home, installedLib } = copyRegistry(t, 'order-rules');
   fs.copyFileSync(path.join(lib, 'shell-unsafe.mjs'), path.join(installedLib, 'shell-unsafe.mjs'));
+  // OW-097 D8: guidance validates topics against the registry installed in this home.
+  fs.copyFileSync(path.join(lib, 'guidance-topics.mjs'), path.join(installedLib, 'guidance-topics.mjs'));
   fs.mkdirSync(path.join(home, 'guidance'));
   fs.copyFileSync(new URL('../src/home/guidance/order.md', import.meta.url),
     path.join(home, 'guidance', 'order.md'));

@@ -1,7 +1,6 @@
 /** Plan_79 B1: guidance derives owned values from the installed home, never a second list. */
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { GUIDANCE_TOPICS } from './guidance-topics.mjs';
 
 const codeList = (values) => values.map((value) =>
   value.includes('`') ? '`` ' + value + ' ``' : '`' + value + '`').join(', ');
@@ -10,7 +9,8 @@ function renderError(topic, placeholder, message) {
   return new Error(`Cannot render guidance topic "${topic}" placeholder "${placeholder}": ${message}`);
 }
 
-export async function renderGuidance(text, { root, topic, configPath }) {
+export async function renderGuidance(text, { root, topic, configPath, topics }) {
+  if (!topics) throw new Error('topics is required');
   const values = new Map();
   for (const [placeholder, name] of text.matchAll(/\{\{([^{}]*)\}\}/g)) {
     if (values.has(placeholder)) continue;
@@ -46,19 +46,28 @@ export async function renderGuidance(text, { root, topic, configPath }) {
         ].join('\n'));
       } else if (name.startsWith('order-rules:')) {
         const ruleTopic = name.slice('order-rules:'.length);
-        if (ruleTopic !== 'all' && !Object.hasOwn(GUIDANCE_TOPICS, ruleTopic)) {
+        if (ruleTopic !== 'all' && !Object.hasOwn(topics, ruleTopic)) {
           throw new Error(`unknown order rule topic "${ruleTopic}"`);
         }
         const { ORDER_RULES } = await import(pathToFileURL(path.join(root, 'lib', 'order-rules.mjs')).href);
         const rules = Object.entries(ORDER_RULES);
         const items = (owner) => rules.filter(([, rule]) => rule.topic === owner)
           .map(([key, rule]) => `- \`${key}\`: ${rule.rule}`).join('\n');
-        const block = ruleTopic === 'all'
-          ? Object.keys(GUIDANCE_TOPICS).map((owner) => {
+        let block;
+        if (ruleTopic === 'all') {
+          // The 2026-11-20 package 0.8.2 mismatch would hide clone-installed rules owned by arbiter.
+          const unregistered = rules.find(([, rule]) => !Object.hasOwn(topics, rule.topic));
+          if (unregistered) {
+            const [key, rule] = unregistered;
+            throw new Error(`order rule "${key}" uses unregistered topic "${rule.topic}"`);
+          }
+          block = Object.keys(topics).map((owner) => {
             const list = items(owner);
             return list ? `Topic \`${owner}\`:\n${list}` : '';
-          }).filter(Boolean).join('\n\n')
-          : items(ruleTopic);
+          }).filter(Boolean).join('\n\n');
+        } else {
+          block = items(ruleTopic);
+        }
         if (!block) throw new Error('no order rules to render');
         values.set(placeholder, block);
       } else {
