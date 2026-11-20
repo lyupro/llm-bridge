@@ -147,9 +147,9 @@ test('workerOrder and worker.json preserve the supplied silence policy unchanged
 });
 
 test('collect copies the saved policy verbatim without registry recomputation or reply changes', async () => {
-  await withTempTree('silence-collect-', (dir) => {
+  await withTempTree('silence-collect-', async (dir) => {
     const workerPath = path.join(dir, 'worker.json');
-    const original = collect(dir, 'codex-advisor', 1);
+    const original = await collect(dir, 'codex-advisor', 1);
     // A historical policy deliberately differs from today's default and catalog id.
     const savedPolicy = {
       ...resolveSilencePolicy('codex-advisor', 'advise'),
@@ -158,7 +158,7 @@ test('collect copies the saved policy verbatim without registry recomputation or
     };
     fs.writeFileSync(workerPath, JSON.stringify({ phase: 'advise', silence_policy: savedPolicy }));
     for (let pass = 0; pass < 2; pass += 1) {
-      const { meta, reply } = collect(dir, 'codex-advisor', 1);
+      const { meta, reply } = await collect(dir, 'codex-advisor', 1);
       const worker = JSON.parse(fs.readFileSync(workerPath, 'utf8'));
       const recorded = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
       assert.deepEqual(meta.silence_policy, worker.silence_policy);
@@ -176,10 +176,10 @@ test('collect copies the saved policy verbatim without registry recomputation or
 });
 
 test('collect records a null policy for older runs with no worker or no policy field', async () => {
-  await withTempTree('silence-legacy-', (dir) => {
+  await withTempTree('silence-legacy-', async (dir) => {
     for (const worker of [undefined, {}, { silence_policy: null }]) {
       if (worker !== undefined) fs.writeFileSync(path.join(dir, 'worker.json'), JSON.stringify(worker));
-      const { meta } = collect(dir, 'codex-scout', 1);
+      const { meta } = await collect(dir, 'codex-scout', 1);
       assert.equal(meta.silence_policy, null);
       const recorded = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
       assert.equal(recorded.silence_policy, null);

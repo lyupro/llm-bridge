@@ -12,7 +12,7 @@ const scoutAnswer = 'The reply points the operator at the structured read comman
   + 'without guessing artifact paths. The command reads the retained events and diagnostic output, '
   + 'and the same link remains available after a successful scout has explained the requested code.';
 
-function snapshot(agent, options, exit, expectedStatus, expected) {
+async function snapshot(agent, options, exit, expectedStatus, expected) {
   const dir = makeRun({ args: ['exec', '--json'], events, ...options });
   if (options.advisorPhase) {
     fs.writeFileSync(path.join(dir, 'status.json'), JSON.stringify({ state: 'running', repo: dir, phase: options.advisorPhase }));
@@ -21,7 +21,7 @@ function snapshot(agent, options, exit, expectedStatus, expected) {
       ...(options.advisorPhase === 'advise' ? { scope: { predicted_risks: [], missing_paths: [] } } : {}),
     }));
   }
-  const { meta, reply } = collect(dir, agent, exit);
+  const { meta, reply } = await collect(dir, agent, exit);
   assert.equal(meta.status, expectedStatus);
   // Only the temporary run path varies; preserve every other byte, including artifact sizes.
   const normalized = reply.replaceAll(dir, '<run>').replaceAll(path.join('<run>', 'report.md'), '<run>/report.md')
@@ -30,16 +30,16 @@ function snapshot(agent, options, exit, expectedStatus, expected) {
   assert.equal(normalized, expected);
 }
 
-test('OK scout reply snapshot', () => {
-  snapshot('codex-scout', { result: { answer: scoutAnswer, findings: [], unknowns: [], report_markdown: '# report' } }, 0, 'OK',
+test('OK scout reply snapshot', async () => {
+  await snapshot('codex-scout', { result: { answer: scoutAnswer, findings: [], unknowns: [], report_markdown: '# report' } }, 0, 'OK',
     'OK — The reply points the operator at the structured read command so the run can be inspected without guessing artifact paths. The command reads the retained...\n'
     + 'Key finding: no findings listed\n'
     + 'Unresolved: none\n'
     + 'Report: <run>/report.md · Log: llm-bridge read <run>');
 });
 
-test('OK build reply snapshot', () => {
-  snapshot('codex-build', { result: buildResult([]) }, 0, 'OK',
+test('OK build reply snapshot', async () => {
+  await snapshot('codex-build', { result: buildResult([]) }, 0, 'OK',
     'OK — done\n'
     + 'Files: 0 changed · worktree untouched\n'
     + 'Verification: npm test — pass\n'
@@ -47,7 +47,7 @@ test('OK build reply snapshot', () => {
     + 'Report: <run>/report.md · Log: llm-bridge read <run>');
 });
 
-test('a delivered letter appears on the Environment line, not among the run changed files', () => {
+test('a delivered letter appears on the Environment line, not among the run changed files', async () => {
   const dir = makeRun({ args: ['exec', '--json'], events,
     result: buildResult([{ file: 'src/a.ts', what: 'change', why: 'task' }]) });
   fs.writeFileSync(path.join(dir, 'scope.txt'), 'src/**\n');
@@ -57,7 +57,7 @@ test('a delivered letter appears on the Environment line, not among the run chan
     { path: 'src/a.ts', state: '1\t0' },
     { path: 'letters/new.md', state: `U\t10:${'a'.repeat(64)}` },
   ]));
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.match(reply, /^Files: 1 changed · src\/a\.ts$/m);
   assert.match(reply, /^Environment: 1 changed outside the run — letters\/new\.md$/m);
@@ -80,16 +80,16 @@ test('damaged, missing and unreadable snapshots still produce a build reply with
   }
 });
 
-test('OK review reply snapshot', () => {
-  snapshot('codex-review', { file: 'review.json', result: { verdict: 'approve', findings: [] } }, 0, 'OK',
+test('OK review reply snapshot', async () => {
+  await snapshot('codex-review', { file: 'review.json', result: { verdict: 'approve', findings: [] } }, 0, 'OK',
     'OK — verdict approve\n'
     + 'Findings: critical 0 · high 0 · medium 0 · low 0\n'
     + 'Top: no critical or high findings\n'
     + 'Report: <run>/review.json · Log: llm-bridge read <run>');
 });
 
-test('OK advisor scope reply snapshot', () => {
-  snapshot('codex-advisor', { advisorPhase: 'scope', result: {
+test('OK advisor scope reply snapshot', async () => {
+  await snapshot('codex-advisor', { advisorPhase: 'scope', result: {
     sufficient: true, missing_paths: [], taken_on_trust: ['The supplied constraints are complete.'], predicted_risks: [],
   } }, 0, 'OK',
     'OK — scope: sufficient; continue this run with `phase:` advise\n'
@@ -97,8 +97,8 @@ test('OK advisor scope reply snapshot', () => {
     + 'Report: <run>/result.json · Log: llm-bridge read <run>');
 });
 
-test('OK advisor advise reply snapshot', () => {
-  snapshot('codex-advisor', { advisorPhase: 'advise', result: {
+test('OK advisor advise reply snapshot', async () => {
+  await snapshot('codex-advisor', { advisorPhase: 'advise', result: {
     recommendation: { option_id: 'A', text: 'Keep the stored evidence authoritative.' },
     rejected: [{ option_id: 'B', cost: 'Recomputing evidence can change its meaning.' }],
     strongest_counterargument: 'Stored evidence may be incomplete.', confidence: 'high',
@@ -111,8 +111,8 @@ test('OK advisor advise reply snapshot', () => {
     + 'Report: <run>/result.json · Log: llm-bridge read <run>');
 });
 
-test('LIMIT reply snapshot', () => {
-  snapshot('codex-build', { events: [{ type: 'error', message: 'quota exhausted' }] }, 1, 'LIMIT',
+test('LIMIT reply snapshot', async () => {
+  await snapshot('codex-build', { events: [{ type: 'error', message: 'quota exhausted' }] }, 1, 'LIMIT',
     'LIMIT — ChatGPT quota exhausted, work not completed\n'
     + 'Signal: quota exhausted\n'
     + 'Action: the ChatGPT quota window is spent; do not retry or resume through this bridge, hand the order to the next executor; for a build, check the Worktree row first\n'
@@ -120,8 +120,8 @@ test('LIMIT reply snapshot', () => {
     + 'Log: llm-bridge read <run>');
 });
 
-test('UNAVAILABLE reply snapshot', () => {
-  snapshot('codex-build', { events: [{ type: 'turn.failed', error: { message:
+test('UNAVAILABLE reply snapshot', async () => {
+  await snapshot('codex-build', { events: [{ type: 'turn.failed', error: { message:
     'unexpected status 401 Unauthorized: Missing bearer or basic authentication in header' } }] }, 1, 'UNAVAILABLE',
     'UNAVAILABLE — Codex is not available (signed out); hand the task to the next executor, do not retry\n'
     + 'Signal: unexpected status 401 Unauthorized: Missing bearer or basic authentication in header\n'
@@ -131,8 +131,8 @@ test('UNAVAILABLE reply snapshot', () => {
     + 'Log: llm-bridge read <run>');
 });
 
-test('FAIL with a usable result reply snapshot', () => {
-  snapshot('codex-build', { result: buildResult([], { verify_passed: false }) }, 0, 'FAIL',
+test('FAIL with a usable result reply snapshot', async () => {
+  await snapshot('codex-build', { result: buildResult([], { verify_passed: false }) }, 0, 'FAIL',
     'FAIL — verification “npm test” failed; changes remain in the tree\n'
     + 'Artifacts: events.jsonl 252 B · stderr.log 0 B · result.json filled · exit=0\n'
     + 'Action: the run returned a result that did not pass; read the report and git status before deciding; a repeat of this pass needs your retry: grant, the next pass your continue: grant\n'
@@ -140,8 +140,8 @@ test('FAIL with a usable result reply snapshot', () => {
     + 'Log: llm-bridge read <run>');
 });
 
-test('FAIL without a result reply snapshot', () => {
-  snapshot('codex-build', { stderr: 'panic: failed before result\n' }, 1, 'FAIL',
+test('FAIL without a result reply snapshot', async () => {
+  await snapshot('codex-build', { stderr: 'panic: failed before result\n' }, 1, 'FAIL',
     'FAIL — panic: failed before result\n'
     + 'Artifacts: events.jsonl 252 B · stderr.log 28 B · result.json empty or missing · exit=1\n'
     + 'Action: the run left no usable result; read the log and git status before deciding; repeat only through a grant this reply offers or the operator approves, never take over the task yourself\n'

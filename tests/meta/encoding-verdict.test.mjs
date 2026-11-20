@@ -28,11 +28,11 @@ const greenBuild = (overrides = {}) => makeRun({
 });
 const encodingRows = (reply) => reply.split('\n').filter((row) => row.startsWith('Encoding:'));
 
-test('green build with tier A fails with its rule and exactly one repair Action; artifacts stay intact', () => {
+test('green build with tier A fails with its rule and exactly one repair Action; artifacts stay intact', async () => {
   const dir = greenBuild();
   writeEvidence(dir, evidence([provenEntry()]));
   const artifact = fs.readFileSync(path.join(dir, 'encoding.json'), 'utf8');
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason_rule, 'build-encoding-corrupted');
   assert.match(meta.reason, /1 proven mojibake replacements at src\/a\.mjs:7/);
@@ -46,17 +46,17 @@ test('green build with tier A fails with its rule and exactly one repair Action;
   assert.equal(fs.readFileSync(path.join(dir, 'state-after.txt'), 'utf8'), changed);
 });
 
-test('tier A blocks carried OK before the earlier-pass success return', () => {
+test('tier A blocks carried OK before the earlier-pass success return', async () => {
   const root = makeChainRoot([
     { name: 'first', at: '2026-11-15T00:00:00Z', before: '', after: changed, result: result() },
     { name: 'second', at: '2026-11-15T01:00:00Z', before: changed, after: changed, result: result() },
   ]);
   const dir = path.join(root, 'second');
-  const baseline = collect(dir, 'codex-build', 0);
+  const baseline = await collect(dir, 'codex-build', 0);
   assert.equal(baseline.meta.status, 'OK');
   assert.equal(baseline.meta.carried_from_earlier_run, true);
   writeEvidence(dir, evidence([provenEntry()]));
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason_rule, 'build-encoding-corrupted');
   assert.equal(meta.carried_from_earlier_run, false);
@@ -76,7 +76,7 @@ test('proven reason uses the true count and only the first three locations', () 
   assert.doesNotMatch(gap.reason, /src\/a\.mjs:4/);
 });
 
-test('suspected entries stay OK, print text and repair after both Flags rows, and use true totals', () => {
+test('suspected entries stay OK, print text and repair after both Flags rows, and use true totals', async () => {
   const dir = greenBuild();
   const report = evidence([], [1, 2, 3, 4].map((n) => suspectedEntry(n)));
   report.counts.suspected = 55;
@@ -85,7 +85,7 @@ test('suspected entries stay OK, print text and repair after both Flags rows, an
   writeEvidence(dir, report);
   fs.writeFileSync(path.join(dir, 'flags.txt'), 'src/a.mjs:1 TODO\n');
   fs.writeFileSync(path.join(dir, 'flags-coverage.txt'), report.coverage.gaps.join('\n'));
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.equal(meta.reason_rule, null);
   const rows = reply.split('\n');
@@ -100,10 +100,10 @@ test('suspected entries stay OK, print text and repair after both Flags rows, an
   assert.equal(readEncodingEvidence(dir).suspected.length, 3);
 });
 
-test('suspected row is capped like Flags and keeps the acceptance hint with long multiline text', () => {
+test('suspected row is capped like Flags and keeps the acceptance hint with long multiline text', async () => {
   const dir = greenBuild();
   writeEvidence(dir, evidence([], [{ ...suspectedEntry(), text: 'long text\n'.repeat(40) }]));
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
   const [row] = encodingRows(reply);
   const prefix = 'Encoding: 1 suspected \u2014 ';
   const hint = '; check before accepting';
@@ -115,14 +115,14 @@ test('suspected row is capped like Flags and keeps the acceptance hint with long
 });
 
 for (const kind of ['inherited', 'replacement-char', 'malformed-utf8']) {
-  test(`tier B ${kind} remains visible without inventing a repair or line`, () => {
+  test(`tier B ${kind} remains visible without inventing a repair or line`, async () => {
     const dir = greenBuild();
     const entry = kind === 'malformed-utf8'
       ? { path: 'src/a.mjs', kind, byteOffset: 5 }
       : kind === 'replacement-char' ? { path: 'src/a.mjs', line: 9, kind, index: 3 }
       : suspectedEntry(9, kind);
     writeEvidence(dir, evidence([], [entry]));
-    const { meta, reply } = collect(dir, 'codex-build', 0);
+    const { meta, reply } = await collect(dir, 'codex-build', 0);
     assert.equal(meta.status, 'OK');
     const [row] = encodingRows(reply);
     assert.ok(row);
@@ -144,14 +144,14 @@ for (const [name, artifact] of [
   ['empty evidence', evidence()],
   ['coverage only', { ...evidence(), coverage: { complete: false, gaps: ['unreadable start'] } }],
 ]) {
-  test(`${name} never accuses a green build or adds an Encoding row`, () => {
+  test(`${name} never accuses a green build or adds an Encoding row`, async () => {
     const dir = greenBuild();
     const file = path.join(dir, 'encoding.json');
     if (artifact === null) fs.mkdirSync(file);
     else if (typeof artifact === 'string') fs.writeFileSync(file, artifact);
     else if (artifact !== undefined) writeEvidence(dir, artifact);
     assert.equal(encodingGap(dir), null);
-    const { meta, reply } = collect(dir, 'codex-build', 0);
+    const { meta, reply } = await collect(dir, 'codex-build', 0);
     assert.equal(meta.status, 'OK');
     assert.equal(meta.reason_rule, null);
     assert.equal(meta.reason, null);
@@ -169,12 +169,12 @@ for (const [name, options, exit] of [
   ['declared failure', { schema: { required: ['outcome'] },
     result: buildResult(result().changes, { outcome: 'fail', summary: 'work incomplete' }) }, 0],
 ]) {
-  test(`${name} keeps its earlier FAIL reason ahead of tier A`, () => {
+  test(`${name} keeps its earlier FAIL reason ahead of tier A`, async () => {
     const dir = greenBuild(options);
-    const earlier = collect(dir, 'codex-build', exit).meta;
+    const earlier = (await collect(dir, 'codex-build', exit)).meta;
     assert.equal(earlier.status, 'FAIL');
     writeEvidence(dir, evidence([provenEntry()]));
-    const { meta } = collect(dir, 'codex-build', exit);
+    const { meta } = await collect(dir, 'codex-build', exit);
     assert.equal(meta.status, 'FAIL');
     assert.equal(meta.reason, earlier.reason);
     assert.equal(meta.reason_rule, earlier.reason_rule);
@@ -183,27 +183,27 @@ for (const [name, options, exit] of [
   });
 }
 
-test('tier A takes precedence over report mismatch', () => {
+test('tier A takes precedence over report mismatch', async () => {
   const dir = greenBuild({ result: buildResult([{ file: 'src/other.mjs', what: 'change', why: 'task' }]) });
-  const before = collect(dir, 'codex-build', 0).meta;
+  const before = (await collect(dir, 'codex-build', 0)).meta;
   assert.equal(before.status, 'FAIL');
   assert.notEqual(before.reason_rule, 'build-encoding-corrupted');
   writeEvidence(dir, evidence([provenEntry()]));
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.reason_rule, 'build-encoding-corrupted');
 });
 
-test('scout run ignores encoding evidence for both verdict and reply', () => {
+test('scout run ignores encoding evidence for both verdict and reply', async () => {
   const dir = makeRun({
     events: [{ type: 'thread.started', thread_id: 'encoding-scout' }, COMPLETED_COMMAND],
     args: ['exec', '--json'],
     result: { answer: 'The scout inspected the repository and explained the existing implementation. '.repeat(5),
       findings: [], unknowns: [], report_markdown: '# report' },
   });
-  const baseline = collect(dir, 'codex-scout', 0);
+  const baseline = await collect(dir, 'codex-scout', 0);
   assert.equal(baseline.meta.status, 'OK');
   writeEvidence(dir, evidence([provenEntry()], [suspectedEntry()]));
-  const { meta, reply } = collect(dir, 'codex-scout', 0);
+  const { meta, reply } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'OK');
   assert.equal(meta.reason_rule, null);
   assert.equal(reply, baseline.reply);

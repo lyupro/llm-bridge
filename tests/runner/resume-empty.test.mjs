@@ -19,7 +19,7 @@ function fixture() {
       return { state: 'observed', last_record_at: recordedAt };
     },
   };
-  function run(name, parent, output, legacy = false) {
+  async function run(name, parent, output, legacy = false) {
     const dir = path.join(root, name);
     fs.mkdirSync(dir);
     fs.writeFileSync(path.join(dir, 'status.json'), JSON.stringify({
@@ -34,7 +34,7 @@ function fixture() {
       events.push({ type: 'item.completed', item: { type: 'reasoning', text: 'Still working' } });
     }
     fs.writeFileSync(path.join(dir, 'events.jsonl'), events.map((event) => JSON.stringify(event)).join('\n') + '\n');
-    const { meta } = collect(dir, 'codex-advisor', 1);
+    const { meta } = await collect(dir, 'codex-advisor', 1);
     if (legacy) {
       delete meta.pass_output;
       fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(meta) + '\n');
@@ -45,17 +45,17 @@ function fixture() {
   return { root, run, decide, calls };
 }
 
-test('one empty resume is allowed; two block the stored assessment and resume naming C', () => {
+test('one empty resume is allowed; two block the stored assessment and resume naming C', async () => {
   const f = fixture();
-  f.run('A', undefined, 'absent');
-  const b = f.run('B', 'A', 'absent');
+  await f.run('A', undefined, 'absent');
+  const b = await f.run('B', 'A', 'absent');
   assert.equal(b.meta.continuation_eligibility.grant.allowed, true);
   assert.equal(f.decide('B', ['A', 'B']), null);
-  const c = f.run('C', 'B', 'absent');
+  const c = await f.run('C', 'B', 'absent');
   const expected = { allowed: false, policy_version: 3, blocking_reasons: ['empty-resumes-exhausted'] };
   assert.deepEqual(c.meta.continuation_eligibility.grant, expected);
   assert.deepEqual(readJson(path.join(c.dir, 'meta.json')).continuation_eligibility.grant, expected);
-  assert.deepEqual(collect(c.dir, 'codex-advisor', 1).meta.continuation_eligibility.grant, expected);
+  assert.deepEqual((await collect(c.dir, 'codex-advisor', 1)).meta.continuation_eligibility.grant, expected);
   f.calls.length = 0;
   const refusal = f.decide('C', ['A', 'B', 'C']);
   assert.match(refusal, /run C cannot be resumed: empty-resumes-exhausted/);
@@ -64,22 +64,22 @@ test('one empty resume is allowed; two block the stored assessment and resume na
   assert.deepEqual(fs.readdirSync(f.root), ['A', 'B', 'C'], 'refusal creates no run');
 });
 
-test('pre-B1 runs cannot bypass exhaustion with a cached allowed grant', () => {
+test('pre-B1 runs cannot bypass exhaustion with a cached allowed grant', async () => {
   const f = fixture();
-  f.run('A', undefined, 'present', true);
-  f.run('B', 'A', 'absent', true);
-  const c = f.run('C', 'B', 'absent', true);
+  await f.run('A', undefined, 'present', true);
+  await f.run('B', 'A', 'absent', true);
+  const c = await f.run('C', 'B', 'absent', true);
   c.meta.continuation_eligibility.grant = { allowed: true, policy_version: 2, blocking_reasons: [] };
   fs.writeFileSync(path.join(c.dir, 'meta.json'), JSON.stringify(c.meta) + '\n');
   assert.match(f.decide('C', ['A', 'B', 'C']), /empty-resumes-exhausted/);
 });
 
 for (const [middle, last] of [['present', 'absent'], ['absent', 'unknown']]) {
-  test(`${middle} then ${last} breaks the empty-resume sequence in both grant paths`, () => {
+  test(`${middle} then ${last} breaks the empty-resume sequence in both grant paths`, async () => {
     const f = fixture();
-    f.run('A', undefined, 'absent');
-    f.run('B', 'A', middle);
-    const c = f.run('C', 'B', last);
+    await f.run('A', undefined, 'absent');
+    await f.run('B', 'A', middle);
+    const c = await f.run('C', 'B', last);
     assert.equal(c.meta.continuation_eligibility.grant.allowed, true);
     assert.equal(f.decide('C', ['A', 'B', 'C']), null);
   });

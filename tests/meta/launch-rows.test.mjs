@@ -95,7 +95,7 @@ test('launchRows bounds retry traversal to 50 hops', () => {
 
 for (const [agent, result] of agents) {
   for (const status of ['OK', 'FAIL', 'LIMIT']) {
-    test(`${agent} ${status} replies keep Retention, Sandbox probe, Model and Log consecutive`, () => {
+    test(`${agent} ${status} replies keep Retention, Sandbox probe, Model and Log consecutive`, async () => {
       const dir = makeRun({
         args: ['exec', '--json'],
         events: status === 'LIMIT' ? [{ type: 'error', message: 'rate limit exceeded for this account' }]
@@ -107,7 +107,7 @@ for (const [agent, result] of agents) {
       });
       if (agent === 'codex-advisor') advisorRunFacts(dir);
 
-      const { meta, reply } = collect(dir, agent, status === 'OK' ? 0 : 1);
+      const { meta, reply } = await collect(dir, agent, status === 'OK' ? 0 : 1);
       const rows = reply.split('\n');
       const logAt = rows.findIndex((row) => row.includes('Log: '));
 
@@ -167,7 +167,7 @@ test('writeFailure closes status.json before reading launch facts for its reply'
 });
 
 for (const outcome of ['alive', 'skipped', undefined]) {
-  test(`collect and writeFailure omit the sandbox row for outcome ${outcome}`, () => {
+  test(`collect and writeFailure omit the sandbox row for outcome ${outcome}`, async () => {
     const dir = makeRun({
       args: ['exec', '--json'],
       events: started,
@@ -175,7 +175,7 @@ for (const outcome of ['alive', 'skipped', undefined]) {
       status: { retention, ...(outcome === undefined ? {} : { sandbox_probe: { ...probe, outcome } }) },
     });
 
-    const collected = collect(dir, 'codex-build', 0);
+    const collected = await collect(dir, 'codex-build', 0);
     const failure = writeFailure(dir, 'codex-build', 'runner stopped', { action: 'runner-fault' });
 
     assert.equal(collected.meta.status, 'OK');
@@ -214,7 +214,7 @@ test('an inconclusive probe without a reason says no reason recorded', () => {
   }
 });
 
-test('a long multiline reason is bounded to 160 characters without splitting the reply', () => {
+test('a long multiline reason is bounded to 160 characters without splitting the reply', async () => {
   const reason = `\r\n\t${'x'.repeat(200)}\nextra diagnostic text`;
   const expected = `Sandbox probe: inconclusive — ${'x'.repeat(157)}... The run started without a sandbox check.`;
   const dir = makeRun({
@@ -225,7 +225,7 @@ test('a long multiline reason is bounded to 160 characters without splitting the
   });
 
   assert.deepEqual(launchRows(dir), [expected]);
-  for (const { reply } of [collect(dir, 'codex-build', 0),
+  for (const { reply } of [await collect(dir, 'codex-build', 0),
     writeFailure(dir, 'codex-build', 'runner stopped', { action: 'runner-fault' })]) {
     const rows = reply.split('\n');
     assert.deepEqual(rows.filter((row) => row.startsWith('Sandbox probe: ')), [expected]);

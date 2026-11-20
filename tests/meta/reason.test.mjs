@@ -7,7 +7,7 @@ import { makeRun } from './test-fixtures.mjs';
 
 const emptyBuild = { summary: '', changes: [], report_markdown: '' };
 
-test('the last model content error wins over stderr policy noise', () => {
+test('the last model content error wins over stderr policy noise', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     stderr: 'ERROR codex_core::tools::router: rejected: blocked by policy\n',
@@ -19,13 +19,13 @@ test('the last model content error wins over stderr policy noise', () => {
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, 'actual task complaint');
 });
 
-test('a model content error falls back from message to text', () => {
+test('a model content error falls back from message to text', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     stderr: 'ERROR policy noise\n',
@@ -36,12 +36,12 @@ test('a model content error falls back from message to text', () => {
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.reason, 'text complaint');
 });
 
-test('a transport event outranks stderr when no model content error exists', () => {
+test('a transport event outranks stderr when no model content error exists', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     stderr: 'ERROR policy noise\n',
@@ -49,12 +49,12 @@ test('a transport event outranks stderr when no model content error exists', () 
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.reason, 'transport complaint');
 });
 
-test('a transport failure keeps its own reason over an older model complaint', () => {
+test('a transport failure keeps its own reason over an older model complaint', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     stderr: 'ERROR policy noise\n',
@@ -65,13 +65,13 @@ test('a transport failure keeps its own reason over an older model complaint', (
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'LIMIT');
   assert.match(meta.reason, /rate_limit_error|429/);
 });
 
-test('stderr remains the final fallback when events carry no reason', () => {
+test('stderr remains the final fallback when events carry no reason', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     stderr: 'panic: worker failed before producing a result\n',
@@ -79,7 +79,7 @@ test('stderr remains the final fallback when events carry no reason', () => {
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.reason, 'panic: worker failed before producing a result');
 });

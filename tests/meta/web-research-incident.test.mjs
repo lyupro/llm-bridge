@@ -21,7 +21,7 @@ const prose = 'The published sources describe historical news access and financi
   + 'must be checked before using these resources. The cited sources support this external research '
   + 'without making claims about repository code that the scout has not read.';
 
-function run(ordered, evidence = [urls[0], urls.at(-1)]) {
+async function run(ordered, evidence = [urls[0], urls.at(-1)]) {
   const result = {
     answer: prose,
     answers: questions.map((question, index) => ({
@@ -33,7 +33,7 @@ function run(ordered, evidence = [urls[0], urls.at(-1)]) {
     args: ['exec', '--json'], events, questions: ordered, result,
     status: { state: 'finished', agent: 'codex-scout', order_id: 'ow084-incident' },
   });
-  const collected = collect(dir, 'codex-scout', 0);
+  const collected = await collect(dir, 'codex-scout', 0);
   const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
   assert.deepEqual(meta, collected.meta);
   assert.equal(meta.result_ok, true);
@@ -55,16 +55,16 @@ function assertAction(reply, variant) {
 // Finished questions.json stores the orderer's extracted marker as kind, not as question text.
 const marked = questions.map((question) => ({ ...question, kind: 'web-research' }));
 
-test('incident searches pass with all web markers and citations to returned hosts', () => {
-  const { meta, reply } = run(marked);
+test('incident searches pass with all web markers and citations to returned hosts', async () => {
+  const { meta, reply } = await run(marked);
   assert.equal(meta.status, 'OK', meta.reason);
   assert.equal(meta.reason_rule, null);
   assert.equal(meta.web_searches.binding, 'host');
   assert.doesNotMatch(reply, /^Action:/m);
 });
 
-test('unmarked incident fails with marker guidance and no paid retry Action', () => {
-  const { meta, reply } = run(questions);
+test('unmarked incident fails with marker guidance and no paid retry Action', async () => {
+  const { meta, reply } = await run(questions);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason_rule, 'scout-commands-run');
   assert.match(meta.reason, /\[web-research\] marker/);
@@ -73,10 +73,10 @@ test('unmarked incident fails with marker guidance and no paid retry Action', ()
   assert.doesNotMatch(reply, /retry:/);
 });
 
-test('incident web answer citing only an absent host fails with the generic result Action', () => {
+test('incident web answer citing only an absent host fails with the generic result Action', async () => {
   const absent = 'https://not-returned.invalid/docs';
   assert.ok(!hosts.includes(new URL(absent).hostname));
-  const { meta, reply } = run(marked, [urls[0], absent]);
+  const { meta, reply } = await run(marked, [urls[0], absent]);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason_rule, 'scout-web-reference');
   assert.match(meta.reason, /Q2/);
@@ -85,8 +85,8 @@ test('incident web answer citing only an absent host fails with the generic resu
   assertAction(reply, 'fail-result');
 });
 
-test('incident searches cannot replace commands for an unmarked code question in a mixed order', () => {
-  const { meta, reply } = run([marked[0], {
+test('incident searches cannot replace commands for an unmarked code question in a mixed order', async () => {
+  const { meta, reply } = await run([marked[0], {
     id: 'Q2', text: 'Where is the repository authentication check implemented?',
   }]);
   assert.equal(meta.status, 'FAIL');

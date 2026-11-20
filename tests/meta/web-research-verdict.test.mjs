@@ -31,94 +31,94 @@ const reason = (key, values = {}) => answerRuleMessage('codex-scout', key, value
 const searchesReason = (gap = null) => reason('scout-web-searches', { questions: 'Q1, Q2', gap });
 const referenceReason = (ids = 'Q1, Q2') => reason('scout-web-reference', { questions: ids });
 
-function verdict(extra = {}) {
+async function verdict(extra = {}) {
   const dir = makeRun({
     args: ['exec', '--json'], questions, result: resultOf(), events: [thread, webItem()], ...extra,
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   const saved = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
   assert.deepEqual(saved.web_searches, meta.web_searches);
   return meta;
 }
 
-test('all-web order with matching returned hosts passes with no commands and persists host binding', () => {
-  const meta = verdict();
+test('all-web order with matching returned hosts passes with no commands and persists host binding', async () => {
+  const meta = await verdict();
   assert.equal(meta.status, 'OK', meta.reason);
   assert.equal(meta.commands_executed.chain, 0);
   assert.equal(meta.web_searches.binding, 'host');
 });
 
-test('real web-search fixture supports an end-to-end verdict with no commands', () => {
+test('real web-search fixture supports an end-to-end verdict with no commands', async () => {
   const events = fs.readFileSync(new URL('./fixtures/web-search-events.jsonl', import.meta.url), 'utf8');
-  const meta = verdict({ events, result: resultOf(['https://docs.alpaca.markets/us/docs/historical-news-data']) });
+  const meta = await verdict({ events, result: resultOf(['https://docs.alpaca.markets/us/docs/historical-news-data']) });
   assert.equal(meta.status, 'OK', meta.reason);
   assert.equal(meta.web_searches.chain.completed, 3);
   assert.equal(meta.web_searches.binding, 'host');
   assert.equal(meta.commands_executed.chain, 0);
 });
 
-test('host matching uses the hostname rather than path, port, capitalization or leading www.', () => {
+test('host matching uses the hostname rather than path, port, capitalization or leading www.', async () => {
   for (const url of ['https://WWW.EXAMPLE.COM/docs', 'http://EXAMPLE.COM:8080/docs']) {
-    const meta = verdict({ result: resultOf([url]) });
+    const meta = await verdict({ result: resultOf([url]) });
     assert.equal(meta.status, 'OK', `${url}: ${meta.reason}`);
   }
 });
 
-test('a cited host not returned by searches fails and names only the offending question', () => {
+test('a cited host not returned by searches fails and names only the offending question', async () => {
   const result = resultOf();
   result.answers[1].evidence = ['https://elsewhere.example/docs'];
-  const meta = verdict({ result });
+  const meta = await verdict({ result });
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, referenceReason('Q2'));
 });
 
-test('a URL must be absolute HTTP(S), not FTP, relative, malformed, or a hostname substring', () => {
+test('a URL must be absolute HTTP(S), not FTP, relative, malformed, or a hostname substring', async () => {
   for (const url of ['ftp://example.com/docs', '/docs', '//example.com/docs', 'https://',
     'https://example.com.evil.test/docs', 'https://example.com@evil.test/docs', 'see https://example.com/docs']) {
-    const meta = verdict({ result: resultOf([url]) });
+    const meta = await verdict({ result: resultOf([url]) });
     assert.equal(meta.status, 'FAIL', url);
     assert.equal(meta.reason, referenceReason(), url);
   }
 });
 
-test('one matching URL suffices even if other evidence items do not match', () => {
-  assert.equal(verdict({ result: resultOf(['not a URL', 'https://elsewhere.example', 'https://example.com']) }).status, 'OK');
+test('one matching URL suffices even if other evidence items do not match', async () => {
+  assert.equal((await verdict({ result: resultOf(['not a URL', 'https://elsewhere.example', 'https://example.com']) })).status, 'OK');
 });
 
-test('zero completed searches fail before the URL reference check', () => {
-  const meta = verdict({ events: [thread], result: resultOf(['https://elsewhere.example']) });
+test('zero completed searches fail before the URL reference check', async () => {
+  const meta = await verdict({ events: [thread], result: resultOf(['https://elsewhere.example']) });
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, searchesReason());
   assert.equal(meta.web_searches.binding, null);
 });
 
-test('started web searches do not satisfy the completed search requirement', () => {
-  const meta = verdict({ events: [thread, { ...webItem(), type: 'item.started' }] });
+test('started web searches do not satisfy the completed search requirement', async () => {
+  const meta = await verdict({ events: [thread, { ...webItem(), type: 'item.started' }] });
   assert.equal(meta.reason, searchesReason());
 });
 
-test('R1 CLI shape softening accepts any absolute HTTP(S) URL and persists unavailable binding', () => {
-  const meta = verdict({ events: [thread, webItem([])], result: resultOf(['https://unreturned.example/docs']) });
+test('R1 CLI shape softening accepts any absolute HTTP(S) URL and persists unavailable binding', async () => {
+  const meta = await verdict({ events: [thread, webItem([])], result: resultOf(['https://unreturned.example/docs']) });
   assert.equal(meta.status, 'OK', meta.reason);
   assert.equal(meta.web_searches.binding, 'unavailable');
   assert.equal(meta.web_searches.chain.completed, 1);
   assert.equal(meta.web_searches.chain.with_urls, 0);
 });
 
-test('R1 unavailable binding still requires a valid absolute HTTP(S) URL per web answer', () => {
+test('R1 unavailable binding still requires a valid absolute HTTP(S) URL per web answer', async () => {
   for (const evidence of [['plain evidence'], ['ftp://example.com/docs'], ['/relative'], []]) {
     assert.deepEqual(webResearchGap({
       questions, result: resultOf(evidence),
       web: { chain: { completed: 1, with_urls: 0, hosts: [] }, gap: null },
     }), { key: 'scout-web-reference', reason: referenceReason() });
   }
-  const meta = verdict({ events: [thread, webItem([])], result: resultOf(['plain evidence']) });
+  const meta = await verdict({ events: [thread, webItem([])], result: resultOf(['plain evidence']) });
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, referenceReason());
   assert.equal(meta.web_searches.binding, 'unavailable');
 });
 
-test('pruned predecessor without retained web evidence fails naming the web gap', () => {
+test('pruned predecessor without retained web evidence fails naming the web gap', async () => {
   const root = makeChainRoot([
     { name: 'previous', meta: { session_id: 'web-thread', commands_executed: { run: 0 } } },
     { name: 'current', result: resultOf() },
@@ -127,7 +127,7 @@ test('pruned predecessor without retained web evidence fails naming the web gap'
   fs.writeFileSync(path.join(dir, 'status.json'), JSON.stringify({ resumed_from: 'previous' }));
   fs.writeFileSync(path.join(dir, 'questions.json'), JSON.stringify(questions));
   fs.writeFileSync(path.join(dir, 'events.jsonl'), [thread, webItem()].map(JSON.stringify).join('\n') + '\n');
-  const meta = collect(dir, 'codex-scout', 0).meta;
+  const meta = (await collect(dir, 'codex-scout', 0)).meta;
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.web_searches.gap, /previous.*no web evidence/);
   assert.equal(meta.reason, searchesReason(meta.web_searches.gap));
@@ -136,7 +136,7 @@ test('pruned predecessor without retained web evidence fails naming the web gap'
   assert.equal(meta.web_searches.binding, null);
 });
 
-test('retained predecessor search hosts satisfy the resumed answer without current searches', () => {
+test('retained predecessor search hosts satisfy the resumed answer without current searches', async () => {
   const root = makeChainRoot([
     { name: 'previous', meta: {
       session_id: 'web-thread', commands_executed: { run: 0 }, web_searches: { run: web.chain },
@@ -147,57 +147,57 @@ test('retained predecessor search hosts satisfy the resumed answer without curre
   fs.writeFileSync(path.join(dir, 'status.json'), JSON.stringify({ resumed_from: 'previous' }));
   fs.writeFileSync(path.join(dir, 'questions.json'), JSON.stringify(questions));
   fs.writeFileSync(path.join(dir, 'events.jsonl'), JSON.stringify(thread) + '\n');
-  const meta = collect(dir, 'codex-scout', 0).meta;
+  const meta = (await collect(dir, 'codex-scout', 0)).meta;
   assert.equal(meta.status, 'OK', meta.reason);
   assert.equal(meta.web_searches.run.completed, 0);
   assert.equal(meta.web_searches.binding, 'host');
 });
 
-test('mixed repository and web questions require commands, then accept their own evidence kinds', () => {
+test('mixed repository and web questions require commands, then accept their own evidence kinds', async () => {
   const mixed = [{ ...questions[0], kind: 'code-required' }, questions[1]];
   const result = resultOf();
   result.answers[0].evidence = ['src/example.mjs:12'];
-  const failed = verdict({ questions: mixed, result });
+  const failed = await verdict({ questions: mixed, result });
   assert.equal(failed.status, 'FAIL');
   // OW-084 W6b: the order already marks its web question, so the unmarked one is about code on purpose.
   assert.equal(failed.reason, reason('scout-commands-run', { searches: 0 }));
-  assert.equal(verdict({ questions: mixed, result, events: [thread, COMPLETED_COMMAND, webItem()] }).status, 'OK');
+  assert.equal((await verdict({ questions: mixed, result, events: [thread, COMPLETED_COMMAND, webItem()] })).status, 'OK');
 });
 
-test('startup and web questions pass without commands but retain independent reference checks', () => {
+test('startup and web questions pass without commands but retain independent reference checks', async () => {
   const mixed = [{ ...questions[0], kind: 'startup-context' }, questions[1]];
   const result = resultOf();
   result.answers[0].evidence = ['startup:task'];
-  assert.equal(verdict({ questions: mixed, result }).status, 'OK');
+  assert.equal((await verdict({ questions: mixed, result })).status, 'OK');
   result.answers[0].evidence = ['https://example.com/docs'];
-  const meta = verdict({ questions: mixed, result, events: [thread] });
+  const meta = await verdict({ questions: mixed, result, events: [thread] });
   assert.equal(meta.reason, reason('scout-startup-reference', { questions: 'Q1' }));
 });
 
-test('URL ports in both evidence and finding locations are not unread repository coordinates', () => {
+test('URL ports in both evidence and finding locations are not unread repository coordinates', async () => {
   const result = resultOf(['https://example.com:8080/docs']);
   result.findings = [{ where: 'https://example.com:8080/docs', fact: 'External documentation.' }];
-  assert.equal(verdict({ result }).status, 'OK');
+  assert.equal((await verdict({ result })).status, 'OK');
   result.findings.push({ where: 'src/example.mjs:12', fact: 'Unread repository claim.' });
-  const meta = verdict({ result });
+  const meta = await verdict({ result });
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, reason('scout-unread-coordinate', { coordinate: 'src/example.mjs:12' }));
 });
 
-test('unknown, missing and empty question lists fail closed on commands', () => {
+test('unknown, missing and empty question lists fail closed on commands', async () => {
   for (const ordered of [undefined, [], [{ id: 'Q1' }], [{ id: 'Q1', kind: 'future-kind' }],
     [questions[0], { id: 'Q2', kind: 'future-kind' }]]) {
     assert.deepEqual(scoutExecutionGap({ execution: { chain: 0, gap: null }, questions: ordered }),
       { key: 'scout-commands-run', reason: reason('scout-commands-run', { searches: 0 }) });
     const marksWeb = ordered?.some((question) => question.kind === 'web-research');
-    assert.equal(verdict({ questions: ordered }).reason,
+    assert.equal((await verdict({ questions: ordered })).reason,
       reason('scout-commands-run', { searches: marksWeb ? 0 : 1 }));
   }
   assert.equal(allStartupContext(questions), false);
   assert.equal(allStartupContext([{ id: 'Q1', kind: 'startup-context' }]), true);
 });
 
-test('binding is null without web questions or known evidence; unknown evidence fails closed', () => {
+test('binding is null without web questions or known evidence; unknown evidence fails closed', async () => {
   assert.equal(webResearchBinding([], web), null);
   assert.equal(webResearchBinding(questions, { chain: null, gap: 'unknown' }), null);
   // The marker postdates `--json`: no stream, no gap and no web fact prove no search, unlike
@@ -207,8 +207,8 @@ test('binding is null without web questions or known evidence; unknown evidence 
   assert.deepEqual(webResearchGap({ questions, result: resultOf(), web: undefined }),
     { key: 'scout-web-searches', reason: searchesReason() });
   assert.equal(webResearchGap({ questions: [], result: resultOf(), web: { chain: null, gap: 'unknown' } }), null);
-  assert.equal(verdict({ questions: questions.map((q) => ({ ...q, kind: 'code-required' })),
-    events: [thread, COMPLETED_COMMAND, webItem()] }).web_searches.binding, null);
+  assert.equal((await verdict({ questions: questions.map((q) => ({ ...q, kind: 'code-required' })),
+    events: [thread, COMPLETED_COMMAND, webItem()] })).web_searches.binding, null);
 });
 
 test('the web judge matches trimmed question ids without case and keeps the first answer', () => {

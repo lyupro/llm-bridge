@@ -87,9 +87,9 @@ function failedRun(agent) {
   return dir;
 }
 
-test('an eligible failed advisor advise run records an allowed grant and prints the ready resume line', () => {
+test('an eligible failed advisor advise run records an allowed grant and prints the ready resume line', async () => {
   const dir = failedRun('codex-advisor');
-  const { meta, reply } = collect(dir, 'codex-advisor', 1);
+  const { meta, reply } = await collect(dir, 'codex-advisor', 1);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.phase, 'advise');
   assert.equal(meta.result_ok, false);
@@ -108,14 +108,14 @@ test('an eligible failed advisor advise run records an allowed grant and prints 
   assert.equal(rows[at + 1],
     `Ready resume line: resume: ${path.basename(dir)} — continue after silent-stall-candidate (continues that pass's Codex thread under order ow066-o8).`);
   assert.equal(rows[at + 2], 'Treatment: retain-stop-facts · diagnostic only, nothing runs it');
-  const second = collect(dir, 'codex-advisor', 1);
+  const second = await collect(dir, 'codex-advisor', 1);
   assert.deepEqual(second.meta.continuation_eligibility, meta.continuation_eligibility);
   assert.equal(second.reply, reply);
 });
 
-test('the same failed run for codex-build retains the writer-role blocker', () => {
+test('the same failed run for codex-build retains the writer-role blocker', async () => {
   const dir = failedRun('codex-build');
-  const { meta, reply } = collect(dir, 'codex-build', 1);
+  const { meta, reply } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.result_ok, false);
   assert.deepEqual(meta.continuation_eligibility.grant, {

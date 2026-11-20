@@ -15,13 +15,13 @@ const packageJson = JSON.parse(
   fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
 );
 
-test('meta.json records the version of the runner package that wrote it', () => {
+test('meta.json records the version of the runner package that wrote it', async () => {
   const dir = makeRun({
     events: [{ type: 'thread.started', thread_id: 'runner-version' }],
     result: buildResult([]),
   });
 
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   const written = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
 
   assert.equal(meta.runner_version, packageJson.version);

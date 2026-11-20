@@ -25,7 +25,7 @@ const build = (changes, extra = {}) => ({
 /** The task context reportVersusWork() gets from status.json in production. */
 const chainCtx = (runsRoot) => ({ runsRoot, repo: CHAIN_REPO, slug: CHAIN_SLUG });
 
-test('collect records a new delivered letter in environment_changes', () => {
+test('collect records a new delivered letter in environment_changes', async () => {
   const dir = makeRun({ result: build([]) });
   fs.writeFileSync(path.join(dir, 'scope.txt'), 'src/**\n');
   fs.writeFileSync(path.join(dir, 'env.json'), JSON.stringify({ environmentNewFilePaths: ['letters/**'] }));
@@ -33,7 +33,7 @@ test('collect records a new delivered letter in environment_changes', () => {
   fs.writeFileSync(path.join(dir, 'state-after.txt'), encodeSnapshot([
     { path: 'letters/new.md', state: `U\t10:${'a'.repeat(64)}` },
   ]));
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.deepEqual(meta.environment_changes, ['letters/new.md']);
 });
@@ -163,14 +163,14 @@ test('reportVersusWork fails a changed tree the report never mentions', () => {
 const QUOTA = 'ERROR: rate limit exceeded for this account\n';
 const emptyBuild = { summary: '', changes: [], report_markdown: '' };
 
-test('stderr quoting a quota is not LIMIT when events carry no transport error', () => {
+test('stderr quoting a quota is not LIMIT when events carry no transport error', async () => {
   const dir = makeRun({
     stderr: QUOTA,
     args: ['exec', '--json'],
     events: [{ type: 'item.completed', item: { type: 'agent_message', text: QUOTA } }],
     result: emptyBuild,
   });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'FAIL');
   assert.doesNotMatch(meta.reason, /abandoned at startup/);
 });
@@ -181,7 +181,7 @@ test('stderr quoting a quota is not LIMIT when events carry no transport error',
  * started is somebody else's commit, and answering that with "commit made despite prohibition"
  * would blame a run that did not exist.
  */
-test('a run that never started is abandoned, not accused of the commit in its window', () => {
+test('a run that never started is abandoned, not accused of the commit in its window', async () => {
   const dir = makeRun({
     stderr: '',
     args: ['exec', '--json'],
@@ -191,26 +191,26 @@ test('a run that never started is abandoned, not accused of the commit in its wi
     headAfter: 'fedcba0987654321\n',
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /abandoned at startup/);
   assert.doesNotMatch(meta.reason, /commit made/);
 });
 
-test('a structured quota error is still a LIMIT', () => {
+test('a structured quota error is still a LIMIT', async () => {
   const dir = makeRun({
     stderr: QUOTA,
     args: ['exec', '--json'],
     events: [{ type: 'error', message: QUOTA }],
     result: emptyBuild,
   });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'LIMIT');
   assert.match(meta.reason, /rate limit/);
 });
 
-test('a deadline verdict outranks a structured quota error', () => {
+test('a deadline verdict outranks a structured quota error', async () => {
   const dir = makeRun({
     stderr: QUOTA,
     args: ['exec', '--json'],
@@ -218,42 +218,42 @@ test('a deadline verdict outranks a structured quota error', () => {
     status: { stopped_on_deadline: true, elapsed_ms: 60012 },
     result: emptyBuild,
   });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /deadline after 60012 ms/);
   assert.doesNotMatch(meta.reason, /rate limit/);
 });
 
-test('an archived run without --json is judged without transport damage', () => {
+test('an archived run without --json is judged without transport damage', async () => {
   const dir = makeRun({ args: ['exec'], stderr: '', result: emptyBuild });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'FAIL');
   assert.doesNotMatch(meta.reason, /artifacts disagree/);
 });
 
-test('no events and empty stderr means abandoned at startup', () => {
+test('no events and empty stderr means abandoned at startup', async () => {
   const dir = makeRun({ args: ['exec', '--json'], events: [], stderr: '', result: emptyBuild });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /abandoned at startup/);
 });
 
-test('no events but non-empty stderr is a plain FAIL with the stderr reason', () => {
+test('no events but non-empty stderr is a plain FAIL with the stderr reason', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     events: [],
     stderr: 'panic: worker died before producing a result\n',
     result: emptyBuild,
   });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /panic: worker died/);
   assert.doesNotMatch(meta.reason, /abandoned at startup/);
 });
 
-test('a new run missing events.jsonl is a damaged-evidence failure', () => {
+test('a new run missing events.jsonl is a damaged-evidence failure', async () => {
   const dir = makeRun({ args: ['exec', '--json'], stderr: '', result: emptyBuild });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /evidence was damaged/);
   assert.match(meta.reason, /quota refusal cannot be told apart/);
@@ -261,7 +261,7 @@ test('a new run missing events.jsonl is a damaged-evidence failure', () => {
 
 // A deadline watcher and stderr.log are produced by the same worker. A run fixture without stderr.log
 // must remain a consistency failure, even when the event stream exists.
-test('a deadline watcher without stderr.log is a damaged-evidence failure', () => {
+test('a deadline watcher without stderr.log is a damaged-evidence failure', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     stderr: null,
@@ -269,12 +269,12 @@ test('a deadline watcher without stderr.log is a damaged-evidence failure', () =
     status: { stopped_on_deadline: false, elapsed_ms: 4200 },
     result: emptyBuild,
   });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /artifacts disagree/);
 });
 
-test('a turn.failed status 429 event is LIMIT', () => {
+test('a turn.failed status 429 event is LIMIT', async () => {
   const dir = makeRun({
     log: 'codex started\n',
     events: [
@@ -291,25 +291,25 @@ test('a turn.failed status 429 event is LIMIT', () => {
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'LIMIT');
   assert.match(meta.reason, /status 429/);
 });
 
-test('an item.completed quotation about a quota is not LIMIT', () => {
+test('an item.completed quotation about a quota is not LIMIT', async () => {
   const dir = makeRun({
     log: 'agent quoted: rate limit exceeded\n',
     events: [{ type: 'item.completed', item: { type: 'agent_message', text: 'rate limit exceeded' } }],
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'FAIL');
 });
 
-test('an error type naming a limit is LIMIT without status 429', () => {
+test('an error type naming a limit is LIMIT without status 429', async () => {
   const dir = makeRun({
     log: 'codex started\n',
     events: [
@@ -324,13 +324,13 @@ test('an error type naming a limit is LIMIT without status 429', () => {
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'LIMIT');
   assert.match(meta.reason, /rate_limit_error/);
 });
 
-test('a non-quota transport event supplies the FAIL reason before raw text', () => {
+test('a non-quota transport event supplies the FAIL reason before raw text', async () => {
   const dir = makeRun({
     log: 'raw text says rate limit exceeded\n',
     events: [
@@ -345,14 +345,14 @@ test('a non-quota transport event supplies the FAIL reason before raw text', () 
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /request body is invalid/);
   assert.doesNotMatch(meta.reason, /rate limit exceeded/);
 });
 
-test('a transport error the run recovered from does not fail a completed run', () => {
+test('a transport error the run recovered from does not fail a completed run', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
@@ -369,12 +369,12 @@ test('a transport error the run recovered from does not fail a completed run', (
     ],
   });
 
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
 
   assert.equal(meta.status, 'OK');
 });
 
-test('an error about a context length limit is not read as a quota refusal', () => {
+test('an error about a context length limit is not read as a quota refusal', async () => {
   const dir = makeRun({
     log: 'codex started\n',
     events: [
@@ -391,7 +391,7 @@ test('an error about a context length limit is not read as a quota refusal', () 
     result: emptyBuild,
   });
 
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /context length limit/);

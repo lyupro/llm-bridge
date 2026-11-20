@@ -121,20 +121,20 @@ test('scope replies ignore ledger display fields and saved schema damage', () =>
     reply(result, runDir));
 });
 
-test('meta.json records the scope outcome for advisors and the named advice for builds', () => {
-  const scope = collect(makeRun({ result: { ...validScope(), sufficient: false, missing_paths: ['src/a.mjs'] } }),
-    'codex-advisor', 0).meta;
+test('meta.json records the scope outcome for advisors and the named advice for builds', async () => {
+  const scope = (await collect(makeRun({ result: { ...validScope(), sufficient: false, missing_paths: ['src/a.mjs'] } }),
+    'codex-advisor', 0)).meta;
   assert.equal(scope.sufficient, false);
   assert.deepEqual(scope.missing_paths, ['src/a.mjs']);
   assert.equal(Object.hasOwn(scope, 'advice'), false);
 
-  const empty = collect(makeRun({ result: {} }), 'codex-advisor', 0).meta;
+  const empty = (await collect(makeRun({ result: {} }), 'codex-advisor', 0)).meta;
   assert.equal(empty.sufficient, null);
   assert.equal(empty.missing_paths, null);
 
-  const build = collect(makeRun({ result: { summary: 'done', changes: [] }, status: { advice: 'mechanical' } }),
-    'codex-build', 0).meta;
+  const build = (await collect(makeRun({ result: { summary: 'done', changes: [] }, status: { advice: 'mechanical' } }),
+    'codex-build', 0)).meta;
   assert.equal(build.advice, 'mechanical');
   assert.equal(Object.hasOwn(build, 'sufficient'), false);
-  assert.equal(collect(makeRun({ result: { summary: 'done', changes: [] } }), 'codex-build', 0).meta.advice, null);
+  assert.equal((await collect(makeRun({ result: { summary: 'done', changes: [] } }), 'codex-build', 0)).meta.advice, null);
 });

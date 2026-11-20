@@ -76,9 +76,9 @@ for (const [name, options, exit, resultOk] of [
   ['failed verification', { result: buildResult(changes, { verify_passed: false }) }, 0, true],
   ['declared failure', { result: buildResult(changes, { outcome: 'fail' }) }, 0, true],
 ]) {
-  test(`${name} selects the refusal rule and T01 Action without changing the worktree record`, () => {
+  test(`${name} selects the refusal rule and T01 Action without changing the worktree record`, async () => {
     const dir = buildRun(options);
-    const { meta, reply } = collect(dir, 'codex-build', exit);
+    const { meta, reply } = await collect(dir, 'codex-build', exit);
     assert.equal(meta.result_ok, resultOk);
     assert.equal(meta.status, 'FAIL');
     assert.equal(meta.exit, exit);
@@ -106,8 +106,8 @@ for (const [name, target, scope, normalized, failed] of [
   ['outside scope', deniedPath, 'tests/**', 'src/blocked.mjs', true],
   ['outside the repository', 'C:\\repo-other\\src\\blocked.mjs', '**', 'C:/repo-other/src/blocked.mjs', false],
 ]) {
-  test(`a refusal ${name} is recorded but does not select the rule`, () => {
-    const { meta, reply } = collect(buildRun({ target, scope }), 'codex-build', 9);
+  test(`a refusal ${name} is recorded but does not select the rule`, async () => {
+    const { meta, reply } = await collect(buildRun({ target, scope }), 'codex-build', 9);
     assert.equal(meta.status, 'FAIL');
     assert.match(meta.reason, /^result exists, but exit=9:/);
     assert.equal(meta.reason_rule, null);
@@ -119,9 +119,9 @@ for (const [name, target, scope, normalized, failed] of [
   });
 }
 
-test('one in-scope path is enough even without a matching failed file change', () => {
+test('one in-scope path is enough even without a matching failed file change', async () => {
   const outside = 'Failed to write file C:\\outside\\blocked.mjs';
-  const { meta } = collect(buildRun({
+  const { meta } = await collect(buildRun({
     result: undefined,
     stderr: [outside, refusalLine].join('\n'),
     events: [thread, COMPLETED_COMMAND],
@@ -138,8 +138,8 @@ test('one in-scope path is enough even without a matching failed file change', (
   });
 });
 
-test('a build that recovered stays OK and keeps the observed refusal in metadata', () => {
-  const { meta, reply } = collect(buildRun(), 'codex-build', 0);
+test('a build that recovered stays OK and keeps the observed refusal in metadata', async () => {
+  const { meta, reply } = await collect(buildRun(), 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.equal(exitCodeFor(meta.status), 0);
   assert.equal(meta.reason_rule, null);
@@ -147,25 +147,25 @@ test('a build that recovered stays OK and keeps the observed refusal in metadata
   assert.deepEqual(actionRows(reply), []);
 });
 
-test('an archived result without a contracted outcome still follows its ordinary verdict', () => {
+test('an archived result without a contracted outcome still follows its ordinary verdict', async () => {
   const dir = buildRun({ schema: undefined, result: buildResult(changes, { outcome: 'fail' }) });
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.equal(meta.reason_rule, null);
   assert.deepEqual(meta.write_refusal, refused);
   assert.deepEqual(actionRows(reply), []);
 });
 
-test('the same refusal does not select a build rule for a scout', () => {
-  const { meta, reply } = collect(buildRun({ result: undefined }), 'codex-scout', 1);
+test('the same refusal does not select a build rule for a scout', async () => {
+  const { meta, reply } = await collect(buildRun({ result: undefined }), 'codex-scout', 1);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason_rule, null);
   assert.equal(Object.hasOwn(meta, 'write_refusal'), false);
   assert.deepEqual(actionRows(reply), [orderDiagnosticMessage('next-action', { variant: 'fail-no-result' })]);
 });
 
-test('matching patch context failure without a refusal line keeps the Verify reason', () => {
-  const { meta } = collect(buildRun({
+test('matching patch context failure without a refusal line keeps the Verify reason', async () => {
+  const { meta } = await collect(buildRun({
     stderr: `Failed to find expected lines in ${deniedPath}:`,
     result: buildResult(changes, { verify_passed: false }),
   }), 'codex-build', 0);
@@ -189,8 +189,8 @@ for (const [name, options, reason] of [
     },
   }, /read-only/],
 ]) {
-  test(`${name} retains its earlier verdict and Action with refusal evidence present`, () => {
-    const { meta, reply } = collect(buildRun({ result: undefined, ...options }), 'codex-build', 1);
+  test(`${name} retains its earlier verdict and Action with refusal evidence present`, async () => {
+    const { meta, reply } = await collect(buildRun({ result: undefined, ...options }), 'codex-build', 1);
     assert.equal(meta.status, 'FAIL');
     assert.match(meta.reason, reason);
     assert.notEqual(meta.reason_rule, 'build-scope-write-refused');

@@ -20,7 +20,7 @@ for (const agent of ['codex-build', 'codex-scout', 'codex-review', 'codex-adviso
     ['fail-output-limit', outputLimitEvents],
     ['fail-no-result', unknownFailureEvents],
   ]) {
-    test(`${agent} collects ${variant} with exactly one Action and no ready resume line`, () => {
+    test(`${agent} collects ${variant} with exactly one Action and no ready resume line`, async () => {
       const stop = {
         version: 2, trigger: 'exit', stopped_at: '2026-10-28T12:00:00.000Z', exit_code: 1,
         tree_stop: { state: 'exited' }, result_file: { state: 'missing' },
@@ -35,7 +35,7 @@ for (const agent of ['codex-build', 'codex-scout', 'codex-review', 'codex-adviso
         phase, silence_policy: { threshold_ms: 996000 },
         recovery_policy: { enabled: true, brake: { value: 'on' }, budget_ms: 1102000 },
       }));
-      const { meta, reply } = collect(dir, agent, 1);
+      const { meta, reply } = await collect(dir, agent, 1);
       assert.equal(meta.status, 'FAIL');
       assert.equal(meta.exit, 1);
       assert.equal(meta.result_ok, false);

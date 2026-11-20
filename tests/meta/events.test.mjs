@@ -127,14 +127,14 @@ test('a truncated final JSONL line does not hide earlier events', () => {
   assert.equal(parsed.usage, null);
 });
 
-test('model and sandbox come from the runner arguments when events are present', () => {
+test('model and sandbox come from the runner arguments when events are present', async () => {
   const dir = makeRun({
     args: ['exec', '--json', '-m', 'configured-model', '--sandbox', 'read-only'],
     events: [{ type: 'thread.started', thread_id: 'thread-18' }],
     result: buildResult([]),
   });
 
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
 
   assert.equal(meta.model, 'configured-model');
   assert.equal(meta.sandbox, 'read-only');
@@ -154,7 +154,7 @@ test('readEvents distinguishes an empty stream from a missing stream', () => {
   );
 });
 
-test('meta.json accounts for events.jsonl and stderr.log without log_bytes', () => {
+test('meta.json accounts for events.jsonl and stderr.log without log_bytes', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     events: [{ type: 'thread.started', thread_id: 'meta-1' }],
@@ -162,7 +162,7 @@ test('meta.json accounts for events.jsonl and stderr.log without log_bytes', () 
     result: buildResult([]),
   });
 
-  collect(dir, 'codex-build', 0);
+  await collect(dir, 'codex-build', 0);
   const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
 
   assert.equal(meta.events_bytes, fs.statSync(path.join(dir, 'events.jsonl')).size);

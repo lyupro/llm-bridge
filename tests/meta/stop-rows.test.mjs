@@ -243,9 +243,9 @@ test('a usable-result FAIL does not access or render stop assessments', () => {
 });
 
 for (const agent of ['codex-build', 'codex-advisor']) {
-  test(`${agent} unusable-result FAIL places diagnostic rows after artifacts/worktree and before log`, () => {
+  test(`${agent} unusable-result FAIL places diagnostic rows after artifacts/worktree and before log`, async () => {
     const dir = makeRun({ args: ['exec', '--json'], events: [], stderr: 'panic: failed before result\n' });
-    const { meta, reply } = collect(dir, agent, 1);
+    const { meta, reply } = await collect(dir, agent, 1);
     assert.equal(meta.status, 'FAIL');
     assert.equal(meta.result_ok, false);
     const continuation = agent === 'codex-build'

@@ -44,17 +44,17 @@ test('snapshotRefusal names the side only when the comparison provides it', () =
     'worktree snapshots cannot be compared (incompatible-versions): Restart.');
 });
 
-test('a v2 Cyrillic in-scope build edit is OK and its exact path is displayed', () => {
+test('a v2 Cyrillic in-scope build edit is OK and its exact path is displayed', async () => {
   const dir = makeRun({ result: claim(), before: v2(), after: v2('2\t0'), scope: 'src/**\n' });
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.ok(reply.includes(file));
   assert.deepEqual(runSnapshotChanges(dir), { ok: true, changed: [file] });
 });
 
-test('the same v2 Cyrillic name outside scope fails before report matching', () => {
+test('the same v2 Cyrillic name outside scope fails before report matching', async () => {
   const dir = makeRun({ result: claim(), before: v2(), after: v2('2\t0'), scope: 'docs/**\n' });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, `out-of-scope changes (1): ${file}`);
 });
@@ -63,38 +63,38 @@ for (const [name, before, after] of [
   ['v1/v2', '1\t0\tsrc/a.mjs\n', v2()],
   ['v2/v1', v2(), '1\t0\tsrc/a.mjs\n'],
 ]) {
-  test(`${name} fails with incompatible-versions both with and without scope`, () => {
+  test(`${name} fails with incompatible-versions both with and without scope`, async () => {
     for (const scope of ['src/**\n', '']) {
       const dir = makeRun({ result: claim(), before, after, scope });
       const verdict = reportVersusWork(dir, claim());
       assert.equal(verdict.ok, false);
       assert.equal(verdict.carried, false);
       assert.match(verdict.reason, /\(incompatible-versions\)/);
-      const { meta } = collect(dir, 'codex-build', 0);
+      const { meta } = await collect(dir, 'codex-build', 0);
       assert.equal(meta.status, 'FAIL');
       assert.match(meta.reason, /\(incompatible-versions\)/);
     }
   });
 }
 
-test('a legacy git-quoted name fails instead of being judged as a literal path', () => {
+test('a legacy git-quoted name fails instead of being judged as a literal path', async () => {
   // The 2026-09-30 incident: git octal escapes are not the original Cyrillic spelling.
   const quoted = '1\t0\t"src/\\320\\277.mjs"\n';
   for (const [before, after, side] of [[quoted, '', 'before'], ['', quoted, 'after']]) {
     const dir = makeRun({ result: claim(), before, after, scope: 'src/**\n' });
-    const { meta } = collect(dir, 'codex-build', 0);
+    const { meta } = await collect(dir, 'codex-build', 0);
     assert.equal(meta.status, 'FAIL');
     assert.match(meta.reason, new RegExp(`\\(${side} legacy-quoted-name\\)`));
   }
 });
 
-test('equal-size untracked edits change when their sha256 changes', () => {
+test('equal-size untracked edits change when their sha256 changes', async () => {
   const state = (text) => `U\t${Buffer.byteLength(text)}:${createHash('sha256').update(text).digest('hex')}`;
   const before = v2(state('first'));
   const after = v2(state('other'));
   const dir = makeRun({ result: claim(), before, after, scope: 'src/**\n' });
   assert.deepEqual(runSnapshotChanges(dir), { ok: true, changed: [file] });
-  assert.equal(collect(dir, 'codex-build', 0).meta.status, 'OK');
+  assert.equal((await collect(dir, 'codex-build', 0)).meta.status, 'OK');
 });
 
 for (const side of ['before', 'after']) {
@@ -117,22 +117,22 @@ for (const side of ['before', 'after']) {
     }
   });
 
-  test(`a malformed ${side} snapshot refuses both scope and report judgement`, () => {
+  test(`a malformed ${side} snapshot refuses both scope and report judgement`, async () => {
     const snapshots = { before: '', after: '', [side]: 'damaged row\n' };
     for (const scope of ['', 'src/**\n']) {
       const dir = makeRun({ result: build([]), ...snapshots, scope });
-      const { meta } = collect(dir, 'codex-build', 0);
+      const { meta } = await collect(dir, 'codex-build', 0);
       assert.equal(meta.status, 'FAIL');
       assert.match(meta.reason, new RegExp(`\\(${side} malformed\\)`));
     }
   });
 }
 
-test('a failed verification retains priority over snapshot refusal', () => {
+test('a failed verification retains priority over snapshot refusal', async () => {
   const dir = makeRun({
     result: build([], { verify_passed: false }), before: 'broken\n', after: '', scope: 'src/**\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /verification.*failed/);
   assert.doesNotMatch(meta.reason, /snapshots cannot be compared/);

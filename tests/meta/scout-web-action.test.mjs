@@ -32,11 +32,11 @@ const marked = (kind) => questions.map((q) => ({ ...q, kind }));
 const oldReason = 'scout executed no command, so no answer rests on reading the code; '
   + 'check stderr.log for sandbox refusals before changing the order';
 
-function run(extra = {}, exit = 0) {
+async function run(extra = {}, exit = 0) {
   const dir = makeRun({
     args: ['exec', '--json'], questions, result: resultOf(), events: [thread, search, search], ...extra,
   });
-  const collected = collect(dir, 'codex-scout', exit);
+  const collected = await collect(dir, 'codex-scout', exit);
   const saved = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
   assert.equal(saved.reason_rule, collected.meta.reason_rule);
   return { dir, ...collected };
@@ -50,8 +50,8 @@ function assertAction(reply, variant) {
   return expected;
 }
 
-test('unmarked external questions, zero commands and completed URL searches keep FAIL with marker guidance', () => {
-  const { dir, meta, reply } = run();
+test('unmarked external questions, zero commands and completed URL searches keep FAIL with marker guidance', async () => {
+  const { dir, meta, reply } = await run();
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.result_ok, true);
   assert.equal(meta.commands_executed.chain, 0);
@@ -72,8 +72,8 @@ test('unmarked external questions, zero commands and completed URL searches keep
     { status: 'FAIL', reason: meta.reason, rule: 'scout-commands-run' });
 });
 
-test('zero completed searches retain the exact sandbox reason and generic filled-result Action', () => {
-  const { meta, reply } = run({ events: [thread, { ...search, type: 'item.started' }] });
+test('zero completed searches retain the exact sandbox reason and generic filled-result Action', async () => {
+  const { meta, reply } = await run({ events: [thread, { ...search, type: 'item.started' }] });
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.web_searches.chain.completed, 0);
   assert.equal(meta.reason_rule, 'scout-commands-run');
@@ -103,8 +103,8 @@ test('mixed web and repository questions retain the no-command reason and retry 
   }
 });
 
-test('the action uses the rule key even when diagnostic prose is replaced', () => {
-  const { dir, meta } = run();
+test('the action uses the rule key even when diagnostic prose is replaced', async () => {
+  const { dir, meta } = await run();
   const changed = { ...meta, reason: 'A completely different diagnostic.' };
   assert.equal(failActionVariant(changed), 'fail-scout-web-unmarked');
   assert.equal(postRunActionVariant(changed), 'fail-scout-web-unmarked');
@@ -114,8 +114,8 @@ test('the action uses the rule key even when diagnostic prose is replaced', () =
   }
 });
 
-test('the incident variant requires a readable result and positive chain searches, never only run searches', () => {
-  const { meta } = run();
+test('the incident variant requires a readable result and positive chain searches, never only run searches', async () => {
+  const { meta } = await run();
   for (const chain of [undefined, null, { completed: 0 }]) {
     assert.equal(failActionVariant({ ...meta, web_searches: { run: { completed: 9 }, chain } }), 'fail-result');
   }
@@ -140,8 +140,8 @@ for (const [key, extra] of [
     result: { ...resultOf(), answers: resultOf().answers.map((a) => ({ ...a, evidence: ['https://elsewhere.example/docs'] })) },
   }],
 ]) {
-  test(`${key} preserves its key and the existing fail-result Action`, () => {
-    const { dir, meta, reply } = run({ events: [thread, COMPLETED_COMMAND, search], ...extra });
+  test(`${key} preserves its key and the existing fail-result Action`, async () => {
+    const { dir, meta, reply } = await run({ events: [thread, COMPLETED_COMMAND, search], ...extra });
     assert.equal(meta.status, 'FAIL');
     assert.equal(meta.reason_rule, key);
     assertAction(reply, 'fail-result');
@@ -153,9 +153,9 @@ for (const [key, extra] of [
   });
 }
 
-test('a correctly marked web-only run and a command-backed unmarked run remain OK with a null key', () => {
+test('a correctly marked web-only run and a command-backed unmarked run remain OK with a null key', async () => {
   for (const extra of [{ questions: marked('web-research') }, { events: [thread, COMPLETED_COMMAND, search] }]) {
-    const { meta, reply } = run(extra);
+    const { meta, reply } = await run(extra);
     assert.equal(meta.status, 'OK', meta.reason);
     assert.equal(meta.reason_rule, null);
     assert.equal(meta.reason, null);
@@ -163,7 +163,7 @@ test('a correctly marked web-only run and a command-backed unmarked run remain O
   }
 });
 
-test('non-rule scout outcomes always have a null key', () => {
+test('non-rule scout outcomes always have a null key', async () => {
   for (const [extra, exit, status] of [
     [{ result: null }, 0, 'FAIL'],
     [{}, 1, 'FAIL'],
@@ -171,19 +171,19 @@ test('non-rule scout outcomes always have a null key', () => {
     [{ status: { stopped_on_deadline: true } }, 0, 'FAIL'],
     [{ result: null, events: [{ type: 'error', message: 'quota exhausted' }] }, 1, 'LIMIT'],
   ]) {
-    const { meta } = run(extra, exit);
+    const { meta } = await run(extra, exit);
     assert.equal(meta.status, status);
     assert.equal(meta.reason_rule, null);
   }
 });
 
-test('non-scout failures always carry a null rule key', () => {
+test('non-scout failures always carry a null rule key', async () => {
   for (const agent of ['codex-build', 'codex-review', 'codex-advisor']) {
     const dir = makeRun({
       args: ['exec', '--json'], events: [thread, search], file: AGENTS[agent].result,
       result: agent === 'codex-build' ? buildResult([], { verify_passed: false }) : undefined,
     });
-    const { meta, reply } = collect(dir, agent, 0);
+    const { meta, reply } = await collect(dir, agent, 0);
     assert.equal(meta.status, 'FAIL');
     assert.equal(meta.reason_rule, null);
     assertAction(reply, agent === 'codex-build' ? 'fail-result' : 'fail-no-result');
@@ -191,8 +191,8 @@ test('non-scout failures always carry a null rule key', () => {
   }
 });
 
-test('resume-chain provenance gaps carry no answer-rule key or marker Action', () => {
-  const { dir, meta, reply } = run({ status: { resumed_from: 'missing-predecessor' } });
+test('resume-chain provenance gaps carry no answer-rule key or marker Action', async () => {
+  const { dir, meta, reply } = await run({ status: { resumed_from: 'missing-predecessor' } });
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /^resume chain: missing-predecessor/);
   assert.equal(meta.reason_rule, null);
@@ -201,7 +201,7 @@ test('resume-chain provenance gaps carry no answer-rule key or marker Action', (
   assert.equal(resolveStatus({ resultOk: true, exit: 0, agent: 'codex-scout', runDir: dir, result: resultOf() }).rule, null);
 });
 
-test('retained predecessor searches select the incident message and Action without current searches', () => {
+test('retained predecessor searches select the incident message and Action without current searches', async () => {
   const root = makeChainRoot([
     { name: 'previous', meta: {
       session_id: 'web-action', commands_executed: { run: 0 },
@@ -213,7 +213,7 @@ test('retained predecessor searches select the incident message and Action witho
   fs.writeFileSync(path.join(dir, 'status.json'), JSON.stringify({ resumed_from: 'previous' }));
   fs.writeFileSync(path.join(dir, 'questions.json'), JSON.stringify(questions));
   fs.writeFileSync(path.join(dir, 'events.jsonl'), JSON.stringify(thread) + '\n');
-  const { meta, reply } = collect(dir, 'codex-scout', 0);
+  const { meta, reply } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.web_searches.run.completed, 0);
   assert.equal(meta.web_searches.chain.completed, 3);

@@ -32,11 +32,11 @@ const scoutResult = {
 const noCommandReason = 'scout executed no command, so no answer rests on reading the code; '
   + 'check stderr.log for sandbox refusals before changing the order';
 
-function verdict(extra = {}) {
+async function verdict(extra = {}) {
   const dir = makeRun({
     args: ['exec', '--json'], events: noCommands, questions, result: scoutResult, ...extra,
   });
-  return collect(dir, 'codex-scout', 0).meta;
+  return (await collect(dir, 'codex-scout', 0)).meta;
 }
 
 function withEvidence(evidence) {
@@ -46,21 +46,21 @@ function withEvidence(evidence) {
   };
 }
 
-test('all marked questions with startup references and prose pass without commands', () => {
-  const meta = verdict();
+test('all marked questions with startup references and prose pass without commands', async () => {
+  const meta = await verdict();
   assert.equal(meta.status, 'OK', meta.reason);
 });
 
-test('an answer citing an unread repository coordinate fails even with a startup reference', () => {
+test('an answer citing an unread repository coordinate fails even with a startup reference', async () => {
   const coordinate = 'src/home/lib/runner/launcher.mjs:52';
-  const meta = verdict({ result: withEvidence(['startup:task', coordinate]) });
+  const meta = await verdict({ result: withEvidence(['startup:task', coordinate]) });
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason,
     `scout cited ${coordinate} without executing a command: an address nobody read`);
 });
 
-test('a finding citing an unread repository coordinate fails', () => {
-  const meta = verdict({
+test('a finding citing an unread repository coordinate fails', async () => {
+  const meta = await verdict({
     result: { ...scoutResult, findings: [{ where: 'cli/install.mjs:10', fact: 'An unread claim.' }] },
   });
   assert.equal(meta.status, 'FAIL');
@@ -68,40 +68,40 @@ test('a finding citing an unread repository coordinate fails', () => {
     'scout cited cli/install.mjs:10 without executing a command: an address nobody read');
 });
 
-test('marked questions with plain sentence evidence fail naming the unsourced question', () => {
-  const meta = verdict({ result: withEvidence(['The startup task was supplied in the prompt.']) });
+test('marked questions with plain sentence evidence fail naming the unsourced question', async () => {
+  const meta = await verdict({ result: withEvidence(['The startup task was supplied in the prompt.']) });
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason,
     'responses to startup-context questions without a startup:<source> reference: Q1');
 });
 
-test('mixed questions without commands retain the existing no-command reason', () => {
-  const meta = verdict({
+test('mixed questions without commands retain the existing no-command reason', async () => {
+  const meta = await verdict({
     questions: [questions[0], { ...questions[1], kind: QUESTION_KIND.CODE_REQUIRED }],
   });
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, noCommandReason);
 });
 
-test('archived questions without kind retain the existing no-command reason', () => {
-  const meta = verdict({ questions: questions.map(({ id, text }) => ({ id, text })) });
+test('archived questions without kind retain the existing no-command reason', async () => {
+  const meta = await verdict({ questions: questions.map(({ id, text }) => ({ id, text })) });
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, noCommandReason);
 });
 
-test('a completed command allows repository coordinates alongside startup references', () => {
-  const meta = verdict({
+test('a completed command allows repository coordinates alongside startup references', async () => {
+  const meta = await verdict({
     events: [...noCommands, COMPLETED_COMMAND],
     result: withEvidence(['src/home/lib/runner/launcher.mjs:52', 'startup:task']),
   });
   assert.equal(meta.status, 'OK', meta.reason);
 });
 
-test('without an events stream repository coordinates do not trigger the unread-address rule', () => {
+test('without an events stream repository coordinates do not trigger the unread-address rule', async () => {
   const dir = makeRun({
     questions, result: withEvidence(['startup:task', 'src/home/lib/runner/launcher.mjs:52']),
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'OK', meta.reason);
 });
 
@@ -126,29 +126,29 @@ test('scout instructions render the startup rule only when a question has startu
   assert.ok(unmarked.includes('support every fact about the code with a `path:line` reference'));
 });
 
-test('only a non-empty array with every item marked receives the command exemption', () => {
+test('only a non-empty array with every item marked receives the command exemption', async () => {
   assert.equal(allStartupContext(questions), true);
   for (const input of [undefined, null, {}, [], [null], [questions[0], null],
     [{ id: 'Q1' }], [questions[0], { kind: QUESTION_KIND.CODE_REQUIRED }]]) {
     assert.equal(allStartupContext(input), false);
   }
   for (const input of [null, {}, [], [questions[0], null]]) {
-    assert.equal(verdict({ questions: input }).reason, noCommandReason);
+    assert.equal((await verdict({ questions: input })).reason, noCommandReason);
   }
 });
 
-test('coverage still precedes startup source and coordinate checks', () => {
-  const missing = verdict({ result: { ...scoutResult, answers: [] } });
+test('coverage still precedes startup source and coordinate checks', async () => {
+  const missing = await verdict({ result: { ...scoutResult, answers: [] } });
   assert.equal(missing.status, 'FAIL');
   assert.equal(missing.reason, 'scout did not answer 2 sub-questions: Q1, Q2');
   // OW-068: one missing answer is named as missing, not misreported as a thin one.
-  const oneMissing = verdict({ result: { ...scoutResult, answers: scoutResult.answers.slice(1) } });
+  const oneMissing = await verdict({ result: { ...scoutResult, answers: scoutResult.answers.slice(1) } });
   assert.equal(oneMissing.reason, 'scout did not answer 1 sub-questions: Q1');
-  const thin = verdict({
+  const thin = await verdict({
     result: { ...scoutResult, answers: scoutResult.answers.map((answer) => ({ ...answer, answer: 'Short.' })) },
   });
   assert.equal(thin.reason, 'response to Q1, Q2 contains coordinates without analysis');
-  const empty = verdict({ result: withEvidence([]) });
+  const empty = await verdict({ result: withEvidence([]) });
   assert.equal(empty.reason, 'responses without a single evidence reference: Q1');
 });
 
@@ -180,18 +180,18 @@ test('empty startup sources fail and multiple unsourced question ids retain ques
   });
 });
 
-test('every answer is checked for unread coordinates, including duplicate answers', () => {
+test('every answer is checked for unread coordinates, including duplicate answers', async () => {
   const result = {
     ...scoutResult,
     answers: [...scoutResult.answers, { question_id: 'q1', evidence: ['First ref: extra.mjs:8 then other.js:9'] }],
     findings: [{ where: 'finding.mjs:4' }],
   };
-  assert.equal(verdict({ result }).reason,
+  assert.equal((await verdict({ result })).reason,
     'scout cited extra.mjs:8 without executing a command: an address nobody read');
 });
 
-test('startup-prefixed sources are exempt from coordinate matching', () => {
-  const meta = verdict({
+test('startup-prefixed sources are exempt from coordinate matching', async () => {
+  const meta = await verdict({
     result: { ...withEvidence(['startup:task cites source.mjs:42']), findings: [{ where: 'startup:task.mjs:2' }] },
   });
   assert.equal(meta.status, 'OK', meta.reason);

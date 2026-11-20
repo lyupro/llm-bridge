@@ -44,9 +44,9 @@ for (const agent of ['codex-build', 'codex-scout', 'codex-review', 'codex-adviso
     ['fail-result', failReply, true, { kind: 'output-limit' }],
     ['fail-no-result', failReply, false, { kind: 'unknown' }],
   ]) {
-    test(`${agent} ${variant} (${situation?.kind}) has exactly one registry Action as its third row`, () => {
+    test(`${agent} ${variant} (${situation?.kind}) has exactly one registry Action as its third row`, async () => {
       const dir = makeRun();
-      const observed = collect(dir, agent, 1).meta;
+      const observed = (await collect(dir, agent, 1)).meta;
       const meta = {
         ...observed,
         reason: 'post-run non-OK', events_bytes: 0, stderr_bytes: 0, exit: 1, result_ok,
@@ -97,9 +97,9 @@ for (const [status, variant, options] of [
   }],
   ['FAIL', 'fail-no-result', { events: [], stderr: 'panic: failed before result\n' }],
 ]) {
-  test(`collected ${status} (${variant}) preserves exactly one third-row registry Action`, () => {
+  test(`collected ${status} (${variant}) preserves exactly one third-row registry Action`, async () => {
     const dir = makeRun({ args: ['exec', '--json'], ...options });
-    const { meta, reply } = collect(dir, 'codex-build', 1);
+    const { meta, reply } = await collect(dir, 'codex-build', 1);
     assert.equal(meta.status, status);
     assertAction(reply.split('\n'), variant);
   });

@@ -264,9 +264,9 @@ test('inherited catalog and switch keys do not configure a recovery policy', () 
 });
 
 test('collect copies the saved recovery policy and uses it only for automatic eligibility and its reply row', async () => {
-  await withTempTree('recovery-collect-', (dir) => {
+  await withTempTree('recovery-collect-', async (dir) => {
     const workerPath = path.join(dir, 'worker.json');
-    const original = collect(dir, 'codex-advisor', 1);
+    const original = await collect(dir, 'codex-advisor', 1);
     // Plan_80 E15/O2b: historical budgets, switches and host brakes must survive recollection.
     const savedPolicy = {
       ...resolveRecoveryPolicy('codex-advisor', 'advise'),
@@ -277,7 +277,7 @@ test('collect copies the saved recovery policy and uses it only for automatic el
     };
     fs.writeFileSync(workerPath, JSON.stringify({ phase: 'advise', recovery_policy: savedPolicy }));
     for (let pass = 0; pass < 2; pass += 1) {
-      const { meta, reply } = collect(dir, 'codex-advisor', 1);
+      const { meta, reply } = await collect(dir, 'codex-advisor', 1);
       const worker = JSON.parse(fs.readFileSync(workerPath, 'utf8'));
       const recorded = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
       assert.deepEqual(meta.recovery_policy, worker.recovery_policy);
@@ -306,14 +306,14 @@ test('collect copies the saved recovery policy and uses it only for automatic el
 });
 
 test('collect preserves a recovery policy with no measured budget and a disabled package switch', async () => {
-  await withTempTree('recovery-uncalibrated-', (dir) => {
+  await withTempTree('recovery-uncalibrated-', async (dir) => {
     const savedPolicy = {
       version: 1, role: 'scout', phase: 'default', budget_ms: null, enabled: false,
       calibration: null,
       brake: { key: 'LLM_BRIDGE_AUTO_RECOVERY', value: 'on', source: 'default' },
     };
     fs.writeFileSync(path.join(dir, 'worker.json'), JSON.stringify({ recovery_policy: savedPolicy }));
-    const { meta } = collect(dir, 'codex-scout', 1);
+    const { meta } = await collect(dir, 'codex-scout', 1);
     const recorded = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
     assert.deepEqual(meta.recovery_policy, savedPolicy);
     assert.deepEqual(recorded.recovery_policy, savedPolicy);
@@ -321,10 +321,10 @@ test('collect preserves a recovery policy with no measured budget and a disabled
 });
 
 test('collect records a null recovery policy for older runs with no worker or no policy field', async () => {
-  await withTempTree('recovery-legacy-', (dir) => {
+  await withTempTree('recovery-legacy-', async (dir) => {
     for (const worker of [undefined, {}, { recovery_policy: null }]) {
       if (worker !== undefined) fs.writeFileSync(path.join(dir, 'worker.json'), JSON.stringify(worker));
-      const { meta } = collect(dir, 'codex-scout', 1);
+      const { meta } = await collect(dir, 'codex-scout', 1);
       assert.equal(meta.recovery_policy, null);
       const recorded = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
       assert.equal(recorded.recovery_policy, null);

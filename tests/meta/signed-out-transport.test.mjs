@@ -13,46 +13,46 @@ const fixture = fs.readFileSync(
 const fixtureEvents = fixture.trim().split(/\r?\n/).map((line) => JSON.parse(line));
 const signedOut = fixtureEvents.find((event) => event.type === 'turn.failed');
 
-test('the verbatim signed-out stream with an empty result is UNAVAILABLE', () => {
+test('the verbatim signed-out stream with an empty result is UNAVAILABLE', async () => {
   const dir = makeRun({ events: fixture });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'UNAVAILABLE');
   assert.match(meta.reason, /401 Unauthorized/);
   assert.equal(meta.reason, readEvents(dir).transport_error.reason);
 });
 
-test('a recovered run ignores the signed-out transport failure', () => {
+test('a recovered run ignores the signed-out transport failure', async () => {
   const dir = makeRun({ events: fixture, result: buildResult([]) });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
 
   assert.equal(meta.status, 'OK');
 });
 
-test('reconnection errors without the final turn failure stay FAIL', () => {
+test('reconnection errors without the final turn failure stay FAIL', async () => {
   const events = fixtureEvents.filter((event) =>
     event.type === 'error' && event.message.startsWith('Reconnecting...'));
   const dir = makeRun({ events });
 
-  assert.equal(collect(dir, 'codex-build', 1).meta.status, 'FAIL');
+  assert.equal((await collect(dir, 'codex-build', 1)).meta.status, 'FAIL');
   assert.equal(readEvents(dir).transport_error.unavailable, false);
 });
 
-test('an unmeasured invalid-token turn failure stays FAIL with its CLI reason', () => {
+test('an unmeasured invalid-token turn failure stays FAIL with its CLI reason', async () => {
   const message = 'unexpected status 401 Unauthorized: invalid token';
   const dir = makeRun({ events: [{ type: 'turn.failed', error: { message } }] });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, message);
   assert.equal(readEvents(dir).transport_error.unavailable, false);
 });
 
-test('quota takes priority over a signed-out turn failure in either stream order', () => {
+test('quota takes priority over a signed-out turn failure in either stream order', async () => {
   const quota = { type: 'turn.failed', error: { status: 429 } };
   for (const events of [[signedOut, quota], [quota, signedOut]]) {
     const dir = makeRun({ events });
-    const { meta } = collect(dir, 'codex-build', 1);
+    const { meta } = await collect(dir, 'codex-build', 1);
     const error = readEvents(dir).transport_error;
 
     assert.equal(meta.status, 'LIMIT');
@@ -71,35 +71,35 @@ test('readEvents selects the measured final failure from the verbatim fixture', 
   assert.deepEqual(error.event, signedOut);
 });
 
-test('a matching plain error event cannot prove unavailability', () => {
+test('a matching plain error event cannot prove unavailability', async () => {
   const events = [{ type: 'error', message: signedOut.error.message }];
   const dir = makeRun({ events });
 
-  assert.equal(collect(dir, 'codex-build', 1).meta.status, 'FAIL');
+  assert.equal((await collect(dir, 'codex-build', 1)).meta.status, 'FAIL');
   assert.equal(readEvents(dir).transport_error.unavailable, false);
 });
 
-test('bare authentication statuses and quoted content cannot prove unavailability', () => {
+test('bare authentication statuses and quoted content cannot prove unavailability', async () => {
   for (const status of [401, 403]) {
     const events = [{ type: 'turn.failed', error: { status } }];
     const dir = makeRun({ events });
-    assert.equal(collect(dir, 'codex-build', 1).meta.status, 'FAIL');
+    assert.equal((await collect(dir, 'codex-build', 1)).meta.status, 'FAIL');
     assert.equal(readEvents(dir).transport_error.unavailable, false);
   }
   const dir = makeRun({ events: [
     { type: 'turn.started' },
     { type: 'item.completed', item: { type: 'error', message: signedOut.error.message } },
   ] });
-  assert.equal(collect(dir, 'codex-build', 1).meta.status, 'FAIL');
+  assert.equal((await collect(dir, 'codex-build', 1)).meta.status, 'FAIL');
   assert.equal(readEvents(dir).transport_error, null);
 });
 
-test('quota suppresses unavailability even on a matching measured message', () => {
+test('quota suppresses unavailability even on a matching measured message', async () => {
   const events = [{ type: 'turn.failed', error: { status: 429, error: { message: signedOut.error.message } } }];
   const dir = makeRun({ events });
   const error = readEvents(dir).transport_error;
 
   assert.equal(error.quota, true);
   assert.equal(error.unavailable, false);
-  assert.equal(collect(dir, 'codex-build', 1).meta.status, 'LIMIT');
+  assert.equal((await collect(dir, 'codex-build', 1)).meta.status, 'LIMIT');
 });

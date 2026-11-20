@@ -48,7 +48,7 @@ for (const [agent, field] of [['codex-build', 'summary'], ['codex-scout', 'answe
   });
 }
 
-test('successful replies use the read command instead of a raw file path', () => {
+test('successful replies use the read command instead of a raw file path', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     events: [{ type: 'thread.started', thread_id: 'reply-1' }, COMPLETED_COMMAND],
@@ -60,14 +60,14 @@ test('successful replies use the read command instead of a raw file path', () =>
     },
   });
 
-  const { meta, reply } = collect(dir, 'codex-scout', 0);
+  const { meta, reply } = await collect(dir, 'codex-scout', 0);
 
   assert.equal(meta.status, 'OK');
   assert.ok(reply.includes(`Log: llm-bridge read ${dir}`));
   assert.doesNotMatch(reply, /raw\.log/);
 });
 
-test('successful build replies preserve summaries longer than the old 160-character limit', () => {
+test('successful build replies preserve summaries longer than the old 160-character limit', async () => {
   const summary = `${'verified behavior '.repeat(11)}final marker`;
   const dir = makeRun({
     args: ['exec', '--json'],
@@ -75,13 +75,13 @@ test('successful build replies preserve summaries longer than the old 160-charac
     result: buildResult([], { summary }),
   });
 
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
 
   assert.ok(summary.length > 160 && summary.length < 300);
   assert.ok(reply.includes(summary));
 });
 
-test('build replies name incomplete flag coverage immediately after the flags row', () => {
+test('build replies name incomplete flag coverage immediately after the flags row', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     events: [{ type: 'thread.started', thread_id: 'reply-flag-gaps' }],
@@ -90,7 +90,7 @@ test('build replies name incomplete flag coverage immediately after the flags ro
   fs.writeFileSync(path.join(dir, 'flags-coverage.txt'),
     '\na.mjs: start content truncated\n\nb.mjs: diff failed\n');
 
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
   const rows = reply.split('\n');
   const flagsAt = rows.findIndex((row) => row.startsWith('Flags: '));
 
@@ -100,7 +100,7 @@ test('build replies name incomplete flag coverage immediately after the flags ro
     'Flags coverage: incomplete — a.mjs: start content truncated (+1 more)');
 });
 
-test('build replies shorten a single coverage gap to 120 characters without a more suffix', () => {
+test('build replies shorten a single coverage gap to 120 characters without a more suffix', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     events: [{ type: 'thread.started', thread_id: 'reply-long-flag-gap' }],
@@ -108,7 +108,7 @@ test('build replies shorten a single coverage gap to 120 characters without a mo
   });
   fs.writeFileSync(path.join(dir, 'flags-coverage.txt'), `a.mjs: ${'start content '.repeat(15)}end\n`);
 
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
   const prefix = 'Flags coverage: incomplete — ';
   const row = reply.split('\n').find((value) => value.startsWith(prefix));
 
@@ -120,7 +120,7 @@ test('build replies shorten a single coverage gap to 120 characters without a mo
 
 for (const coverage of ['', '\n \t\n', null]) {
   const description = coverage === null ? 'absent' : coverage === '' ? 'empty' : 'blank';
-  test(`build replies omit flag coverage when its file is ${description}`, () => {
+  test(`build replies omit flag coverage when its file is ${description}`, async () => {
     const dir = makeRun({
       args: ['exec', '--json'],
       events: [{ type: 'thread.started', thread_id: 'reply-complete-flags' }],
@@ -128,14 +128,14 @@ for (const coverage of ['', '\n \t\n', null]) {
     });
     if (coverage !== null) fs.writeFileSync(path.join(dir, 'flags-coverage.txt'), coverage);
 
-    const { meta, reply } = collect(dir, 'codex-build', 0);
+    const { meta, reply } = await collect(dir, 'codex-build', 0);
 
     assert.equal(meta.status, 'OK');
     assert.doesNotMatch(reply, /^Flags coverage:/m);
   });
 }
 
-test('failed replies report events and stderr sizes plus the read command', () => {
+test('failed replies report events and stderr sizes plus the read command', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     events: [],
@@ -143,7 +143,7 @@ test('failed replies report events and stderr sizes plus the read command', () =
     result: buildResult([], { summary: '' }),
   });
 
-  const { reply } = collect(dir, 'codex-build', 1);
+  const { reply } = await collect(dir, 'codex-build', 1);
 
   assert.match(reply, /Artifacts: events\.jsonl \d+ B · stderr\.log \d+ B/);
   assert.ok(reply.includes(`Log: llm-bridge read ${dir}`));
@@ -160,7 +160,7 @@ test('failed replies report events and stderr sizes plus the read command', () =
   ].join('\n'));
 });
 
-test('replies report retained bytes from status.json, the only place housekeeping is recorded', () => {
+test('replies report retained bytes from status.json, the only place housekeeping is recorded', async () => {
   const retention = { bytes_freed: 41.2 * 1024 * 1024, runs: 12, days: 30 };
   const dir = makeRun({
     args: ['exec', '--json'],
@@ -169,14 +169,14 @@ test('replies report retained bytes from status.json, the only place housekeepin
     status: { state: 'running', retention },
   });
 
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
   const status = JSON.parse(fs.readFileSync(path.join(dir, 'status.json'), 'utf8'));
 
   assert.match(reply, /Retention: freed 41\.2 MB from 12 runs older than 30 days/);
   assert.deepEqual(status.retention, retention);
 });
 
-test('replies omit retention when no bytes were freed', () => {
+test('replies omit retention when no bytes were freed', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     events: [{ type: 'thread.started', thread_id: 'reply-no-retention' }],
@@ -184,7 +184,7 @@ test('replies omit retention when no bytes were freed', () => {
     status: { state: 'running', retention: { bytes_freed: 0, runs: 1, days: 30 } },
   });
 
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
 
   assert.doesNotMatch(reply, /^Retention:/m);
 });
@@ -193,7 +193,7 @@ test('replies omit retention when no bytes were freed', () => {
  * The row that would have exposed the defect it was written for: for three releases a run answered
  * on a model nobody ordered, and no line of any reply named a model at all.
  */
-test('a reply names the ordered worker and where its depth came from', () => {
+test('a reply names the ordered worker and where its depth came from', async () => {
   const dir = makeRun({
     args: ['exec', '--json', '-m', 'pinned-model'],
     profile: { model: 'pinned-model', model_source: 'config', effort: 'max', effort_source: 'config' },
@@ -201,7 +201,7 @@ test('a reply names the ordered worker and where its depth came from', () => {
     result: buildResult([]),
   });
 
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
   const rows = reply.split('\n');
 
   assert.match(reply, /^Model: pinned-model at max effort \(config\)$/m);
@@ -210,7 +210,7 @@ test('a reply names the ordered worker and where its depth came from', () => {
   assert.equal(rows.findIndex((r) => r.startsWith('Model: ')) + 1, rows.findIndex((r) => r.includes('Log: ')));
 });
 
-test('a run with no pinned model says so instead of going quiet', () => {
+test('a run with no pinned model says so instead of going quiet', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     profile: { model: '', model_source: 'codex default', effort: 'medium', effort_source: 'fallback' },
@@ -218,19 +218,19 @@ test('a run with no pinned model says so instead of going quiet', () => {
     result: buildResult([]),
   });
 
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
 
   assert.match(reply, /^Model: codex default at medium effort \(fallback\)$/m);
 });
 
-test('an archived run without a profile keeps its reply unchanged', () => {
+test('an archived run without a profile keeps its reply unchanged', async () => {
   const dir = makeRun({
     args: ['exec', '--json'],
     events: [{ type: 'thread.started', thread_id: 'reply-archived' }],
     result: buildResult([]),
   });
 
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
 
   assert.doesNotMatch(reply, /^Model:/m);
 });

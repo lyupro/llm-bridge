@@ -17,9 +17,9 @@ const reconnectFixture = fs.readFileSync(
 const fixtureEvents = fixture.trim().split(/\r?\n/).map((line) => JSON.parse(line));
 const capacityFailure = fixtureEvents.find((event) => event.type === 'turn.failed');
 
-test('the verbatim capacity stream with an empty result is CAPACITY with runner code 6', () => {
+test('the verbatim capacity stream with an empty result is CAPACITY with runner code 6', async () => {
   const dir = makeRun({ events: fixture });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'CAPACITY');
   assert.equal(meta.exit, 1);
@@ -28,26 +28,26 @@ test('the verbatim capacity stream with an empty result is CAPACITY with runner 
   assert.equal(exitCodeFor(meta.status), EXIT.CAPACITY);
 });
 
-test('capacity after reconnect errors with an empty result is CAPACITY', () => {
+test('capacity after reconnect errors with an empty result is CAPACITY', async () => {
   const dir = makeRun({ events: reconnectFixture });
 
-  assert.equal(collect(dir, 'codex-build', 1).meta.status, 'CAPACITY');
+  assert.equal((await collect(dir, 'codex-build', 1)).meta.status, 'CAPACITY');
 });
 
-test('a recovered run ignores the capacity transport failure', () => {
+test('a recovered run ignores the capacity transport failure', async () => {
   const dir = makeRun({ events: fixture, result: buildResult([]) });
 
-  assert.equal(collect(dir, 'codex-build', 0).meta.status, 'OK');
+  assert.equal((await collect(dir, 'codex-build', 0)).meta.status, 'OK');
 });
 
-test('quota takes priority on a capacity turn failure that also says quota', () => {
+test('quota takes priority on a capacity turn failure that also says quota', async () => {
   const events = [{
     type: 'turn.failed',
     error: { message: `${capacityFailure.error.message} quota exhausted` },
   }];
   const dir = makeRun({ events });
 
-  assert.equal(collect(dir, 'codex-build', 1).meta.status, 'LIMIT');
+  assert.equal((await collect(dir, 'codex-build', 1)).meta.status, 'LIMIT');
 });
 
 test('an unknown status is a programming error instead of a FAIL runner code', () => {

@@ -109,8 +109,8 @@ test('unmeasured capacity wording cannot prove capacity', () => {
   }
 });
 
-test('a recovered run with a populated result remains OK', () => {
+test('a recovered run with a populated result remains OK', async () => {
   const dir = makeRun({ events: fixture, result: buildResult([]) });
 
-  assert.equal(collect(dir, 'codex-build', 0).meta.status, 'OK');
+  assert.equal((await collect(dir, 'codex-build', 0)).meta.status, 'OK');
 });

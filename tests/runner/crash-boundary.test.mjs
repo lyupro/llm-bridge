@@ -60,14 +60,14 @@ function crash({ dir, currentAgent = agent, parent, launcher = false, failPublic
   return child;
 }
 
-function recordedRun(result) {
+async function recordedRun(result) {
   const dir = makeRun({
     result,
     stderr: 'existing diagnostic\n',
     events: [{ type: 'thread.started', thread_id: 'crash-boundary-fixture' }, COMPLETED_COMMAND],
     status: { state: 'running', agent, stop: { trigger: 'exit' } },
   });
-  return { dir, ...collect(dir, agent, 0) };
+  return { dir, ...(await collect(dir, agent, 0)) };
 }
 
 function assertRecordedFiles(dir, before) {
@@ -82,8 +82,8 @@ for (const [label, result, expectedStatus] of [
   ['FAIL without a result', undefined, 'FAIL'],
   ['OK with a result', buildResult([]), 'OK'],
 ]) {
-  test(`crash preserves a collected ${label} verdict and reply`, () => {
-    const { dir, meta, reply } = recordedRun(result);
+  test(`crash preserves a collected ${label} verdict and reply`, async () => {
+    const { dir, meta, reply } = await recordedRun(result);
     assert.equal(meta.status, expectedStatus);
     if (expectedStatus === 'FAIL') assert.match(reply, /Continuation:/);
     fs.writeFileSync(path.join(dir, 'reply.txt'), `${reply}\n`);
@@ -131,8 +131,8 @@ for (const [label, contents] of [
 }
 
 for (const reason of ['recorded reason', null]) {
-  test(`render failure preserves the verdict with ${reason === null ? 'a fallback' : 'its'} reason`, () => {
-    const { dir, meta } = recordedRun();
+  test(`render failure preserves the verdict with ${reason === null ? 'a fallback' : 'its'} reason`, async () => {
+    const { dir, meta } = await recordedRun();
     meta.status = 'LIMIT';
     meta.reason = reason;
     fs.writeFileSync(path.join(dir, 'meta.json'), `${JSON.stringify(meta, null, 2)}\n`);
@@ -220,8 +220,8 @@ test('a crash without a current run folder keeps the bare launcher reply', () =>
   assertRunnerFault(child.stdout);
 });
 
-test('a launcher crash with a recorded verdict answers on stdout', () => {
-  const { dir, meta, reply } = recordedRun(buildResult([]));
+test('a launcher crash with a recorded verdict answers on stdout', async () => {
+  const { dir, meta, reply } = await recordedRun(buildResult([]));
   const before = Object.fromEntries(['meta.json', 'status.json'].map((file) => [
     file, fs.readFileSync(path.join(dir, file)),
   ]));
@@ -235,8 +235,8 @@ test('a launcher crash with a recorded verdict answers on stdout', () => {
 });
 
 // Plan_80 E17, A12: adopting a child must move both the crash target and reply destination.
-test('adoptRun sends crash artifacts and the reply to the child only', () => {
-  const { dir: parent } = recordedRun();
+test('adoptRun sends crash artifacts and the reply to the child only', async () => {
+  const { dir: parent } = await recordedRun();
   const childDir = makeTempTree('crash-child-');
   fs.writeFileSync(path.join(childDir, 'status.json'), JSON.stringify({ state: 'running', agent }));
   const before = Object.fromEntries(fs.readdirSync(parent).map((file) => [

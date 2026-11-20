@@ -36,10 +36,10 @@ function automaticStatus(witness) {
 for (const witness of [{ state: 'absent' }, { state: 'not-observed' }, undefined, { state: 'unknown' }]) {
   const state = witness?.state ?? 'missing';
   const reason = `automatic continuation ran without a confirmed sandbox policy (witness: ${state}); its result is not trusted`;
-  test(`an automatic child with a filled result fails for witness ${state}`, () => {
+  test(`an automatic child with a filled result fails for witness ${state}`, async () => {
     const dir = makeRun({ status: automaticStatus(witness), result: buildResult([]) });
     assert.equal(sandboxWitnessGap(dir, { resultOk: true }), reason);
-    const { meta } = collect(dir, 'codex-build', 0);
+    const { meta } = await collect(dir, 'codex-build', 0);
     assert.equal(meta.result_ok, true);
     assert.equal(meta.status, 'FAIL');
     assert.equal(meta.reason, reason);
@@ -70,14 +70,14 @@ test('automatic child witness states are flattened and bounded to 60 characters'
     `automatic continuation ran without a confirmed sandbox policy (witness: ${'x'.repeat(57)}...); its result is not trusted`);
 });
 
-test('an automatic-looking recovery record without the exact marker stays manual', () => {
+test('an automatic-looking recovery record without the exact marker stays manual', async () => {
   for (const recovery of [
     { automatic: true, attempt: 1, parent: 'failed-pass' },
     { automatic: true, attempt: 2, parent: 'another-pass' },
   ]) {
     const dir = makeRun({ status: { ...resumedStatus({ state: 'absent' }), recovery }, result: buildResult([]) });
     assert.equal(sandboxWitnessGap(dir, { resultOk: true }), null);
-    const { meta } = collect(dir, 'codex-build', 0);
+    const { meta } = await collect(dir, 'codex-build', 0);
     assert.equal(meta.status, 'OK', meta.reason);
   }
 });
@@ -165,14 +165,14 @@ for (const [policy, expectedStatus, expectedReason, expectedRow] of [
   ['workspace-write', 'FAIL', unsafeReason, unsafeRow],
   ['read-only', 'OK', null, readOnlyRow],
 ]) {
-  test(`collect judges a filled valid resume result witnessed under ${policy}`, () => {
+  test(`collect judges a filled valid resume result witnessed under ${policy}`, async () => {
     const dir = makeRun({
       status: resumedStatus({ state: 'observed', policy, at }),
       result: buildResult([]), before: '', after: '',
       args: ['exec', 'resume', '--json', '-c', 'sandbox_mode=read-only', 'resume-thread'],
       events: [{ type: 'thread.started', thread_id: 'resume-thread' }],
     });
-    const { meta, reply } = collect(dir, 'codex-build', 0);
+    const { meta, reply } = await collect(dir, 'codex-build', 0);
     assert.equal(meta.result_ok, true);
     assert.equal(meta.status, expectedStatus, meta.reason);
     assert.equal(meta.reason, expectedReason);
@@ -185,10 +185,10 @@ for (const [policy, expectedStatus, expectedReason, expectedRow] of [
 }
 
 for (const witness of [{ state: 'absent' }, { state: 'not-observed' }, undefined]) {
-  test(`collect keeps an unconfirmed resume result OK (${witness?.state ?? 'missing'})`, () => {
+  test(`collect keeps an unconfirmed resume result OK (${witness?.state ?? 'missing'})`, async () => {
     const dir = makeRun({ status: resumedStatus(witness), result: buildResult([]) });
     assert.equal(sandboxWitnessGap(dir, { resultOk: true }), null);
-    const { meta, reply } = collect(dir, 'codex-build', 0);
+    const { meta, reply } = await collect(dir, 'codex-build', 0);
     assert.equal(meta.status, 'OK', meta.reason);
     assert.ok(reply.includes(witness?.state === 'absent' ? absentRow : unconfirmedRow));
   });

@@ -18,9 +18,9 @@ function assertNoContinuation(rows) {
   assert.equal(rows.some((row) => /^(?:resume:|retry:|continue:|Continuation:|Situation:)/.test(row)), false);
 }
 
-test('a build capacity reply names the signal and action, then the worktree and log', () => {
+test('a build capacity reply names the signal and action, then the worktree and log', async () => {
   const dir = makeRun({ events: fixture });
-  const { meta, reply } = collect(dir, 'codex-build', 1);
+  const { meta, reply } = await collect(dir, 'codex-build', 1);
   const rows = reply.split('\n');
 
   assert.equal(meta.status, 'CAPACITY');
@@ -34,9 +34,9 @@ test('a build capacity reply names the signal and action, then the worktree and 
   assertNoContinuation(rows);
 });
 
-test('a scout capacity reply has no worktree or continuation rows', () => {
+test('a scout capacity reply has no worktree or continuation rows', async () => {
   const dir = makeRun({ events: fixture });
-  const { meta, reply } = collect(dir, 'codex-scout', 1);
+  const { meta, reply } = await collect(dir, 'codex-scout', 1);
   const rows = reply.split('\n');
 
   assert.equal(meta.status, 'CAPACITY');
@@ -59,12 +59,12 @@ test('capacity reuses the LIMIT worktree row and cuts the signal', () => {
   assertNoContinuation(rows);
 });
 
-test('the existing profile wrapper adds exactly one model row before the capacity log', () => {
+test('the existing profile wrapper adds exactly one model row before the capacity log', async () => {
   const dir = makeRun({ events: fixture });
   fs.writeFileSync(path.join(dir, 'worker.json'), JSON.stringify({
     profile: { model: 'test-model', effort: 'high', effort_source: 'order' },
   }), 'utf8');
-  const rows = collect(dir, 'codex-build', 1).reply.split('\n');
+  const rows = (await collect(dir, 'codex-build', 1)).reply.split('\n');
 
   assert.equal(rows[0], firstRow);
   assert.equal(rows.filter((row) => row.startsWith('Model:')).length, 1);
@@ -73,18 +73,18 @@ test('the existing profile wrapper adds exactly one model row before the capacit
   assertNoContinuation(rows);
 });
 
-test('a non-capacity reconnect failure still renders FAIL', () => {
+test('a non-capacity reconnect failure still renders FAIL', async () => {
   const dir = makeRun({ events: [{ type: 'error', message: 'Reconnecting... 1/5' }] });
-  const { meta, reply } = collect(dir, 'codex-build', 1);
+  const { meta, reply } = await collect(dir, 'codex-build', 1);
 
   assert.equal(meta.status, 'FAIL');
   assert.match(reply, /^FAIL — /);
 });
 
-test('a recovered build strips a CAPACITY verdict prefix from its summary', () => {
+test('a recovered build strips a CAPACITY verdict prefix from its summary', async () => {
   const result = { ...buildResult([]), summary: 'CAPACITY — recovered work' };
   const dir = makeRun({ events: fixture, result });
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
 
   assert.equal(meta.status, 'OK');
   assert.equal(reply.split('\n')[0], 'OK — recovered work');

@@ -139,15 +139,15 @@ test('empty and missing streams have no failed turn', () => {
   }
 });
 
-test('a failed result remains FAIL through collect despite output-limit detection', () => {
+test('a failed result remains FAIL through collect despite output-limit detection', async () => {
   const result = buildResult([], { outcome: 'fail', summary: 'Output ceiling prevented completion' });
   const dir = makeRun({ events: fixture, result });
 
-  assert.equal(collect(dir, 'codex-build', 1).meta.status, 'FAIL');
+  assert.equal((await collect(dir, 'codex-build', 1)).meta.status, 'FAIL');
 });
 
-test('a recovered run with a populated result remains OK', () => {
+test('a recovered run with a populated result remains OK', async () => {
   const dir = makeRun({ events: fixture, result: buildResult([]) });
 
-  assert.equal(collect(dir, 'codex-build', 0).meta.status, 'OK');
+  assert.equal((await collect(dir, 'codex-build', 0)).meta.status, 'OK');
 });

@@ -78,12 +78,12 @@ test('readEvents reports zero executed commands for empty or absent streams', ()
   }
 });
 
-test('a fully covered scout with messages but no commands fails and starts its reply with FAIL', () => {
+test('a fully covered scout with messages but no commands fails and starts its reply with FAIL', async () => {
   const dir = makeRun({
     args: ['exec', '--json'], events: noCommands, result: scoutResult, questions,
   });
 
-  const { meta, reply } = collect(dir, 'codex-scout', 0);
+  const { meta, reply } = await collect(dir, 'codex-scout', 0);
 
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, noCommandReason);
@@ -92,47 +92,47 @@ test('a fully covered scout with messages but no commands fails and starts its r
 });
 
 for (const command of [COMPLETED_COMMAND, failedCommand]) {
-  test(`one completed command with status ${command.item.status} and exit ${command.item.exit_code} allows scout OK`, () => {
+  test(`one completed command with status ${command.item.status} and exit ${command.item.exit_code} allows scout OK`, async () => {
     const dir = makeRun({
       args: ['exec', '--json'], events: [...noCommands, command], result: scoutResult, questions,
     });
 
-    const { meta, reply } = collect(dir, 'codex-scout', 0);
+    const { meta, reply } = await collect(dir, 'codex-scout', 0);
 
     assert.equal(meta.status, 'OK', meta.reason);
     assert.ok(reply.startsWith('OK —'));
   });
 }
 
-test('a started command without a completed item does not allow scout OK', () => {
+test('a started command without a completed item does not allow scout OK', async () => {
   const dir = makeRun({
     args: ['exec', '--json'], events: [...noCommands, startedCommand], result: scoutResult, questions,
   });
 
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
 
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, noCommandReason);
 });
 
-test('missing commands take precedence over unanswered scout questions', () => {
+test('missing commands take precedence over unanswered scout questions', async () => {
   const dir = makeRun({
     args: ['exec', '--json'], events: noCommands,
     result: { ...scoutResult, answers: [] }, questions,
   });
 
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
 
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, noCommandReason);
 });
 
 // Recomputing an archived run must not accuse it of a contract it never had: no stream, no gate.
-test('an archived scout run without an events stream is not judged by the command gate', () => {
+test('an archived scout run without an events stream is not judged by the command gate', async () => {
   const dir = makeRun({ result: scoutResult, questions });
 
   assert.equal(readEvents(dir).hasStream, false);
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
 
   assert.notEqual(meta.reason, noCommandReason);
   assert.equal(meta.status, 'OK', meta.reason);
@@ -142,26 +142,26 @@ for (const [agent, result] of [
   ['codex-build', buildResult([])],
   ['codex-review', { verdict: 'approve', summary: 'Reviewed', findings: [], next_steps: [] }],
 ]) {
-  test(`${agent} remains OK without any executed command`, () => {
+  test(`${agent} remains OK without any executed command`, async () => {
     const dir = makeRun({
       args: ['exec', '--json'], events: noCommands, result, file: AGENTS[agent].result,
     });
 
     assert.equal(readEvents(dir).commands_executed, 0);
-    const { meta } = collect(dir, agent, 0);
+    const { meta } = await collect(dir, agent, 0);
 
     assert.equal(meta.status, 'OK', meta.reason);
   });
 }
 
 // Plan_59 D4: advice is judged against the code, so an advisor that ran no command did not read it.
-test('codex-advisor without any executed command fails on the advice contract', () => {
+test('codex-advisor without any executed command fails on the advice contract', async () => {
   const dir = advisorRunFacts(makeRun({
     args: ['exec', '--json'], events: noCommands, result: validScope(), file: AGENTS['codex-advisor'].result,
   }));
 
   assert.equal(readEvents(dir).commands_executed, 0);
-  const { meta } = collect(dir, 'codex-advisor', 0);
+  const { meta } = await collect(dir, 'codex-advisor', 0);
 
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /^advice contract broken \(1\): D4 commandsRun 0/);
