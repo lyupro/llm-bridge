@@ -12,7 +12,7 @@ import { exitCodeFor, writeFailure, chainRuns } from '../write-meta.mjs';
 import { readyGrantLines, sameRun } from './continuation.mjs';
 import { conflictingOrderOwner, orderOwnerConflictText, runsForOrder } from './order-owner.mjs';
 import { withActionRow } from './args.mjs';
-import { postRunActionVariant } from '../meta/reply.mjs';
+import { folderCheckRow, postRunActionVariant } from '../meta/reply.mjs';
 import { orderDiagnosticMessage } from '../order-diagnostics.mjs';
 import { orderRuleMessage } from '../order-rules.mjs';
 import { normalizeRepoPath } from './project-dir.mjs';
@@ -247,10 +247,13 @@ export async function attach({
     if (meta) {
       if (reportRejected(runDir, meta)) return EXIT.FAIL;
       const variant = postRunActionVariant(meta);
+      // OW-092 D4: the first published meta.json already contains the folder measurement.
+      const folderCheck = folderCheckRow(meta.write_refusal?.measurement?.classification);
       console.log(
         [
           `${meta.status} — ${meta.reason || 'verdict recorded, worker process response not saved'}`,
           ...(variant ? [orderDiagnosticMessage('next-action', { variant })] : []),
+          ...(folderCheck !== null ? [folderCheck] : []),
           `Run: ${runDir}`,
         ].join('\n'),
       );

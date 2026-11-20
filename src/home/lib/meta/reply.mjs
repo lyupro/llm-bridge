@@ -259,7 +259,7 @@ export function failReply(ctx, meta) {
   ];
 }
 
-function folderCheckRow(classification) {
+export function folderCheckRow(classification) {
   switch (classification?.level) {
     case 'confirmed': {
       const { folders } = classification;

@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   its SHA-256 in `meta.json#report_sha256`. Re-delivery and `llm-bridge report export <run> <path>` check that
   hash. `llm-bridge guidance arbiter` describes the task file; the operator sets the model with
   `llm-bridge model set arbiter <model> <effort>` (OW-097).
+- A build whose sandbox refused writes inside its scope ends `FAIL` with `build-scope-write-refused`. On Windows
+  the runner measures the owner and inherited rights of the refused folders before `meta.json` is published,
+  stores them as `write_refusal.measurement`, and picks the `Action:` row from the result: the case T01 repair only
+  for folders it confirmed, no repair when it did not confirm the case, a manual check when it could not measure.
+  A `Folder check:` row shows the level (OW-092).
 
 ## [0.8.2] - 2026-11-16
 

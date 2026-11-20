@@ -10,6 +10,8 @@ A build ends `FAIL` and the work looks unfinished even though the executor tried
 
 **Check**
 
+The build reply's `Folder check:` row summarizes the runner's measurement of the refused folders, recorded in `meta.json` under `write_refusal.measurement`. For a folder, `confirmed` means the runner measured both findings below. Repair only those confirmed folders. If a folder is `not confirmed`, the repair does not apply. If the reply says `not measured` or has no `Folder check:` row, check by hand as below.
+
 On Windows, inspect the folder holding the file with `icacls "<folder>"` and check its owner with `(Get-Acl -LiteralPath '<folder>').Owner`. This case is confirmed when `CodexSandboxOffline` owns the folder and the ACL lacks the sandbox write entry inherited from the repository root. Require both ACL findings. The write error has also appeared with an unidentified cause.
 
 **Cause**
