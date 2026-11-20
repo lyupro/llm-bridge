@@ -31,7 +31,7 @@ const input = (agent) => ({
 
 test('every resume-enabled registry role rejects the retired implementation blocker for all fact combinations', () => {
   const agents = ORDER_AGENTS.filter((agent) => orderLabelsFor(agent).some(({ label }) => label === 'resume'));
-  assert.deepEqual(agents, ['codex-scout', 'codex-review', 'codex-advisor']);
+  assert.deepEqual(agents, ['codex-scout', 'codex-review', 'codex-advisor', 'codex-arbiter']);
   for (const agent of agents) {
     assert.equal(AGENTS[agent].writes, false);
     for (const turnFailed of [false, true]) for (const status of ['OK', 'FAIL', 'LIMIT', 'UNAVAILABLE']) {

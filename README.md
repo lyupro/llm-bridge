@@ -32,7 +32,7 @@ Use `--scope project` to install the Claude Code-facing files under `<repo>/.cla
 Installation has two roots:
 
 - `~/.lyupro/.llm-bridge/` contains package runtime files, guards, configuration, conventions, the installation record, and run records under `runs/` as user data.
-- The selected Claude Code root (`~/.claude/` or `<repo>/.claude/`) contains the four agents (`codex-scout`, `codex-build`, `codex-review`, `codex-advisor`), two slash commands, and merged hook registrations in `settings.json`. Before the move, existing run records remain in `~/.claude/codex-runs/`.
+- The selected Claude Code root (`~/.claude/` or `<repo>/.claude/`) contains the five agents (`codex-scout`, `codex-build`, `codex-review`, `codex-advisor`, `codex-arbiter`), two slash commands, and merged hook registrations in `settings.json`. Before the move, existing run records remain in `~/.claude/codex-runs/`.
 
 The repository's `src/home/` directory is the literal image copied into the branded root: its
 `hooks/`, `lib/`, `config.json`, and `conventions.md` paths are the host paths without remapping.
@@ -61,7 +61,7 @@ Run records in `~/.lyupro/.llm-bridge/runs/` (or `~/.claude/codex-runs/` before 
 - **Every run leaves an audit folder.** The verbatim task, scope, before/after git state, events, report, verdict, and reason remain together.
 - **Zero runtime dependencies and zero build steps.** The package is plain `.mjs` on the Node.js standard library.
 
-The current suite contains **7413 automated tests: 7407 passing and 6 skipped**.
+The current suite contains **7448 automated tests: 7442 passing and 6 skipped**.
 ## Verify
 
 ```bash

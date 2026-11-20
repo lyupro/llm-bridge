@@ -187,7 +187,7 @@ test('absent sessions are ordered by newest listing and name only dispatchers ac
   assert.equal(row.status, 'warn');
   assert.ok(row.value.indexOf('newer-se') < row.value.indexOf('older-se'));
   assert.match(row.value, /codex-build/);
-  assert.doesNotMatch(row.value, /codex-scout|codex-review|codex-advisor/);
+  assert.doesNotMatch(row.value, /codex-scout|codex-review|codex-advisor|codex-arbiter/);
 });
 
 test('cutoff mtime is assessed inclusively and one millisecond older is never replayed', async () => {

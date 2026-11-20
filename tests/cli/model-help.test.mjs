@@ -67,6 +67,6 @@ test('extra unset argument ends with the unset help pointer', async (t) => {
 test('unknown role keeps its allowed-values refusal without a help pointer', async (t) => {
   const result = await model(['set', 'nosuchrole', 'm'], fixture(t));
   assert.equal(result.exitCode, 2);
-  assert.equal(result.output, 'llm-bridge model: unknown role "nosuchrole". Allowed roles: scout, build, review, advisor.');
+  assert.equal(result.output, 'llm-bridge model: unknown role "nosuchrole". Allowed roles: scout, build, review, advisor, arbiter.');
   assert.doesNotMatch(result.output, /Run llm-bridge .* -h for usage\./);
 });

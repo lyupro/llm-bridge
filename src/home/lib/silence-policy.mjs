@@ -7,15 +7,22 @@
  */
 import { AGENTS } from './agents.mjs';
 
+const adviseCalibration = Object.freeze({
+  id: 'plan80-s2-2026-10-13',
+  measured_on: '2026-10-13',
+  codex_version: '0.160.1',
+  sample_runs: 308,
+  max_healthy_pause_ms: 855163,
+  min_stalled_silence_ms: 1136878,
+  rule: 'midpoint of the healthy maximum and the stalled minimum',
+});
+
 export const CALIBRATIONS = Object.freeze({
-  'advisor.advise': Object.freeze({
-    id: 'plan80-s2-2026-10-13',
-    measured_on: '2026-10-13',
-    codex_version: '0.160.1',
-    sample_runs: 308,
-    max_healthy_pause_ms: 855163,
-    min_stalled_silence_ms: 1136878,
-    rule: 'midpoint of the healthy maximum and the stalled minimum',
+  'advisor.advise': adviseCalibration,
+  // OW-097 D5: No arbiter run has been measured. Replace this with an arbiter measurement once live arbiter runs exist.
+  'arbiter.default': Object.freeze({
+    ...adviseCalibration,
+    borrowed_from: 'advisor.advise',
   }),
 });
 

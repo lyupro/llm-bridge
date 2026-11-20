@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { model } from '../../cli/model.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
-const roles = ['scout', 'build', 'review', 'advisor'];
+const roles = ['scout', 'build', 'review', 'advisor', 'arbiter'];
 const credits = 'https://learn.chatgpt.com/docs/agent-configuration/speed';
 const tier = () => ({ id: randomUUID(), name: 'Fast', description: '2x speed, increased usage' });
 const entry = (overrides = {}) => ({

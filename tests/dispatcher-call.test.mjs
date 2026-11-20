@@ -10,7 +10,7 @@ import {
 } from '../src/home/lib/dispatcher-call.mjs';
 import {
   ALL_ORDER_LABELS, CONTINUATION_ORDER_INPUT, ORDER_AGENTS, RETRY_ORDER_INPUT, RESUME_ORDER_INPUT,
-  orderLabelsFor, renderOrderHeaderHelp,
+  orderFromHeader, orderLabelsFor, renderOrderHeaderHelp,
 } from '../src/home/lib/order-schema.mjs';
 import { SHELL_UNSAFE_SEQUENCES } from '../src/home/lib/shell-unsafe.mjs';
 import { canonicalRunCommand } from '../src/home/lib/dispatcher-command.mjs';
@@ -288,6 +288,22 @@ test('summary names only agent-owned header labels in required, conditional, opt
   }
   assert.equal(renderRequiredInputSummary('unknown-agent'), '');
   assert.match(renderRequiredInputSummary('codex-advisor'), /`phase`/);
+});
+
+test('the arbiter header accepts only its order id, retry and resume grants, and shared options', () => {
+  const agent = 'codex-arbiter';
+  assert.deepEqual(orderLabelsFor(agent).map(({ label }) => label),
+    ['order id', 'retry', 'resume', 'repository', 'slug', 'effort']);
+  const inputs = { 'order id': 'ow097-arbiter-20261120', repository: 'C:/work/llm-bridge', slug: 'arbiter-fork', effort: 'high' };
+  for (const grant of ['retry', 'resume']) {
+    assert.deepEqual(orderFromHeader(agent, { fields: { ...inputs, [grant]: 'prior-run — repeat the arbitration' } }),
+      { order: new Map(Object.entries(inputs)), problems: [] });
+  }
+  for (const label of ['continue', 'phase', 'scope', 'decisions', 'changeset']) {
+    const { problems } = orderFromHeader(agent, { fields: { ...inputs, [label]: 'value' } });
+    assert.equal(problems.length, 1, label);
+    assert.equal(problems[0].reason, `label "${label}" is not accepted by ${agent}`);
+  }
 });
 
 test('every dispatcher markdown carries the shared no-self-execution placeholder first', async () => {

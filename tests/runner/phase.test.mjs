@@ -196,8 +196,8 @@ await import(${JSON.stringify(CONFIG.href)});
     });
     assert.equal(output.status, 0, output.stderr);
     const expected = budget === 15
-      ? 'budgets: scout: 15 minutes; build: 25 minutes; review: 20 minutes; advisor: scope: 10 minutes, advise: 35 minutes'
-      : 'budgets: scout: scope: 5 minutes, advise: 15 minutes; build: 25 minutes; review: 20 minutes; advisor: scope: 10 minutes, advise: 35 minutes';
+      ? 'budgets: scout: 15 minutes; build: 25 minutes; review: 20 minutes; advisor: scope: 10 minutes, advise: 35 minutes; arbiter: 35 minutes'
+      : 'budgets: scout: scope: 5 minutes, advise: 15 minutes; build: 25 minutes; review: 20 minutes; advisor: scope: 10 minutes, advise: 35 minutes; arbiter: 35 minutes';
     assert.equal(output.stdout.split(/\r?\n/).find((line) => line.startsWith('budgets:')), expected);
   }
 });

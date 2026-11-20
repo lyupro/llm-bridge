@@ -41,7 +41,7 @@ test('guidance lists the finite topics in order with summaries and usage', async
   const { env } = homeFixture(t);
   const result = await guidance([], { env });
   assert.equal(result.exitCode, 0);
-  const expectedTopics = ['order', 'advisor', 'budget', 'records', 'concurrency', 'troubleshooting'];
+  const expectedTopics = ['order', 'advisor', 'arbiter', 'budget', 'records', 'concurrency', 'troubleshooting'];
   assert.deepEqual(Object.keys(GUIDANCE_TOPICS), expectedTopics);
   assertTopics(result.output);
   assert.deepEqual(result.output.split('\n').slice(1, 1 + expectedTopics.length),

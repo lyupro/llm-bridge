@@ -117,7 +117,7 @@ test('the unpinned build row names the current user tier while read-only roles i
     fs.writeFileSync(userConfigPath, userConfig);
     const result = await model([], { configPath, codexHome });
     assert.equal(result.exitCode, 0, result.output);
-    for (const role of ['scout', 'build', 'review', 'advisor']) {
+    for (const role of ['scout', 'build', 'review', 'advisor', 'arbiter']) {
       const row = result.output.split('\n').find((line) => line.startsWith(role));
       assert.match(row, /\smedium\s+not pinned\s/, 'the speed column still describes the package pin');
       if (role === 'build') assert.ok(row.endsWith(`speed: operator Codex config (${tier})`), row);
@@ -134,7 +134,7 @@ test('the unpinned build row names the current user tier while read-only roles i
 test('package tier pins take precedence over the user tier for every role', async (t) => {
   const { codexHome, configPath, userConfigPath } = fixture(t);
   const userTier = randomUUID();
-  const models = Object.fromEntries(['scout', 'build', 'review', 'advisor'].map((role) =>
+  const models = Object.fromEntries(['scout', 'build', 'review', 'advisor', 'arbiter'].map((role) =>
     [role, { model: randomUUID(), effort: 'high', speed: randomUUID() }]));
   fs.writeFileSync(configPath, JSON.stringify({ models }));
   fs.writeFileSync(userConfigPath, `service_tier = "${userTier}"\n`);

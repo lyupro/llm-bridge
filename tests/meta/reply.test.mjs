@@ -6,7 +6,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { collect } from '../../src/home/lib/write-meta.mjs';
 import { AGENTS } from '../../src/home/lib/meta/reply.mjs';
+import { arbiterFilled, arbiterReply } from '../../src/home/lib/meta/arbiter-reply.mjs';
 import { buildResult, COMPLETED_COMMAND, makeRun } from './test-fixtures.mjs';
+
+test('codex-arbiter uses the arbiter result and reply contracts', () => {
+  assert.equal(AGENTS['codex-arbiter'].filled, arbiterFilled);
+  assert.equal(AGENTS['codex-arbiter'].reply, arbiterReply);
+});
 
 for (const [agent, field] of [['codex-build', 'summary'], ['codex-scout', 'answer']]) {
   test(`${agent} strips one leading model verdict and preserves all other reply rows`, () => {

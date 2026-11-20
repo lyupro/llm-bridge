@@ -2,6 +2,7 @@
 export const GUIDANCE_TOPICS = Object.freeze({
   order: 'Task file, header labels, and scope.',
   advisor: 'Scope and advise phases, and the continue grant.',
+  arbiter: 'Third opinion on a disputed or irreversible design fork.',
   budget: 'Run deadline and slicing.',
   records: 'Finding and reading runs.',
   concurrency: 'Parallel and writing runs.',

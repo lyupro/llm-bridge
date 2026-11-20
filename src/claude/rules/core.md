@@ -2,15 +2,16 @@
 
 Installed, updated and removed by the `llm-bridge` package: change the package, not this file.
 
-Four dispatcher agents run work on a Codex CLI subscription: `codex-scout` (read-only research), `codex-build`
-(writes code inside its `scope`), `codex-review` (second opinion on a diff) and `codex-advisor` (design advice before
-code: a `scope` phase, then `advise`).
+Five dispatcher agents run work on a Codex CLI subscription: `codex-scout` (read-only research), `codex-build`
+(writes code inside its `scope`), `codex-review` (second opinion on a diff), `codex-advisor` (design advice before
+code: a `scope` phase, then `advise`), and `codex-arbiter` (a third opinion on one disputed or irreversible design
+fork, one read-only pass, report in `report.md`).
 
 - The call is one line, `task file: <absolute path>`. Labels go in the task-file header, free text in its body.
   Pre-start refusals spend no quota.
 - Before every task file, run `llm-bridge guidance order` and follow it: it lists the enforced rules.
-  Other topics, via `llm-bridge guidance <topic>`: `advisor` (two phases, the `continue:` grant),
-  `troubleshooting` (known failures by case id),
+  Other topics via `llm-bridge guidance <topic>`: `advisor` (two phases, `continue:` grant), `arbiter` (one design
+  fork), `troubleshooting` (failures by case id),
   `budget` (run deadline, slicing), `records` (finding and reading runs), `concurrency` (parallel and writing
   runs); `llm-bridge guidance` lists them. If it fails, stop and show its output to the operator — never guess
   the contract.

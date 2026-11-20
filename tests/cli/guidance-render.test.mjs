@@ -218,6 +218,7 @@ test('budget rows follow the installed registry and effective host phase sources
     `| codex-review | \u2014 | ${AGENTS['codex-review'].budget} | package |`,
     `| codex-advisor | scope | ${AGENTS['codex-advisor'].budget.scope} | package |`,
     '| codex-advisor | advise | 12 | host config |',
+    '| codex-arbiter | \u2014 | 35 | package |',
     '| installed-extra-agent | prepare | 3 | host config |',
     '| installed-extra-agent | finish | 9 | package |',
     '| installed-single-phase | \u2014 | 6 | package |',

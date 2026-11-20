@@ -85,6 +85,15 @@ const REQUIRED_ORDER_INPUTS = Object.freeze({
       example: 'scope',
     },
   ]),
+  'codex-arbiter': freezeEntries([
+    {
+      label: 'order id',
+      explanation: 'The label of one arbitration. A repeated arbitration of the same question gets a new order id.',
+      example: 'ow097-arbiter-20261120',
+    },
+    RETRY_ORDER_INPUT,
+    RESUME_ORDER_INPUT,
+  ]),
 });
 
 export const ORDER_AGENTS = Object.freeze(Object.keys(REQUIRED_ORDER_INPUTS));

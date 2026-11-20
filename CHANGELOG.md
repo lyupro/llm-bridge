@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - Troubleshooting guidance with stable case ids, linked from the rules core and README and available through `llm-bridge guidance troubleshooting`.
+- A fifth dispatcher, `codex-arbiter`: a read-only third opinion on one disputed or irreversible design fork,
+  run in one 35-minute pass. Unlike `codex-advisor` it receives the orchestrator's position and earlier advice
+  runs, binds each probe to a completed command by a tag, and publishes `report.md` before an OK verdict with
+  its SHA-256 in `meta.json#report_sha256`. Re-delivery and `llm-bridge report export <run> <path>` check that
+  hash. `llm-bridge guidance arbiter` describes the task file; the operator sets the model with
+  `llm-bridge model set arbiter <model> <effort>` (OW-097).
 
 ## [0.8.2] - 2026-11-16
 

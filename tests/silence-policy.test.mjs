@@ -17,13 +17,14 @@ const phasesOf = (entry) => typeof entry.budget === 'object' ? Object.keys(entry
 for (const [agent, entry] of Object.entries(AGENTS)) {
   for (const phase of phasesOf(entry)) {
     test(`${agent}.${phase} resolves its explicit silence policy`, () => {
-      const calibrated = entry.role === 'advisor' && phase === 'advise';
+      const key = `${entry.role}.${phase}`;
+      const calibrated = key === 'advisor.advise' || key === 'arbiter.default';
       assert.deepEqual(resolveSilencePolicy(agent, phase), {
         version: 1,
         role: entry.role,
         phase,
         threshold_ms: calibrated ? 996000 : null,
-        calibration: calibrated ? CALIBRATIONS['advisor.advise'] : null,
+        calibration: calibrated ? CALIBRATIONS[key] : null,
       });
     });
   }
@@ -31,20 +32,28 @@ for (const [agent, entry] of Object.entries(AGENTS)) {
 
 test('the frozen catalog retains the complete Plan_80 S2 evidence', () => {
   assert.ok(Object.isFrozen(CALIBRATIONS));
+  const adviseEvidence = {
+    id: 'plan80-s2-2026-10-13',
+    measured_on: '2026-10-13',
+    codex_version: '0.160.1',
+    sample_runs: 308,
+    max_healthy_pause_ms: 855163,
+    min_stalled_silence_ms: 1136878,
+    rule: 'midpoint of the healthy maximum and the stalled minimum',
+  };
   assert.deepEqual(CALIBRATIONS, {
-    'advisor.advise': {
-      id: 'plan80-s2-2026-10-13',
-      measured_on: '2026-10-13',
-      codex_version: '0.160.1',
-      sample_runs: 308,
-      max_healthy_pause_ms: 855163,
-      min_stalled_silence_ms: 1136878,
-      rule: 'midpoint of the healthy maximum and the stalled minimum',
-    },
+    'advisor.advise': adviseEvidence,
+    'arbiter.default': { ...adviseEvidence, borrowed_from: 'advisor.advise' },
   });
   for (const calibration of Object.values(CALIBRATIONS)) {
     assert.ok(Object.isFrozen(calibration));
   }
+});
+
+test('the arbiter silence calibration matches its named source evidence', () => {
+  const { borrowed_from, ...evidence } = CALIBRATIONS['arbiter.default'];
+  assert.ok(Object.hasOwn(CALIBRATIONS, borrowed_from));
+  assert.deepEqual(evidence, CALIBRATIONS[borrowed_from]);
 });
 
 test('every calibration strictly brackets its registry threshold with measured bounds', () => {

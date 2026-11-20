@@ -40,7 +40,7 @@ test('an absent file means defaults, not an error', () => {
  * are derived from one registry, so this test now proves the derivation, not two hand-kept lists.
  */
 test('every agent maps to a role that has a budget', () => {
-  for (const agent of ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor']) {
+  for (const agent of ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor', 'codex-arbiter']) {
     const role = agentRole(agent);
     assert.ok(role, `${agent} has no role`);
     const phases = agent === 'codex-advisor' ? ['scope', 'advise'] : ['default'];
@@ -151,12 +151,13 @@ test('run-config state appends a pinned tier in the profile sentence and leaves 
 });
 
 test('budgets default per role and merge when only one role is written', () => {
-  assert.deepEqual(DEFAULTS.budgets, { scout: { default: 15 }, build: { default: 25 }, review: { default: 20 }, advisor: { scope: 10, advise: 35 } });
+  assert.deepEqual(DEFAULTS.budgets, { scout: { default: 15 }, build: { default: 25 }, review: { default: 20 }, advisor: { scope: 10, advise: 35 }, arbiter: { default: 35 } });
   assert.deepEqual(readRunConfig(tempFile('{"budgets": {"build": 7.5}}')).budgets, {
     scout: { default: 15 },
     build: { default: 7.5 },
     review: { default: 20 },
     advisor: { scope: 10, advise: 35 },
+    arbiter: { default: 35 },
   });
 });
 
@@ -178,7 +179,7 @@ test('detailed reads preserve the config and name only explicit host budget phas
   assert.equal(Object.hasOwn(expected, 'budgetSources'), false);
   assert.deepEqual(budgetSources, {
     scout: new Set(['default']), build: new Set(['default']),
-    review: new Set(), advisor: new Set(['advise']),
+    review: new Set(), advisor: new Set(['advise']), arbiter: new Set(),
   });
   assert.equal(config.budgets.advisor.scope, DEFAULTS.budgets.advisor.scope);
   assert.deepEqual(readRunConfig(file, { provenance: false }), expected);
@@ -210,7 +211,7 @@ test('budgets reject every invalid shape with an actionable message', () => {
   assert.throws(() => readRunConfig(tempFile('{"budgets": 5}')), /budgets.*must be an object/);
   assert.throws(
     () => readRunConfig(tempFile('{"budgets": {"deploy": 5}}')),
-    /budgets.*unknown role.*deploy.*scout, build, review, advisor/,
+    /budgets.*unknown role.*deploy.*scout, build, review, advisor, arbiter/,
   );
   assert.throws(
     () => readRunConfig(tempFile('{"budgets": {"build": "5"}}')),
@@ -251,7 +252,7 @@ test('models must be known roles holding profiles of known string fields', () =>
   assert.throws(() => readRunConfig(tempFile('{"models": []}')), /models.*must be an object/);
   assert.throws(
     () => readRunConfig(tempFile('{"models": {"deploy": {"model": "model-d"}}}')),
-    /unknown role.*deploy.*scout, build, review, advisor/,
+    /unknown role.*deploy.*scout, build, review, advisor, arbiter/,
   );
   assert.throws(
     () => readRunConfig(tempFile('{"models": {"build": "model-b"}}')),

@@ -9,17 +9,24 @@
 import { AGENTS } from './agents.mjs';
 import { resolveSilencePolicy } from './silence-policy.mjs';
 
+const adviseCalibration = Object.freeze({
+  id: 'plan80-s4-2026-10-15',
+  measured_on: '2026-10-15',
+  window: '2026-10-01..2026-10-15',
+  codex_version: '0.160.1',
+  sample_runs: 322,
+  measure: 'last exec or read tool output to the final answer, Codex session log, successful runs',
+  max_tail_ms: 917634,
+  margin: 0.2,
+  rule: 'ceil(max_tail_ms * (1 + margin) / 1000) * 1000',
+});
+
 export const RECOVERY_CALIBRATIONS = Object.freeze({
-  'advisor.advise': Object.freeze({
-    id: 'plan80-s4-2026-10-15',
-    measured_on: '2026-10-15',
-    window: '2026-10-01..2026-10-15',
-    codex_version: '0.160.1',
-    sample_runs: 322,
-    measure: 'last exec or read tool output to the final answer, Codex session log, successful runs',
-    max_tail_ms: 917634,
-    margin: 0.2,
-    rule: 'ceil(max_tail_ms * (1 + margin) / 1000) * 1000',
+  'advisor.advise': adviseCalibration,
+  // OW-097 D5: No arbiter run has been measured. Replace this with an arbiter measurement once live arbiter runs exist.
+  'arbiter.default': Object.freeze({
+    ...adviseCalibration,
+    borrowed_from: 'advisor.advise',
   }),
 });
 
@@ -27,7 +34,7 @@ export function deriveRecoveryBudgetMs(calibration) {
   return Math.ceil(calibration.max_tail_ms * (1 + calibration.margin) / 1000) * 1000;
 }
 
-export const AUTOMATIC_RECOVERY_ENABLED = Object.freeze({ 'advisor.advise': false });
+export const AUTOMATIC_RECOVERY_ENABLED = Object.freeze({ 'advisor.advise': false, 'arbiter.default': false });
 
 export function resolveRecoveryBrake({ env = process.env } = {}) {
   const key = 'LLM_BRIDGE_AUTO_RECOVERY';

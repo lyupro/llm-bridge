@@ -63,7 +63,8 @@ test('host brake reads only the injected environment and only its own key', () =
 for (const [agent, entry] of Object.entries(AGENTS)) {
   for (const phase of phasesOf(entry)) {
     test(`${agent}.${phase} resolves its explicit recovery policy with automatic recovery disabled`, () => {
-      const calibrated = entry.role === 'advisor' && phase === 'advise';
+      const key = `${entry.role}.${phase}`;
+      const calibrated = key === 'advisor.advise' || key === 'arbiter.default';
       const policy = resolveRecoveryPolicy(agent, phase);
       assert.deepEqual(policy, {
         version: 1,
@@ -71,9 +72,9 @@ for (const [agent, entry] of Object.entries(AGENTS)) {
         phase,
         budget_ms: calibrated ? 1102000 : null,
         enabled: false,
-        calibration: calibrated ? calibration : null,
+        calibration: calibrated ? RECOVERY_CALIBRATIONS[key] : null,
       });
-      assert.equal(policy.calibration, calibrated ? calibration : null);
+      assert.equal(policy.calibration, calibrated ? RECOVERY_CALIBRATIONS[key] : null);
     });
   }
 }
@@ -81,19 +82,28 @@ for (const [agent, entry] of Object.entries(AGENTS)) {
 test('the frozen catalog retains the complete Plan_80 S4 evidence', () => {
   assert.ok(Object.isFrozen(RECOVERY_CALIBRATIONS));
   assert.ok(Object.isFrozen(calibration));
+  assert.ok(Object.isFrozen(RECOVERY_CALIBRATIONS['arbiter.default']));
+  const adviseEvidence = {
+    id: 'plan80-s4-2026-10-15',
+    measured_on: '2026-10-15',
+    window: '2026-10-01..2026-10-15',
+    codex_version: '0.160.1',
+    sample_runs: 322,
+    measure: 'last exec or read tool output to the final answer, Codex session log, successful runs',
+    max_tail_ms: 917634,
+    margin: 0.2,
+    rule: 'ceil(max_tail_ms * (1 + margin) / 1000) * 1000',
+  };
   assert.deepEqual(RECOVERY_CALIBRATIONS, {
-    'advisor.advise': {
-      id: 'plan80-s4-2026-10-15',
-      measured_on: '2026-10-15',
-      window: '2026-10-01..2026-10-15',
-      codex_version: '0.160.1',
-      sample_runs: 322,
-      measure: 'last exec or read tool output to the final answer, Codex session log, successful runs',
-      max_tail_ms: 917634,
-      margin: 0.2,
-      rule: 'ceil(max_tail_ms * (1 + margin) / 1000) * 1000',
-    },
+    'advisor.advise': adviseEvidence,
+    'arbiter.default': { ...adviseEvidence, borrowed_from: 'advisor.advise' },
   });
+});
+
+test('the arbiter recovery calibration matches its named source evidence', () => {
+  const { borrowed_from, ...evidence } = RECOVERY_CALIBRATIONS['arbiter.default'];
+  assert.ok(Object.hasOwn(RECOVERY_CALIBRATIONS, borrowed_from));
+  assert.deepEqual(evidence, RECOVERY_CALIBRATIONS[borrowed_from]);
 });
 
 test('the pure derivation gives 1102000 ms and covers every measured tail', () => {
@@ -126,7 +136,7 @@ test('registry budgets and catalog records cover one another in both directions'
 
 test('the frozen package switch covers exactly the catalog and ships disabled under E15', () => {
   assert.ok(Object.isFrozen(AUTOMATIC_RECOVERY_ENABLED));
-  assert.deepEqual(AUTOMATIC_RECOVERY_ENABLED, { 'advisor.advise': false });
+  assert.deepEqual(AUTOMATIC_RECOVERY_ENABLED, { 'advisor.advise': false, 'arbiter.default': false });
   assert.deepEqual(Object.keys(AUTOMATIC_RECOVERY_ENABLED).sort(), Object.keys(RECOVERY_CALIBRATIONS).sort());
 });
 

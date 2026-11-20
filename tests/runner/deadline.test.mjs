@@ -9,9 +9,9 @@ import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 import path from 'node:path';
-import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 import { resolveBudgets } from '../../src/home/lib/budgets.mjs';
 import { workerOrder } from '../../src/home/lib/runner/worker-order.mjs';
+import { withFakeCodex } from './fake-codex.mjs';
 
 const realSpawnSync = childProcess.spawnSync;
 const taskkillCalls = [];
@@ -67,43 +67,6 @@ async function waitFor(predicate, timeout = 2_000) {
     await wait(25);
   }
   return predicate();
-}
-
-const shellQuote = (value) => `'${String(value).replaceAll("'", "'\\''")}'`;
-
-function installFakeCodex(root, source) {
-  const bin = path.join(root, 'bin');
-  const script = path.join(root, 'fake-codex.mjs');
-  fs.mkdirSync(bin);
-  fs.writeFileSync(script, source);
-  if (process.platform === 'win32') {
-    fs.writeFileSync(
-      path.join(bin, 'codex.cmd'),
-      `@echo off\r\n"${process.execPath}" "${script}" %*\r\n`,
-    );
-  } else {
-    const wrapper = path.join(bin, 'codex');
-    fs.writeFileSync(wrapper, `#!/bin/sh\nexec ${shellQuote(process.execPath)} ${shellQuote(script)} "$@"\n`);
-    fs.chmodSync(wrapper, 0o755);
-  }
-  return bin;
-}
-
-async function withFakeCodex(source, work) {
-  const root = makeTempTree('codex-deadline-');
-  const bin = installFakeCodex(root, source);
-  const previousPath = process.env.PATH;
-  const previousCwd = process.cwd();
-  process.env.PATH = [bin, previousPath].filter(Boolean).join(path.delimiter);
-  if (process.platform === 'win32') process.chdir(bin);
-  try {
-    return await work(root);
-  } finally {
-    if (process.platform === 'win32') process.chdir(previousCwd);
-    if (previousPath === undefined) delete process.env.PATH;
-    else process.env.PATH = previousPath;
-    await removeTempTree(root);
-  }
 }
 
 const processAlive = (pid) => {

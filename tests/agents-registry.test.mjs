@@ -21,6 +21,7 @@ test('the registry owns execution agents and the phased advisor defaults from Pl
     'codex-build': { role: 'build', budget: 25, silenceThresholdMs: null, recoveryBudgetMs: null, writes: true, result: 'result.json' },
     'codex-review': { role: 'review', budget: 20, silenceThresholdMs: null, recoveryBudgetMs: null, writes: false, result: 'review.json' },
     'codex-advisor': { role: 'advisor', budget: { scope: 10, advise: 35 }, silenceThresholdMs: { scope: null, advise: 996000 }, recoveryBudgetMs: { scope: null, advise: 1102000 }, writes: false, result: 'result.json' },
+    'codex-arbiter': { role: 'arbiter', budget: 35, silenceThresholdMs: 996000, recoveryBudgetMs: 1102000, writes: false, result: 'result.json' },
   });
   for (const [name, agent] of Object.entries(AGENTS)) {
     assert.equal(typeof agent.role, 'string', `${name} must have a role`);
@@ -74,6 +75,7 @@ test('agentRole maps full agent names and leaves an unknown name undefined', () 
   assert.equal(agentRole('codex-build'), 'build');
   assert.equal(agentRole('codex-review'), 'review');
   assert.equal(agentRole('codex-advisor'), 'advisor');
+  assert.equal(agentRole('codex-arbiter'), 'arbiter');
   assert.equal(agentRole('codex-unknown'), undefined);
 });
 
@@ -87,10 +89,10 @@ function findSourceFiles(dir) {
 
 function hasCopiedRoleList(source) {
   const lists = source.matchAll(
-    /\[\s*((['"`])(?:codex-)?(?:scout|build|review|advisor)\2(?:\s*,\s*(['"`])(?:codex-)?(?:scout|build|review|advisor)\3){2,}\s*,?)\s*\]/g,
+    /\[\s*((['"`])(?:codex-)?(?:scout|build|review|advisor|arbiter)\2(?:\s*,\s*(['"`])(?:codex-)?(?:scout|build|review|advisor|arbiter)\3){2,}\s*,?)\s*\]/g,
   );
   return [...lists].some(([, list]) => {
-    const roles = [...list.matchAll(/['"`](?:codex-)?(scout|build|review|advisor)['"`]/g)].map(([, role]) => role);
+    const roles = [...list.matchAll(/['"`](?:codex-)?(scout|build|review|advisor|arbiter)['"`]/g)].map(([, role]) => role);
     return new Set(roles).size >= 3;
   });
 }
@@ -130,6 +132,8 @@ test('the role-list gate recognizes both spellings in every ordering, as an arra
       }
     }
   }
+  assert.ok(hasCopiedRoleList("['scout', 'build', 'review', 'advisor', 'arbiter']"));
+  assert.ok(hasCopiedRoleList("['codex-arbiter', 'codex-advisor', 'codex-review']"));
   assert.equal(hasCopiedRoleList("['scout', 'build']"), false);
   assert.equal(hasCopiedRoleList("['scout', 'scout', 'review']"), false);
   assert.equal(hasCopiedRoleList("['codex-scout', 'codex-scout', 'codex-review']"), false);

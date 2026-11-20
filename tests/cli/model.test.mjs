@@ -12,7 +12,7 @@ import { HELP, main } from '../../bin/llm-bridge.mjs';
 import { makeTempTree, removeTempTree } from '../temp-tree.mjs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const roles = ['scout', 'build', 'review', 'advisor'];
+const roles = ['scout', 'build', 'review', 'advisor', 'arbiter'];
 
 function fixture(t, models) {
   const root = makeTempTree('model-profile-');

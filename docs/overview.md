@@ -12,6 +12,7 @@ response, log, worktree snapshots, and the verdict computed from them remain in 
 | `codex-build` | `workspace-write` | Implement a change, fix a defect, add tests, or add documentation. Requires an explicit `scope:` in the task-file header. |
 | `codex-review` | `read-only` | Get an independent second opinion on a diff after implementation. Checks for defects, not style. |
 | `codex-advisor` | `read-only` | Assess whether the listed paths cover a design question, then recommend among unbiased options before implementation. |
+| `codex-arbiter` | `read-only` | Get a third opinion in one pass when the advisor and orchestrator disagree and the operator is unsure, or when a design decision is irreversible or expensive. |
 
 ### Hard dispatcher boundary
 
@@ -677,6 +678,7 @@ judges the field written by the runner, not text to which Codex also writes), an
 directory with a normal verdict—`FAIL` with a deadline reason. The limit makes “for hours”
 impossible by construction. In past runs, the project's longest legitimate run took about twenty
 minutes, and healthy advise passes ran up to about 25 minutes (Plan_80 E32).
+The arbiter's single pass uses the same package-default budget as `advise`, shown below.
 
 These are the package defaults; `llm-bridge guidance budget` prints the values in force on this host with their source (package or host config).
 <!-- budget-defaults:begin -->
@@ -686,7 +688,8 @@ These are the package defaults; `llm-bridge guidance budget` prints the values i
     "scout": 15,
     "build": 25,
     "review": 20,
-    "advisor": { "scope": 10, "advise": 35 }
+    "advisor": { "scope": 10, "advise": 35 },
+    "arbiter": 35
   }
 }
 ```

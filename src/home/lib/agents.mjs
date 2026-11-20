@@ -14,6 +14,8 @@ export const AGENTS = {
   // Plan_59: design advice needs a bounded scope pass before the continued decision pass.
   // The advise budget is 35 minutes because healthy advise passes ran up to 24.6 minutes and stayed silent up to ~23 minutes (Plan_80 E32).
   'codex-advisor': { role: 'advisor', budget: { scope: 10, advise: 35 }, silenceThresholdMs: { scope: null, advise: 996000 }, recoveryBudgetMs: { scope: null, advise: 1102000 }, writes: false, result: 'result.json' },
+  // OW-097 D1 and D5: single-pass arbitration uses the advisor's advise timing.
+  'codex-arbiter': { role: 'arbiter', budget: 35, silenceThresholdMs: 996000, recoveryBudgetMs: 1102000, writes: false, result: 'result.json' },
 };
 
 export const agentRole = (agent) => AGENTS[agent]?.role;

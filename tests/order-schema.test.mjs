@@ -11,18 +11,20 @@ const expectedLabels = {
   'codex-build': ['order id', 'scope', 'continue', 'retry', 'repository', 'scope new', 'slug', 'effort'],
   'codex-review': ['order id', 'continue', 'retry', 'resume', 'repository', 'slug', 'effort', 'changeset'],
   'codex-advisor': ['order id', 'continue', 'retry', 'resume', 'phase', 'repository', 'slug', 'effort', 'decisions'],
+  // OW-097 D1: one arbitration pass, so no continue and no phase.
+  'codex-arbiter': ['order id', 'retry', 'resume', 'repository', 'slug', 'effort'],
 };
 const expectedOptionalAgents = {
-  repository: ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor'],
+  repository: ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor', 'codex-arbiter'],
   'scope new': ['codex-build'],
-  slug: ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor'],
-  effort: ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor'],
+  slug: ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor', 'codex-arbiter'],
+  effort: ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor', 'codex-arbiter'],
   changeset: ['codex-review'],
   decisions: ['codex-advisor'],
 };
 
 test('order schemas own the immutable registry without call labels or runner fields (Plan_63 D9)', () => {
-  assert.deepEqual(ORDER_AGENTS, ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor']);
+  assert.deepEqual(ORDER_AGENTS, ['codex-scout', 'codex-build', 'codex-review', 'codex-advisor', 'codex-arbiter']);
   assert.ok(Object.isFrozen(ORDER_AGENTS));
   for (const agent of ORDER_AGENTS) {
     const labels = orderLabelsFor(agent);
