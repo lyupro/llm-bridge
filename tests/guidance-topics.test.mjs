@@ -13,11 +13,10 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { COMMANDS } from '../cli/command-registry.mjs';
 import { GUIDANCE_TOPICS } from '../src/home/lib/guidance-topics.mjs';
-import { renderGuidance } from '../cli/guidance-render.mjs';
 import { ORDER_RULES } from '../src/home/lib/order-rules.mjs';
 import { SHELL_UNSAFE_SEQUENCES } from '../src/home/lib/shell-unsafe.mjs';
 import { SCHEMAS } from '../src/home/lib/runner/schemas.mjs';
-import { makeTempTree, removeTempTree } from './temp-tree.mjs';
+import { makeHomeImage } from './home-image.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const guidanceDir = path.join(root, 'src', 'home', 'guidance');
@@ -25,11 +24,10 @@ const topics = Object.keys(GUIDANCE_TOPICS);
 const registered = new Set(COMMANDS.map((command) => command.name));
 const readTopic = (topic) => fs.readFileSync(path.join(guidanceDir, `${topic}.md`), 'utf8');
 
-function installedHome(t) {
-  const home = makeTempTree('guidance-topics-');
-  t.after(() => removeTempTree(home));
-  fs.cpSync(path.join(root, 'src', 'home'), home, { recursive: true });
-  return home;
+async function installedHome(t) {
+  const home = await makeHomeImage(t);
+  const { renderGuidance } = await import(pathToFileURL(path.join(home, 'lib', 'guidance-render.mjs')).href);
+  return { home, renderGuidance };
 }
 
 const codeList = (values) => values.map((value) =>
@@ -47,10 +45,10 @@ for (const topic of topics) {
   });
 
   test(`${topic} renders from an installed home without placeholders`, async (t) => {
-    const home = installedHome(t);
+    const { home, renderGuidance } = await installedHome(t);
     const text = fs.readFileSync(path.join(home, 'guidance', `${topic}.md`), 'utf8');
     assert.doesNotMatch(await renderGuidance(text, {
-      root: home, topic, configPath: path.join(home, 'config.json'), topics: GUIDANCE_TOPICS,
+      topic, configPath: path.join(home, 'config.json'), topics: GUIDANCE_TOPICS,
     }), /{{/);
   });
 
@@ -66,7 +64,7 @@ for (const topic of topics) {
 }
 
 test('budget guidance reflects the edited config in the installed home', async (t) => {
-  const home = installedHome(t);
+  const { home, renderGuidance } = await installedHome(t);
   const configPath = path.join(home, 'config.json');
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
   const { AGENTS } = await import(pathToFileURL(path.join(home, 'lib', 'agents.mjs')).href);
@@ -76,7 +74,7 @@ test('budget guidance reflects the edited config in the installed home', async (
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf8');
 
   const source = fs.readFileSync(path.join(home, 'guidance', 'budget.md'), 'utf8');
-  const text = await renderGuidance(source, { root: home, topic: 'budget', configPath, topics: GUIDANCE_TOPICS });
+  const text = await renderGuidance(source, { topic: 'budget', configPath, topics: GUIDANCE_TOPICS });
   const lines = text.split('\n');
   assert.ok(lines.includes(`| ${agent} | advise | ${advise} | host config |`));
   assert.ok(lines.includes(`| ${agent} | scope | ${budget.scope} | package |`));
@@ -84,14 +82,16 @@ test('budget guidance reflects the edited config in the installed home', async (
 });
 
 test('order renders the shell list in the source array order', async (t) => {
+  const { renderGuidance } = await installedHome(t);
   const text = await renderGuidance(readTopic('order'),
-    { root: installedHome(t), topic: 'order', topics: GUIDANCE_TOPICS });
+    { topic: 'order', topics: GUIDANCE_TOPICS });
   assert.equal(/Forbidden shell sequences are (.*?)\./.exec(text)?.[1], codeList(SHELL_UNSAFE_SEQUENCES));
 });
 
 test('order guidance advertises decisions only for advisor and explains the ledger', async (t) => {
+  const { renderGuidance } = await installedHome(t);
   const text = await renderGuidance(readTopic('order'),
-    { root: installedHome(t), topic: 'order', topics: GUIDANCE_TOPICS });
+    { topic: 'order', topics: GUIDANCE_TOPICS });
   const rows = text.split('\n').filter((line) => /^\| codex-/.test(line));
   assert.equal(rows.find((line) => line.startsWith('| codex-advisor |')),
     '| codex-advisor | `order id`, `phase` | `continue`, `retry`, `resume` | `repository`, `slug`, `effort`, `decisions` |');
@@ -126,8 +126,9 @@ test('advisor guidance explains the empty-resume limit and resubmitting the orig
 });
 
 test('records renders both required review field arrays from the schema', async (t) => {
+  const { renderGuidance } = await installedHome(t);
   const text = await renderGuidance(readTopic('records'),
-    { root: installedHome(t), topic: 'records', topics: GUIDANCE_TOPICS });
+    { topic: 'records', topics: GUIDANCE_TOPICS });
   const review = SCHEMAS['codex-review'];
   const match = /Top-level fields: (.*?); finding fields: (.*?)\./.exec(text);
   assert.ok(match);
@@ -135,10 +136,11 @@ test('records renders both required review field arrays from the schema', async 
   assert.equal(match[2], codeList(review.properties.findings.items.required));
 });
 test('order renders every registered rule key exactly once before free refusals', async (t) => {
+  const { renderGuidance } = await installedHome(t);
   const source = readTopic('order');
   assert.match(source, /## Rules the runner enforces\n\nThese are the rules a pre-start refusal names\.\n\n{{order-rules:all}}/);
   assert.ok(source.indexOf('## Rules the runner enforces') < source.indexOf('## Free refusals'));
-  const text = await renderGuidance(source, { root: installedHome(t), topic: 'order', topics: GUIDANCE_TOPICS });
+  const text = await renderGuidance(source, { topic: 'order', topics: GUIDANCE_TOPICS });
   const keys = [...text.matchAll(/^- `([^`]+)`: /gm)].map((match) => match[1]);
   assert.deepEqual(keys.sort(), Object.keys(ORDER_RULES).sort());
   for (const key of Object.keys(ORDER_RULES)) {

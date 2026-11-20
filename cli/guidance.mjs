@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resolveBrandHome } from '../src/home/lib/brand-home.mjs';
-import { renderGuidance } from './guidance-render.mjs';
 
 const topicList = (topics) => [
   'Topics:',
@@ -59,11 +58,26 @@ export async function guidance(argv, { env = process.env, homedir } = {}) {
       output: `Cannot read guidance file ${file}: ${error.message}\nrun llm-bridge update`,
     };
   }
-  return renderGuidance(text, { root, topic, configPath, topics }).then(
-    (output) => ({ exitCode: 0, output }),
-    (error) => ({
+  // Package 0.6.19 failed on the budget placeholder from a newer home.
+  // OW-097 D8 keeps the renderer and its templates in the same installed image.
+  const rendererPath = path.join(root, 'lib', 'guidance-render.mjs');
+  let renderGuidance;
+  try {
+    ({ renderGuidance } = await import(pathToFileURL(rendererPath).href));
+    if (typeof renderGuidance !== 'function') throw new Error('Invalid renderGuidance export');
+  } catch (error) {
+    return {
+      exitCode: 1,
+      output: `Cannot load guidance renderer ${rendererPath}: ${error?.message ?? String(error)}\nrun llm-bridge update`,
+    };
+  }
+  try {
+    const output = await renderGuidance(text, { topic, configPath, topics });
+    return { exitCode: 0, output };
+  } catch (error) {
+    return {
       exitCode: 1,
       output: error.hostConfig === true ? error.message : `${error.message}\nrun llm-bridge update`,
-    }),
-  );
+    };
+  }
 }

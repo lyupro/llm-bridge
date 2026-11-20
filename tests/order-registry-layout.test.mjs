@@ -146,6 +146,7 @@ test('llm-bridge guidance order prints every registered key from a copied real r
   fs.copyFileSync(path.join(lib, 'shell-unsafe.mjs'), path.join(installedLib, 'shell-unsafe.mjs'));
   // OW-097 D8: guidance validates topics against the registry installed in this home.
   fs.copyFileSync(path.join(lib, 'guidance-topics.mjs'), path.join(installedLib, 'guidance-topics.mjs'));
+  fs.copyFileSync(path.join(lib, 'guidance-render.mjs'), path.join(installedLib, 'guidance-render.mjs'));
   fs.mkdirSync(path.join(home, 'guidance'));
   fs.copyFileSync(new URL('../src/home/guidance/order.md', import.meta.url),
     path.join(home, 'guidance', 'order.md'));

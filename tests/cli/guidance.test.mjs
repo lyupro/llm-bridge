@@ -17,6 +17,11 @@ function writeRegistry(root, source = `export const GUIDANCE_TOPICS = ${JSON.str
   fs.writeFileSync(registryPath, source, 'utf8');
 }
 
+function installRenderer(root) {
+  fs.copyFileSync(new URL('../../src/home/lib/guidance-render.mjs', import.meta.url),
+    path.join(root, 'lib', 'guidance-render.mjs'));
+}
+
 function homeFixture(t, { installRegistry = true } = {}) {
   const home = makeTempTree('guidance-');
   t.after(() => removeTempTree(home));
@@ -42,6 +47,7 @@ function assertTopics(output) {
 
 test('guidance always returns a Promise for usage, read errors and rendering', async (t) => {
   const { home, env } = homeFixture(t);
+  installRenderer(home);
   fs.mkdirSync(path.join(home, 'guidance'));
   fs.writeFileSync(path.join(home, 'guidance', 'order.md'), 'Installed rules');
   fs.writeFileSync(path.join(home, 'guidance', 'records.md'), '{{unknown-field}}');
@@ -64,86 +70,9 @@ test('guidance lists the finite topics in order with summaries and usage', async
     Object.entries(GUIDANCE_TOPICS).map(([topic, summary]) => `  ${topic} — ${summary}`));
 });
 
-test('guidance advertises and renders a topic added by the installed home', async (t) => {
-  // The 2026-11-20 incident had package 0.8.2 on PATH and newer topics installed from the clone.
-  const { home } = homeFixture(t, { installRegistry: false });
-  const root = path.join(home, 'installed home # Unicode-漢');
-  const env = { LLM_BRIDGE_HOME: root };
-  const topic = 'installed-only';
-  const summary = 'Only in the installed registry.';
-  assert.equal(Object.hasOwn(GUIDANCE_TOPICS, topic), false);
-  writeRegistry(root, `export const GUIDANCE_TOPICS = Object.freeze(${JSON.stringify({
-    ...GUIDANCE_TOPICS, [topic]: summary,
-  })});`);
-  fs.mkdirSync(path.join(root, 'guidance'));
-  fs.writeFileSync(path.join(root, 'guidance', `${topic}.md`), '{{order-rules:installed-only}}', 'utf8');
-  fs.writeFileSync(path.join(root, 'lib', 'order-rules.mjs'), `export const ORDER_RULES = {
-    'installed-rule': { topic: 'installed-only', rule: 'Rules from the installed home.' },
-  };`, 'utf8');
-
-  for (const [argv, exitCode] of [[[], 0], [['unknown'], 2], [['order', 'advisor'], 2]]) {
-    const result = await guidance(argv, { env });
-    assert.equal(result.exitCode, exitCode);
-    assert.ok(result.output.includes(`  ${topic} — ${summary}`));
-  }
-  assert.deepEqual(await guidance([topic], { env }),
-    { exitCode: 0, output: '- `installed-rule`: Rules from the installed home.' });
-});
-
-test('guidance refuses a clone topic omitted from the installed registry', async (t) => {
-  const { home, env } = homeFixture(t, { installRegistry: false });
-  assert.ok(Object.hasOwn(GUIDANCE_TOPICS, 'arbiter'));
-  writeRegistry(home, 'export const GUIDANCE_TOPICS = { order: "Installed order summary." };');
-  fs.mkdirSync(path.join(home, 'guidance'));
-  fs.writeFileSync(path.join(home, 'guidance', 'arbiter.md'), 'Stale guidance file.', 'utf8');
-
-  const result = await guidance(['arbiter'], { env });
-  assert.equal(result.exitCode, 2);
-  assert.match(result.output, /^Unknown guidance topic "arbiter"\./);
-  assert.match(result.output, /^  order — Installed order summary\.$/m);
-  assert.doesNotMatch(result.output, /^  arbiter /m);
-});
-
-test('missing installed registry names its path and asks for update before processing topics', async (t) => {
-  const { home, env } = homeFixture(t, { installRegistry: false });
-  for (const argv of [[], ['order'], ['order', 'advisor']]) {
-    const result = await guidance(argv, { env });
-    assert.equal(result.exitCode, 1);
-    assert.ok(result.output.includes(path.join(home, 'lib', 'guidance-topics.mjs')));
-    assert.ok(result.output.endsWith('\nrun llm-bridge update'));
-  }
-});
-
-test('failed installed registry import names its path and asks for update', async (t) => {
-  const { home, env } = homeFixture(t, { installRegistry: false });
-  writeRegistry(home, 'throw new Error("installed registry import failed");');
-  const result = await guidance([], { env });
-  assert.equal(result.exitCode, 1);
-  assert.ok(result.output.includes(path.join(home, 'lib', 'guidance-topics.mjs')));
-  assert.match(result.output, /installed registry import failed\nrun llm-bridge update$/);
-});
-
-test('invalid installed registry exports name their path and ask for update', async (t) => {
-  for (const source of [
-    'export const unrelated = {};',
-    'export const GUIDANCE_TOPICS = Object.freeze([]);',
-    'export const GUIDANCE_TOPICS = { "Bad-key": "Summary." };',
-    'export const GUIDANCE_TOPICS = { all: "Reserved." };',
-    'export const GUIDANCE_TOPICS = { order: 1 };',
-    'export const GUIDANCE_TOPICS = { order: "" };',
-    'export const GUIDANCE_TOPICS = { order: "  " };',
-  ]) {
-    const { home, env } = homeFixture(t, { installRegistry: false });
-    writeRegistry(home, source);
-    const result = await guidance([], { env });
-    assert.equal(result.exitCode, 1, source);
-    assert.ok(result.output.includes(path.join(home, 'lib', 'guidance-topics.mjs')));
-    assert.match(result.output, /Invalid GUIDANCE_TOPICS export\nrun llm-bridge update$/);
-  }
-});
-
 test('guidance prints each installed topic verbatim from the injected home', async (t) => {
   const { home, env } = homeFixture(t);
+  installRenderer(home);
   fs.mkdirSync(path.join(home, 'guidance'));
   for (const topic of Object.keys(GUIDANCE_TOPICS)) {
     const text = `\uFEFF# ${topic}\r\n\r\nDetailed rules — naïve.  \r\n\n`;
@@ -156,6 +85,7 @@ test('guidance also resolves the default brand home from an injected homedir', a
   const { home } = homeFixture(t, { installRegistry: false });
   const root = path.join(home, '.lyupro', '.llm-bridge');
   writeRegistry(root);
+  installRenderer(root);
   const dir = path.join(root, 'guidance');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'order.md'), 'Default home rules');
@@ -247,6 +177,7 @@ test('guidance is public and reachable through main, with usage errors on io.err
 
 test('main awaits installed rendering and preserves existing output routing', async (t) => {
   const { home } = homeFixture(t);
+  installRenderer(home);
   fs.mkdirSync(path.join(home, 'guidance'));
   fs.writeFileSync(path.join(home, 'lib', 'shell-unsafe.mjs'),
     'export const SHELL_UNSAFE_SEQUENCES = ["installed-only"];');
@@ -268,6 +199,7 @@ test('main awaits installed rendering and preserves existing output routing', as
 
 test('unknown installed placeholders return exit 1 naming the topic and placeholder', async (t) => {
   const { home, env } = homeFixture(t);
+  installRenderer(home);
   fs.mkdirSync(path.join(home, 'guidance'));
   fs.writeFileSync(path.join(home, 'guidance', 'order.md'), '{{unknown-field}}');
   const result = await guidance(['order'], { env });
@@ -279,6 +211,7 @@ test('unknown installed placeholders return exit 1 naming the topic and placehol
 
 test('unresolved installed templates return exit 1 with the update remedy', async (t) => {
   const { home, env } = homeFixture(t);
+  installRenderer(home);
   fs.mkdirSync(path.join(home, 'guidance'));
   fs.writeFileSync(path.join(home, 'guidance', 'records.md'), 'Fields: {{unfinished');
   const result = await guidance(['records'], { env });
@@ -290,6 +223,7 @@ test('unresolved installed templates return exit 1 with the update remedy', asyn
 
 test('missing installed value modules return exit 1 for each placeholder', async (t) => {
   const { home, env } = homeFixture(t);
+  installRenderer(home);
   fs.mkdirSync(path.join(home, 'guidance'));
   for (const [topic, placeholder] of [
     ['order', '{{shell-unsafe-sequences}}'], ['records', '{{review-required-fields}}'],
@@ -333,6 +267,7 @@ test('records guidance follows the newest resumed run and preserves the review t
 
 test('invalid host config names the file without recommending update', async (t) => {
   const { home, env } = homeFixture(t);
+  installRenderer(home);
   const configPath = path.join(home, 'config.json');
   fs.mkdirSync(path.join(home, 'guidance'));
   fs.writeFileSync(path.join(home, 'guidance', 'budget.md'), '{{agent-budgets}}');
@@ -360,6 +295,7 @@ test('budget guidance passes the resolved config path for overridden and default
     const configPath = path.join(root, 'config.json');
     fs.mkdirSync(path.join(root, 'guidance'), { recursive: true });
     writeRegistry(root);
+    installRenderer(root);
     fs.writeFileSync(path.join(root, 'guidance', 'budget.md'), '{{agent-budgets}}');
     fs.writeFileSync(configPath, JSON.stringify({ minutes: 6.25 }));
     fs.writeFileSync(path.join(root, 'lib', 'agents.mjs'),

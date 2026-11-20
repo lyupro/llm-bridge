@@ -1,6 +1,4 @@
-/** Plan_79 B1: guidance derives owned values from the installed home, never a second list. */
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+/** Expands guidance placeholders using modules from the same installed home. */
 
 const codeList = (values) => values.map((value) =>
   value.includes('`') ? '`` ' + value + ' ``' : '`' + value + '`').join(', ');
@@ -9,24 +7,24 @@ function renderError(topic, placeholder, message) {
   return new Error(`Cannot render guidance topic "${topic}" placeholder "${placeholder}": ${message}`);
 }
 
-export async function renderGuidance(text, { root, topic, configPath, topics }) {
+export async function renderGuidance(text, { topic, configPath, topics }) {
   if (!topics) throw new Error('topics is required');
   const values = new Map();
   for (const [placeholder, name] of text.matchAll(/\{\{([^{}]*)\}\}/g)) {
     if (values.has(placeholder)) continue;
     try {
-      // The 2026-08-26 seeded-config incident requires file URLs rooted in the installed home.
+      // Resolve siblings lazily so a broken module only affects the placeholder that needs it.
       if (name === 'shell-unsafe-sequences') {
-        const { SHELL_UNSAFE_SEQUENCES } = await import(pathToFileURL(path.join(root, 'lib', 'shell-unsafe.mjs')).href);
+        const { SHELL_UNSAFE_SEQUENCES } = await import(new URL('./shell-unsafe.mjs', import.meta.url).href);
         values.set(placeholder, codeList(SHELL_UNSAFE_SEQUENCES));
       } else if (name === 'review-required-fields') {
-        const { SCHEMAS } = await import(pathToFileURL(path.join(root, 'lib', 'runner', 'schemas.mjs')).href);
+        const { SCHEMAS } = await import(new URL('./runner/schemas.mjs', import.meta.url).href);
         const review = SCHEMAS['codex-review'];
         values.set(placeholder, `Top-level fields: ${codeList(review.required)}; finding fields: ${codeList(review.properties.findings.items.required)}`);
       } else if (name === 'agent-budgets') {
         if (!configPath) throw new Error('configPath is required');
-        const { AGENTS } = await import(pathToFileURL(path.join(root, 'lib', 'agents.mjs')).href);
-        const { readRunConfig } = await import(pathToFileURL(path.join(root, 'lib', 'run-config.mjs')).href);
+        const { AGENTS } = await import(new URL('./agents.mjs', import.meta.url).href);
+        const { readRunConfig } = await import(new URL('./run-config.mjs', import.meta.url).href);
         let runConfig;
         try {
           runConfig = readRunConfig(configPath, { provenance: true });
@@ -49,7 +47,7 @@ export async function renderGuidance(text, { root, topic, configPath, topics }) 
         if (ruleTopic !== 'all' && !Object.hasOwn(topics, ruleTopic)) {
           throw new Error(`unknown order rule topic "${ruleTopic}"`);
         }
-        const { ORDER_RULES } = await import(pathToFileURL(path.join(root, 'lib', 'order-rules.mjs')).href);
+        const { ORDER_RULES } = await import(new URL('./order-rules.mjs', import.meta.url).href);
         const rules = Object.entries(ORDER_RULES);
         const items = (owner) => rules.filter(([, rule]) => rule.topic === owner)
           .map(([key, rule]) => `- \`${key}\`: ${rule.rule}`).join('\n');

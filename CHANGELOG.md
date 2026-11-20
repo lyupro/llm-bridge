@@ -27,7 +27,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   (`lib/guidance-topics.mjs`) instead of a package constant, so a package older or newer than the home no longer
   refuses a topic the installed rules name (`Unknown guidance topic "arbiter"` with package 0.8.2 and a newer
   home). A home without the registry answers exit 1 with its path and `run llm-bridge update`, and
-  `{{order-rules:all}}` fails on a rule whose topic is not registered instead of dropping it (OW-097).
+  `{{order-rules:all}}` fails on a rule whose topic is not registered instead of dropping it. The placeholder
+  renderer ships in the home too (`lib/guidance-render.mjs`), so a template and the code that expands it always
+  come from the same install; a home without it answers exit 1 with its path (OW-097).
 
 ## [0.8.2] - 2026-11-16
 

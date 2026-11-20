@@ -2,8 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { renderGuidance } from '../cli/guidance-render.mjs';
+import { renderGuidance } from '../src/home/lib/guidance-render.mjs';
 import { GUIDANCE_TOPICS } from '../src/home/lib/guidance-topics.mjs';
 import { ORDER_RULES, orderRuleMessage, orderRefusalAt } from '../src/home/lib/order-rules.mjs';
 import { ORDER_DIAGNOSTICS, orderDiagnosticMessage } from '../src/home/lib/order-diagnostics.mjs';
@@ -294,7 +293,7 @@ test('call rules render once and replace the handwritten absolute task-file inst
   const source = fs.readFileSync(new URL('../src/home/guidance/order.md', import.meta.url), 'utf8');
   assert.ok(!source.includes('The path must be absolute and name a file the orchestrator wrote with its file tool.'));
   const text = await renderGuidance(source, {
-    root: fileURLToPath(new URL('../src/home/', import.meta.url)), topic: 'order', topics: GUIDANCE_TOPICS,
+    topic: 'order', topics: GUIDANCE_TOPICS,
   });
   assert.equal(ORDER_RULES['decisions-path'].rule,
     'When decisions is present, give one repository-relative path to an existing readable ledger file ' +
