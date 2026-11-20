@@ -95,7 +95,7 @@ for (const [name, options, exit, resultOk] of [
     assert.equal(recorded.reason_rule, meta.reason_rule);
     assert.deepEqual(recorded.write_refusal, { ...refused, measurement });
     assert.deepEqual(actionRows(reply), [
-      orderDiagnosticMessage('next-action', { variant: 'fail-build-write-refusal' }),
+      orderDiagnosticMessage('next-action', { variant: 'fail-build-write-refusal-unmeasured' }),
     ]);
     assert.equal(reply.split('\n')[2], actionRows(reply)[0]);
     assert.match(actionRows(reply)[0], /llm-bridge guidance troubleshooting, case T01/);
@@ -106,6 +106,60 @@ for (const [name, options, exit, resultOk] of [
     assert.equal(renderReply(dir, 'codex-build', recorded), reply);
   });
 }
+
+for (const [classification, variant, folderRow] of [
+  [{ level: 'confirmed', reason: null, folders: [
+    { path: 'C:\\repo\\src', level: 'confirmed', reason: null },
+    { path: 'C:\\repo\\src\\other', level: 'not-confirmed', reason: 'inheritance-intact' },
+  ] }, 'fail-build-write-refusal-confirmed', 'Folder check: T01 confirmed for 1 of 2 folder(s)'],
+  [{ level: 'not-confirmed', reason: 'inheritance-intact', folders: [
+    { path: 'C:\\repo\\src', level: 'not-confirmed', reason: 'inheritance-intact' },
+  ] }, 'fail-build-write-refusal-not-confirmed', 'Folder check: T01 not confirmed (inheritance-intact)'],
+  [measurement.classification, 'fail-build-write-refusal-unmeasured', 'Folder check: not measured (timeout)'],
+]) {
+  test(`a refused build renders the exact ${classification.level} reply from stored measurement`, async () => {
+    const stderr = classification.level === 'confirmed'
+      ? `${refusalLine}\nFailed to write file C:\\repo\\src\\other\\blocked.mjs\n`
+      : `${refusalLine}\n`;
+    const dir = buildRun({ stderr });
+    const { meta, reply } = await collect(dir, 'codex-build', 9, {
+      measureWriteRefusal: async () => ({
+        raw: classification.level === 'not-measured' ? measurement.raw : { status: 'measured' },
+        classification,
+      }),
+    });
+    const recorded = readJsonFileSync(path.join(dir, 'meta.json'));
+    assert.deepEqual(recorded.write_refusal.measurement.classification, classification);
+    const expected = [
+      `FAIL — ${meta.reason}`,
+      `Artifacts: events.jsonl ${meta.events_bytes} B · stderr.log ${Buffer.byteLength(stderr)} B · result.json filled · exit=9`,
+      orderDiagnosticMessage('next-action', { variant }),
+      'Worktree: has unfinished changes (1): src/partial.mjs',
+      folderRow,
+      `Log: llm-bridge read ${dir}`,
+    ].join('\n');
+    assert.equal(reply, expected);
+    assert.equal(renderReply(dir, 'codex-build', recorded), expected);
+  });
+}
+
+test('a legacy stored refusal without a measurement keeps its exact reply', async () => {
+  const dir = buildRun();
+  await collect(dir, 'codex-build', 9, fakeMeasurement);
+  const recorded = readJsonFileSync(path.join(dir, 'meta.json'));
+  const expected = [
+    `FAIL — ${recorded.reason}`,
+    `Artifacts: events.jsonl ${recorded.events_bytes} B · stderr.log ${recorded.stderr_bytes} B · result.json filled · exit=9`,
+    orderDiagnosticMessage('next-action', { variant: 'fail-build-write-refusal' }),
+    'Worktree: has unfinished changes (1): src/partial.mjs',
+    `Log: llm-bridge read ${dir}`,
+  ].join('\n');
+
+  assert.equal(renderReply(dir, 'codex-build', { ...recorded, write_refusal: refused }), expected);
+  assert.equal(renderReply(dir, 'codex-build', {
+    ...recorded, write_refusal: { ...refused, measurement: { classification: { level: 'unknown' } } },
+  }), expected);
+});
 
 test('a refused build awaits measurement before publishing its first meta.json', async () => {
   const dir = buildRun({ result: undefined });

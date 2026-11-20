@@ -16,6 +16,20 @@ const NEXT_ACTION_TEXT = Object.freeze({
     + `Check each folder owner and ACL using llm-bridge guidance troubleshooting, case ${writeRefusalCase.id}. `
     + 'Use the administrator repair only on affected subfolders after the checks confirm the case. '
     + 'Then continue the missing work under a continue: grant',
+  'fail-build-write-refusal-confirmed': 'Action: keep the partial edits in the worktree. Do not repeat the order unchanged. '
+    + `The runner confirmed llm-bridge guidance troubleshooting case ${writeRefusalCase.id} for the folders marked confirmed in meta.json (write_refusal.measurement). `
+    + 'Show the operator only those folders and the administrator repair from that case. Do not repair any other folders. '
+    + 'Continue the missing work under a continue: grant only after the folder problem is solved',
+  'fail-build-write-refusal-not-confirmed': 'Action: keep the partial edits in the worktree. Do not repeat the order unchanged. '
+    + `The runner measured the refused folders and did not confirm llm-bridge guidance troubleshooting case ${writeRefusalCase.id}. The administrator repair does not apply. `
+    + 'Show the operator the refused paths, the measured reasons from meta.json and the refusal lines from stderr.log. Ask how to proceed. '
+    + 'Continue the missing work under a continue: grant only after the folder problem is solved',
+  'fail-build-write-refusal-unmeasured': 'Action: keep the partial edits in the worktree. Do not repeat the order unchanged. '
+    + 'The runner could not measure the folders (see the reason in meta.json). '
+    + 'Show the operator the in-scope refused paths from meta.json and their containing folders. '
+    + `Check each folder owner and ACL by hand using llm-bridge guidance troubleshooting, case ${writeRefusalCase.id}. `
+    + 'Use the administrator repair only on affected subfolders after the checks confirm the case. '
+    + 'Continue the missing work under a continue: grant only after the folder problem is solved',
   'fail-output-limit': "Action: the model's output limit ended the turn before an answer; do not resume this run, the same thread hits the same limit; narrow the order (fewer files, fewer questions, a shorter answer) or lower the role's effort (/llm-bridge:model), then repeat it once with a retry: grant carrying the revised task, or under a new order id",
   'fail-no-result': 'Action: the run left no usable result; read the log and git status before deciding; repeat only through a grant this reply offers or the operator approves, never take over the task yourself',
   'usage': 'Action: nothing was started and no quota was spent; fix the task file or the call as the refusal says, then call again',

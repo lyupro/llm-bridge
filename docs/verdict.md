@@ -361,10 +361,20 @@ A result-carrying `FAIL` with `reason_rule: build-encoding-corrupted` selects `f
 from the corrupted text. Repair the named lines by re-reading the file as UTF-8 in a new pass under
 a `continue:` grant, or accept the work as it stands if that text was intended.
 
-A `FAIL` with `reason_rule: build-scope-write-refused` selects `fail-build-write-refusal`
-even when the result is unusable. The row directs the orchestrator to keep partial edits,
-report the refused paths and containing folders, and check the owner and ACL under
-`llm-bridge guidance troubleshooting` case T01 before any affected-subfolder repair and continuation.
+A `FAIL` with `reason_rule: build-scope-write-refused` selects its third-row `Action:` from
+`meta.json#write_refusal.measurement.classification.level`, even when the result is unusable
+(OW-092 D4). Keep partial edits and do not repeat the order unchanged. Continue missing work
+under a `continue:` grant after the folder problem is solved.
+
+| Stored level | Action variant and guidance | Row immediately after `Worktree:` |
+| --- | --- | --- |
+| `confirmed` | `fail-build-write-refusal-confirmed`. Show only the folders marked confirmed and the administrator repair from `llm-bridge guidance troubleshooting` case T01. | `Folder check: T01 confirmed for <n> of <m> folder(s)` |
+| `not-confirmed` | `fail-build-write-refusal-not-confirmed`. Show the refused paths, measured reasons and stderr refusal lines, then ask the operator how to proceed. | `Folder check: T01 not confirmed (<reason>)` |
+| `not-measured` | `fail-build-write-refusal-unmeasured`. Check each folder by hand as case T01 describes before any repair. | `Folder check: not measured (<reason>)` |
+| Missing or unknown | `fail-build-write-refusal`. Show the refused paths and containing folders, then check the owner and ACL under case T01 before any affected-subfolder repair. | Omitted |
+
+`<n>` counts confirmed folders and `<m>` counts all folders in the stored classification.
+`<reason>` is the overall classification reason.
 
 The row is third in post-run replies, second in a runner-recorded failure (`writeFailure()`, right
 after its `FAIL — ` headline), and last in pre-start refusals. If a refusal producer supplies

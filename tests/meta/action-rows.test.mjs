@@ -96,7 +96,7 @@ for (const [status, variant, options] of [
     result: buildResult([], { verify_passed: false }),
   }],
   ['FAIL', 'fail-no-result', { events: [], stderr: 'panic: failed before result\n' }],
-  ['FAIL', 'fail-build-write-refusal', {
+  ['FAIL', 'fail-build-write-refusal-unmeasured', {
     status: { repo: 'C:\\repo' },
     scope: 'src/**',
     events: [{ type: 'thread.started', thread_id: 'action-refusal' }, COMPLETED_COMMAND],
@@ -112,6 +112,11 @@ for (const [status, variant, options] of [
       }),
     });
     assert.equal(meta.status, status);
-    assertAction(reply.split('\n'), variant);
+    const rows = reply.split('\n');
+    assertAction(rows, variant);
+    if (variant === 'fail-build-write-refusal-unmeasured') {
+      assert.equal(postRunActionVariant(meta), variant);
+      assert.deepEqual(rows.slice(3, 5), ['Worktree: no new changes', 'Folder check: not measured (timeout)']);
+    }
   });
 }

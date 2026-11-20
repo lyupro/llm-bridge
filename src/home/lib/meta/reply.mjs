@@ -220,7 +220,14 @@ export function failActionVariant(meta) {
   // OW-089 D1: an unchanged repeat starts from the corruption, so it needs its own repair guidance.
   if (meta.result_ok && meta.reason_rule === 'build-encoding-corrupted') return 'fail-build-encoding';
   // OW-092 D1: the refusal can explain the failure even when no usable result survived.
-  if (meta.reason_rule === 'build-scope-write-refused') return 'fail-build-write-refusal';
+  if (meta.reason_rule === 'build-scope-write-refused') {
+    // OW-092 D4: administrator repair depends on the stored folder checks.
+    const level = meta.write_refusal?.measurement?.classification?.level;
+    if (level === 'confirmed') return 'fail-build-write-refusal-confirmed';
+    if (level === 'not-confirmed') return 'fail-build-write-refusal-not-confirmed';
+    if (level === 'not-measured') return 'fail-build-write-refusal-unmeasured';
+    return 'fail-build-write-refusal';
+  }
   if (meta.result_ok) return 'fail-result';
   return meta.situation?.kind === 'output-limit' ? 'fail-output-limit' : 'fail-no-result';
 }
@@ -236,6 +243,7 @@ export function postRunActionVariant(meta) {
 }
 
 export function failReply(ctx, meta) {
+  const folderCheck = folderCheckRow(meta.write_refusal?.measurement?.classification);
   return [
     `FAIL — ${line(meta.reason, 170)}`,
     `Artifacts: events.jsonl ${meta.events_bytes} B · stderr.log ${meta.stderr_bytes} B · ${path.basename(ctx.resultPath)} ${meta.result_ok ? 'filled' : 'empty or missing'} · exit=${meta.exit}`,
@@ -245,9 +253,23 @@ export function failReply(ctx, meta) {
     // and the orchestrator has to know whether there is something to revert before it decides
     // anything else.
     ...(ctx.agent === 'codex-build' ? [`Worktree: ${worktreeState(ctx.runDir)}`] : []),
+    ...(folderCheck ? [folderCheck] : []),
     ...(meta.result_ok === false ? stopRows(meta, ctx.runDir) : []),
     `Log: ${readCommand(ctx.runDir)}`,
   ];
+}
+
+function folderCheckRow(classification) {
+  switch (classification?.level) {
+    case 'confirmed': {
+      const { folders } = classification;
+      const confirmed = folders.filter((folder) => folder.level === 'confirmed').length;
+      return `Folder check: T01 confirmed for ${confirmed} of ${folders.length} folder(s)`;
+    }
+    case 'not-confirmed': return `Folder check: T01 not confirmed (${classification.reason})`;
+    case 'not-measured': return `Folder check: not measured (${classification.reason})`;
+    default: return null;
+  }
 }
 
 /**

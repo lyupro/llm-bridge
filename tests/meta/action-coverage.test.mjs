@@ -13,6 +13,7 @@ import { buildResult, makeRun } from './test-fixtures.mjs';
 
 const actionsByExit = {
   FAIL: ['fail-result', 'fail-scout-web-unmarked', 'fail-build-encoding', 'fail-build-write-refusal',
+    'fail-build-write-refusal-confirmed', 'fail-build-write-refusal-not-confirmed', 'fail-build-write-refusal-unmeasured',
     'fail-no-result', 'fail-output-limit', 'runner-fault', 'run-in-progress',
     'runs-root-retired', 'availability-unconfirmed', 'readiness-unconfirmed',
     'advisor-scope-result', 'grant-decision', 'usage'],
