@@ -21,6 +21,7 @@ import { unavailableRows } from './unavailable-rows.mjs';
 import { stopRows } from './stop-rows.mjs';
 import { alreadyDecidedRow } from './already-decided-row.mjs';
 import { readEncodingEvidence } from './encoding-verdict.mjs';
+import { readCommand } from './read-command.mjs';
 
 /** What the run itself changed, and what the tooling around it changed while it worked. */
 const runChanges = (runDir) => {
@@ -28,8 +29,6 @@ const runChanges = (runDir) => {
   const after = readText(path.join(runDir, 'state-after.txt'));
   return splitRunChanges(runDir, changedPaths(before, after), { before, after });
 };
-
-const readCommand = (runDir) => `llm-bridge read ${runDir}`;
 
 function stripVerdict(value) {
   // Run 2026-10-01_114244_plan72-r3q-live-probe-20261001 repeated OK because the model prefixed its summary.
