@@ -16,6 +16,11 @@ const refused = {
   paths: [{ path: 'src/blocked.mjs', inScope: true, failedChange: true }],
   evidence: [refusalLine],
 };
+const measurement = {
+  raw: { status: 'not-measured', reason: 'timeout' },
+  classification: { level: 'not-measured', reason: 'timeout', folders: [] },
+};
+const fakeMeasurement = { measureWriteRefusal: async () => measurement };
 const changed = 'U\t10\tsrc/partial.mjs\n';
 const changes = [{ file: 'src/partial.mjs', what: 'edit', why: 'task' }];
 const thread = { type: 'thread.started', thread_id: 'write-refusal' };
@@ -78,17 +83,17 @@ for (const [name, options, exit, resultOk] of [
 ]) {
   test(`${name} selects the refusal rule and T01 Action without changing the worktree record`, async () => {
     const dir = buildRun(options);
-    const { meta, reply } = await collect(dir, 'codex-build', exit);
+    const { meta, reply } = await collect(dir, 'codex-build', exit, fakeMeasurement);
     assert.equal(meta.result_ok, resultOk);
     assert.equal(meta.status, 'FAIL');
     assert.equal(meta.exit, exit);
     assert.equal(exitCodeFor(meta.status), 1);
     assert.equal(meta.reason_rule, 'build-scope-write-refused');
     assert.match(meta.reason, /sandbox refused to write .*src\/blocked\.mjs/);
-    assert.deepEqual(meta.write_refusal, refused);
+    assert.deepEqual(meta.write_refusal, { ...refused, measurement });
     const recorded = readJsonFileSync(path.join(dir, 'meta.json'));
     assert.equal(recorded.reason_rule, meta.reason_rule);
-    assert.deepEqual(recorded.write_refusal, refused);
+    assert.deepEqual(recorded.write_refusal, { ...refused, measurement });
     assert.deepEqual(actionRows(reply), [
       orderDiagnosticMessage('next-action', { variant: 'fail-build-write-refusal' }),
     ]);
@@ -101,6 +106,32 @@ for (const [name, options, exit, resultOk] of [
     assert.equal(renderReply(dir, 'codex-build', recorded), reply);
   });
 }
+
+test('a refused build awaits measurement before publishing its first meta.json', async () => {
+  const dir = buildRun({ result: undefined });
+  const metaPath = path.join(dir, 'meta.json');
+  let finishMeasurement;
+  const pendingMeasurement = new Promise((resolve) => { finishMeasurement = resolve; });
+  let request;
+  const pendingCollect = collect(dir, 'codex-build', 1, {
+    measureWriteRefusal: async (input) => {
+      request = input;
+      assert.equal(fs.existsSync(metaPath), false);
+      return pendingMeasurement;
+    },
+  });
+  try {
+    await Promise.resolve();
+    assert.equal(fs.existsSync(metaPath), false);
+  } finally {
+    finishMeasurement(measurement);
+  }
+  const { meta } = await pendingCollect;
+  assert.deepEqual(request, { writeRefusal: refused, repoRoot: repo });
+  assert.equal(Object.hasOwn(request.writeRefusal, 'measurement'), false);
+  assert.deepEqual(meta.write_refusal.measurement, measurement);
+  assert.deepEqual(readJsonFileSync(metaPath).write_refusal.measurement, measurement);
+});
 
 for (const [name, target, scope, normalized, failed] of [
   ['outside scope', deniedPath, 'tests/**', 'src/blocked.mjs', true],
@@ -125,7 +156,7 @@ test('one in-scope path is enough even without a matching failed file change', a
     result: undefined,
     stderr: [outside, refusalLine].join('\n'),
     events: [thread, COMPLETED_COMMAND],
-  }), 'codex-build', 1);
+  }), 'codex-build', 1, fakeMeasurement);
   assert.equal(meta.reason_rule, 'build-scope-write-refused');
   assert.match(meta.reason, /\(src\/blocked\.mjs\)/);
   assert.doesNotMatch(meta.reason, /outside/);
@@ -135,6 +166,7 @@ test('one in-scope path is enough even without a matching failed file change', a
       { path: 'src/blocked.mjs', inScope: true, failedChange: false },
     ],
     evidence: [outside, refusalLine],
+    measurement,
   });
 });
 
@@ -190,11 +222,20 @@ for (const [name, options, reason] of [
   }, /read-only/],
 ]) {
   test(`${name} retains its earlier verdict and Action with refusal evidence present`, async () => {
-    const { meta, reply } = await collect(buildRun({ result: undefined, ...options }), 'codex-build', 1);
+    const dir = buildRun({ result: undefined, ...options });
+    let calls = 0;
+    const { meta, reply } = await collect(dir, 'codex-build', 1, {
+      measureWriteRefusal: async () => {
+        calls += 1;
+        return measurement;
+      },
+    });
     assert.equal(meta.status, 'FAIL');
     assert.match(meta.reason, reason);
     assert.notEqual(meta.reason_rule, 'build-scope-write-refused');
+    assert.equal(calls, 0);
     assert.deepEqual(meta.write_refusal, refused);
+    assert.equal(Object.hasOwn(readJsonFileSync(path.join(dir, 'meta.json')).write_refusal, 'measurement'), false);
     assert.deepEqual(actionRows(reply), [
       orderDiagnosticMessage('next-action', { variant: 'fail-no-result' }),
     ]);

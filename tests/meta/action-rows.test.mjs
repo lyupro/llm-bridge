@@ -96,10 +96,21 @@ for (const [status, variant, options] of [
     result: buildResult([], { verify_passed: false }),
   }],
   ['FAIL', 'fail-no-result', { events: [], stderr: 'panic: failed before result\n' }],
+  ['FAIL', 'fail-build-write-refusal', {
+    status: { repo: 'C:\\repo' },
+    scope: 'src/**',
+    events: [{ type: 'thread.started', thread_id: 'action-refusal' }, COMPLETED_COMMAND],
+    stderr: 'Failed to write file C:\\repo\\src\\blocked.mjs\n',
+  }],
 ]) {
   test(`collected ${status} (${variant}) preserves exactly one third-row registry Action`, async () => {
     const dir = makeRun({ args: ['exec', '--json'], ...options });
-    const { meta, reply } = await collect(dir, 'codex-build', 1);
+    const { meta, reply } = await collect(dir, 'codex-build', 1, {
+      measureWriteRefusal: async () => ({
+        raw: { status: 'not-measured', reason: 'timeout' },
+        classification: { level: 'not-measured', reason: 'timeout', folders: [] },
+      }),
+    });
     assert.equal(meta.status, status);
     assertAction(reply.split('\n'), variant);
   });

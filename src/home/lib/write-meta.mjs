@@ -33,6 +33,7 @@ import { webResearchBinding } from './meta/web-research.mjs';
 import { writeStatus } from './meta/run-state.mjs';
 import { resolveStatus } from './meta/verdict.mjs';
 import { publishArbiterReport } from './meta/arbiter-publication.mjs';
+import { measureWriteRefusal } from './meta/write-refusal-measurement.mjs';
 import { assessStop } from './meta/stop-assessment.mjs';
 import { consecutiveEmptyResumes } from './meta/empty-resumes.mjs';
 import { AGENTS, capacityReply, failReply, limitReply, unavailableReply, withProfileRow } from './meta/reply.mjs';
@@ -76,7 +77,7 @@ export const projectFolder = (repoRoot) => path.basename(repoRoot).replace(/^\.+
  * exact text a dispatcher is allowed to return. Async because a refused build awaits the
  * folder-rights measurement before meta.json is published (OW-092 D4).
  */
-export async function collect(runDir, agent, exitCode) {
+export async function collect(runDir, agent, exitCode, { measureWriteRefusal: measureFn = measureWriteRefusal } = {}) {
   const cfg = AGENTS[agent];
   if (!cfg) throw new Error(`unknown agent: ${agent} (expected one of ${Object.keys(AGENTS).join(', ')})`);
 
@@ -108,7 +109,8 @@ export async function collect(runDir, agent, exitCode) {
     events,
     execution: executionFact,
   });
-  const { carried, writeRefusal } = verdict;
+  const { carried } = verdict;
+  let { writeRefusal } = verdict;
   let { status, reason, rule } = verdict;
   let reportSha256;
   // OW-097 D4 requires the verified report to exist before an OK meta can attest to its bytes.
@@ -121,6 +123,13 @@ export async function collect(runDir, agent, exitCode) {
       reason = publication.reason;
       rule = null;
     }
+  }
+
+  // OW-092 D4: if the worker dies after publication, attach reads the first meta.json.
+  if (agent === 'codex-build' && rule === 'build-scope-write-refused' &&
+      writeRefusal !== null && typeof writeRefusal === 'object') {
+    const measurement = await measureFn({ writeRefusal, repoRoot: launched.repo });
+    writeRefusal = { ...writeRefusal, measurement };
   }
 
   const before = readText(path.join(runDir, 'state-before.txt'));
