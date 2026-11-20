@@ -10,12 +10,9 @@ The runner checks the header, never the dispatcher. Free text belongs in the tas
 Start at the first line with consecutive lowercase `label: value` lines, then a blank line and the task body.
 The header ends at the first line that is not a recognized label line, including a blank line.
 
-| Agent | Required labels | Conditional labels | Optional labels |
-| --- | --- | --- | --- |
-| codex-scout | `order id` | `continue`, `retry`, `resume` | `repository`, `slug`, `effort` |
-| codex-build | `order id`, `scope`, `advice` | `continue`, `retry` | `repository`, `scope new`, `slug`, `effort` |
-| codex-review | `order id` | `continue`, `retry`, `resume` | `repository`, `slug`, `effort`, `changeset` |
-| codex-advisor | `order id`, `phase` | `continue`, `retry`, `resume` | `repository`, `slug`, `effort`, `decisions` |
+{{order-header-labels}}
+
+The table lists the labels registered by the order schema, and every `codex-build` header also carries exactly one `advice:` line (see [Advice](#advice)) because its own gate checks it separately from the schema.
 
 `decisions` names one repository-relative decision-ledger file of the owning plan so the advise answer reports whether the question is already decided there; declare it in each phase that should check the ledger, as phases do not inherit it. Omit it when there is no ledger.
 

@@ -145,10 +145,11 @@ test('grant rule guidance and the agent table document all three distinct grant 
     'Give continue, retry or resume a bare run folder other than . or .. and a non-placeholder reason, ' +
     'separated by an em dash, hyphen or colon.');
   const guidance = fs.readFileSync(new URL('../src/home/guidance/order.md', import.meta.url), 'utf8');
+  // OW-097 D8: the agent table is rendered from the schema; tests/guidance-topics.test.mjs proves the rendering.
+  assert.ok(guidance.includes('{{order-header-labels}}'));
   for (const agent of [...readOnlyAgents, 'codex-build']) {
-    const row = guidance.split('\n').find((line) => line.startsWith(`| ${agent} |`));
-    assert.equal(row.split('|')[3].trim(), agent === 'codex-build'
-      ? '`continue`, `retry`' : '`continue`, `retry`, `resume`', agent);
+    const conditional = orderLabelsFor(agent).filter((entry) => entry.conditional).map(({ label }) => label);
+    assert.deepEqual(conditional, agent === 'codex-build' ? ['continue', 'retry'] : grantLabels, agent);
   }
   assert.ok(guidance.includes('`continue` names the continued run; `retry` repeats a failed pass on a fresh thread; ' +
     '`resume` continues a failed read-only pass in its own Codex thread; neither `retry` nor `resume` authorizes the next pass.'));

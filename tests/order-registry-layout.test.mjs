@@ -147,6 +147,11 @@ test('llm-bridge guidance order prints every registered key from a copied real r
   // OW-097 D8: guidance validates topics against the registry installed in this home.
   fs.copyFileSync(path.join(lib, 'guidance-topics.mjs'), path.join(installedLib, 'guidance-topics.mjs'));
   fs.copyFileSync(path.join(lib, 'guidance-render.mjs'), path.join(installedLib, 'guidance-render.mjs'));
+  // The header-label table of order guidance is rendered from the installed order schema and its imports.
+  for (const file of ['order-schema.mjs', 'order-values.mjs', 'order-diagnostics.mjs', 'troubleshooting-cases.mjs']) {
+    fs.copyFileSync(path.join(lib, file), path.join(installedLib, file));
+  }
+  fs.cpSync(path.join(lib, 'order-diagnostics'), path.join(installedLib, 'order-diagnostics'), { recursive: true });
   fs.mkdirSync(path.join(home, 'guidance'));
   fs.copyFileSync(new URL('../src/home/guidance/order.md', import.meta.url),
     path.join(home, 'guidance', 'order.md'));

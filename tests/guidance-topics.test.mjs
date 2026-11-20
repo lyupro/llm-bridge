@@ -88,16 +88,44 @@ test('order renders the shell list in the source array order', async (t) => {
   assert.equal(/Forbidden shell sequences are (.*?)\./.exec(text)?.[1], codeList(SHELL_UNSAFE_SEQUENCES));
 });
 
-test('order guidance advertises decisions only for advisor and explains the ledger', async (t) => {
-  const { renderGuidance } = await installedHome(t);
-  const text = await renderGuidance(readTopic('order'),
-    { topic: 'order', topics: GUIDANCE_TOPICS });
-  const rows = text.split('\n').filter((line) => /^\| codex-/.test(line));
-  assert.equal(rows.find((line) => line.startsWith('| codex-advisor |')),
-    '| codex-advisor | `order id`, `phase` | `continue`, `retry`, `resume` | `repository`, `slug`, `effort`, `decisions` |');
-  for (const row of rows.filter((line) => !line.startsWith('| codex-advisor |'))) {
-    assert.doesNotMatch(row, /`decisions`/);
+test('order guidance matches the installed header schema and explains the advisor ledger', async (t) => {
+  const { home, renderGuidance } = await installedHome(t);
+  const { ORDER_AGENTS, orderLabelsFor } = await import(pathToFileURL(path.join(home, 'lib', 'order-schema.mjs')).href);
+  const source = fs.readFileSync(path.join(home, 'guidance', 'order.md'), 'utf8');
+  const text = await renderGuidance(source, { topic: 'order', topics: GUIDANCE_TOPICS });
+  const lines = text.split(/\r?\n/);
+  const header = lines.indexOf('| Agent | Required labels | Conditional labels | Optional labels |');
+  assert.ok(header >= 0, 'header-label table is missing');
+  assert.equal(lines[header + 1], '| --- | --- | --- | --- |');
+
+  // On 2026-11-20 the handwritten table missed codex-arbiter after the fifth dispatcher was registered.
+  const rows = [];
+  for (let index = header + 2; lines[index]?.trimStart().startsWith('|'); index++) {
+    const cells = lines[index].split('|').map((cell) => cell.trim());
+    assert.equal(cells.length, 6, lines[index]);
+    assert.equal(cells[0], '');
+    assert.equal(cells[5], '');
+    const [agent, ...columns] = cells.slice(1, -1);
+    const labels = columns.map((column) => column === '—' ? [] : column.split(', ').map((label) => {
+      assert.match(label, /^`[^`]+`$/);
+      return label.slice(1, -1);
+    }));
+    rows.push([agent, labels]);
   }
+  const agents = rows.map(([agent]) => agent);
+  assert.ok(agents.includes('codex-arbiter'));
+  assert.deepEqual(agents, ORDER_AGENTS);
+  for (const [agent, columns] of rows) {
+    const schema = orderLabelsFor(agent);
+    assert.deepEqual(columns, [
+      schema.filter(({ required }) => required).map(({ label }) => label),
+      schema.filter(({ conditional }) => conditional).map(({ label }) => label),
+      schema.filter(({ optional }) => optional).map(({ label }) => label),
+    ], agent);
+  }
+  assert.deepEqual(rows.filter(([, columns]) => columns.flat().includes('decisions')).map(([agent]) => agent),
+    ['codex-advisor']);
+  assert.match(lines[header + 3 + rows.length], /exactly one `advice:` line \(see \[Advice\]\(#advice\)\)/);
   assert.ok(text.includes('`decisions` names one repository-relative decision-ledger file of the owning plan '
     + 'so the advise answer reports whether the question is already decided there; declare it in each phase '
     + 'that should check the ledger, as phases do not inherit it. Omit it when there is no ledger.'));

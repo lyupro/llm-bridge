@@ -42,6 +42,19 @@ export async function renderGuidance(text, { topic, configPath, topics }) {
           `Budgets the runner enforces on this host. \`host config\` values come from ${configPath}.`,
           '', '| Agent | Phase | Minutes | Source |', '| --- | --- | --- | --- |', ...rows,
         ].join('\n'));
+      } else if (name === 'order-header-labels') {
+        // OW-097 D8: the handwritten table missed codex-arbiter when it became the fifth dispatcher on 2026-11-20.
+        const { ORDER_AGENTS, orderLabelsFor } = await import(new URL('./order-schema.mjs', import.meta.url).href);
+        const rows = ORDER_AGENTS.map((agent) => {
+          const labels = orderLabelsFor(agent);
+          const columns = ['required', 'conditional', 'optional'].map((flag) =>
+            codeList(labels.filter((entry) => entry[flag]).map(({ label }) => label)) || '—');
+          return `| ${agent} | ${columns.join(' | ')} |`;
+        });
+        values.set(placeholder, [
+          '| Agent | Required labels | Conditional labels | Optional labels |',
+          '| --- | --- | --- | --- |', ...rows,
+        ].join('\n'));
       } else if (name.startsWith('order-rules:')) {
         const ruleTopic = name.slice('order-rules:'.length);
         if (ruleTopic !== 'all' && !Object.hasOwn(topics, ruleTopic)) {
