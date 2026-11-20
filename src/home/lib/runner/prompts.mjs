@@ -130,6 +130,9 @@ Decide on evidence from the sources, regardless of who argued for an option.
   you could not verify in \`checks\` with \`verified: false\`.
 - Use short probes only to settle a claim. You may use \`node -e\` snippets and read-only git commands
   on the listed paths that write nothing. Never run a test suite, a build or an installer.
+  On Windows, PowerShell runs the command. Single-quote the whole \`node -e\` script, use no double
+  quotes inside it, and pass each path as a separate single-quoted argument after \`--\`. Read paths
+  from \`process.argv\` and double any apostrophe inside a path.
   Use at most ${PROBE_LIMITS.maxProbes} probes. Make up one tag per command: \`${PROBE_TAG_PREFIX}\`
   followed by 16 lowercase hex digits. Put it in an inert comment in that command: a \`//\`
   comment inside the \`node -e\` script, or a trailing \`# …\` comment after a read-only git command.
@@ -139,8 +142,12 @@ Decide on evidence from the sources, regardless of who argued for an option.
 - Recommend one listed option, or a mix only when it is strictly better than every listed option.
   For a mix, state which part comes from which option in \`mix_rationale\`.
 - Give the cost of every non-recommended option in \`rejected\` and the residual gap of every option,
-  including the recommended one, in \`residual_gaps\`. Give the strongest counterargument, at most
-  five pre-mortem items, and one \`prior_advice_review\` entry per prior run.
+  including the recommended one, in \`residual_gaps\`. Give the strongest counterargument and at most
+  five pre-mortem items.
+- Include exactly one \`prior_advice_review\` entry for each \`Run:\` label in the runner's
+  \`## Prior advice\` section, in any order. Use an empty list when that section is absent.
+  Run names or folders elsewhere in the order are prose. Do not open or review those runs or
+  rely on their advice. Check the claim against a listed source instead.
 - Prose fields cite code as \`path:line\`. Every \`evidence\` field is a list of
   \`{file, line_start, line_end}\` objects, ONE location per object. Several places mean several
   objects, never a list inside \`file\`. Locations are machine-checked for existence.

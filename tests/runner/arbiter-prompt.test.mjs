@@ -9,6 +9,7 @@ import { INSTRUCTIONS } from '../../src/home/lib/runner/prompts.mjs';
 import { schemaFor } from '../../src/home/lib/runner/schemas.mjs';
 
 const AGENT = 'codex-arbiter';
+const EMPTY_REVIEW_RULE = 'Use an empty list when that section is absent.';
 
 test('arbiter instructions state the evidence boundary, independence checks, probes and answer obligations', () => {
   const prompt = INSTRUCTIONS[AGENT]({}).replace(/\s+/g, ' ');
@@ -24,6 +25,9 @@ test('arbiter instructions state the evidence boundary, independence checks, pro
     'Use short probes only to settle a claim.',
     'You may use `node -e` snippets and read-only git commands on the listed paths that write nothing.',
     'Never run a test suite, a build or an installer.',
+    'On Windows, PowerShell runs the command.',
+    'Single-quote the whole `node -e` script, use no double quotes inside it, and pass each path as a separate single-quoted argument after `--`.',
+    'Read paths from `process.argv` and double any apostrophe inside a path.',
     `Use at most ${PROBE_LIMITS.maxProbes} probes. Make up one tag per command: \`${PROBE_TAG_PREFIX}\` followed by 16 lowercase hex digits.`,
     'Put it in an inert comment in that command: a `//` comment inside the `node -e` script, or a trailing `# …` comment after a read-only git command.',
     'Use a fresh tag for every command and every attempt, including retries. Never reuse a tag.',
@@ -32,7 +36,10 @@ test('arbiter instructions state the evidence boundary, independence checks, pro
     'Recommend one listed option, or a mix only when it is strictly better than every listed option.',
     'For a mix, state which part comes from which option in `mix_rationale`.',
     'Give the cost of every non-recommended option in `rejected` and the residual gap of every option, including the recommended one, in `residual_gaps`.',
-    'Give the strongest counterargument, at most five pre-mortem items, and one `prior_advice_review` entry per prior run.',
+    'Give the strongest counterargument and at most five pre-mortem items.',
+    "Include exactly one `prior_advice_review` entry for each `Run:` label in the runner's `## Prior advice` section, in any order.",
+    EMPTY_REVIEW_RULE,
+    'Run names or folders elsewhere in the order are prose. Do not open or review those runs or rely on their advice. Check the claim against a listed source instead.',
     'Prose fields cite code as `path:line`. Every `evidence` field is a list of `{file, line_start, line_end}` objects, ONE location per object.',
     'Write nothing. Do your own reading and checks. Do not spawn or delegate to other agents.',
   ]) assert.ok(prompt.includes(rule), rule);
@@ -85,6 +92,10 @@ test('renders each frozen snapshot in order and quotes every advice line', () =>
   ].join('\n'));
 });
 
-test('omits the prior-advice section for an empty snapshot', () => {
+test('keeps the empty-review rule when a run folder appears only in the question', () => {
   assert.equal(arbiterEvidenceSection(Object.freeze([])), '');
+  const order = '## Question\nShould we check for a missing order id at the gate, as suggested in runs/advisor-one?';
+  const prompt = [order, arbiterEvidenceSection(Object.freeze([])), INSTRUCTIONS[AGENT]({})].join('\n\n');
+  assert.doesNotMatch(prompt, /^## Prior advice\s*$/m);
+  assert.ok(prompt.includes(EMPTY_REVIEW_RULE));
 });

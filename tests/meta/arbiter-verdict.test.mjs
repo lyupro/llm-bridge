@@ -101,8 +101,10 @@ function mix(result) {
   return result;
 }
 
-test('accepts a single recommendation, scoped citations, frozen run names, an unverified claim and a bound probe', () => {
-  assert.deepEqual(judge(validResult()), pass);
+test('accepts a single recommendation, scoped citations, frozen runs reviewed in reverse, an unverified claim and a bound probe', () => {
+  const result = validResult();
+  assert.deepEqual(result.prior_advice_review.map(({ run }) => run), evidence.map(({ run }) => run).reverse());
+  assert.deepEqual(judge(result), pass);
 });
 
 test('accepts a mix with rationale and no rejections when all options are recommended', () => {
@@ -115,15 +117,38 @@ test('accepts a mix with rationale and no rejections when all options are recomm
   assert.deepEqual(judge(result), pass);
 });
 
+const irreversible = parseArbiterTask(brief.replace('disagreement', 'irreversible')
+  .replace('How should we detect a missing order id?', 'How should we detect a missing order id discussed in runs/advisor-one?')
+  .replace('## Prior runs\n- advisor-one\n- advisor-two\n', ''));
+
 test('accepts five scenarios and an empty review for an irreversible brief without prior runs', () => {
-  const irreversible = parseArbiterTask(brief.replace('disagreement', 'irreversible')
-    .replace('## Prior runs\n- advisor-one\n- advisor-two\n', ''));
   const result = validResult();
   result.pre_mortem = Array.from({ length: 5 }, () => ({ ...result.pre_mortem[0] }));
   result.prior_advice_review = [];
   assert.deepEqual(judgeArbitration({
     result, task: irreversible, evidence: [], repoRoot, events: [completedProbe(PROBE_TAG)], captureComplete: true,
   }), pass);
+});
+
+test('rejects a review of a run named only in the question when the frozen snapshot is empty', () => {
+  const result = validResult();
+  result.prior_advice_review = [result.prior_advice_review[1]];
+  assert.deepEqual(judgeArbitration({
+    result, task: irreversible, evidence: [], repoRoot, events: [completedProbe(PROBE_TAG)], captureComplete: true,
+  }), { ok: false, reasons: [answerRuleMessage('codex-arbiter', 'arbiter-coverage-unexpected', {
+    field: 'prior_advice_review', id: 'advisor-one',
+  })] });
+});
+
+test('reports both the duplicate and the missing run when the review count matches the snapshot', () => {
+  const result = validResult();
+  result.prior_advice_review[1] = { ...result.prior_advice_review[0] };
+  const verdict = judge(result);
+  assert.equal(verdict.ok, false);
+  assert.deepEqual(verdict.reasons.toSorted(), [
+    answerRuleMessage('codex-arbiter', 'arbiter-coverage-duplicate', { field: 'prior_advice_review', id: 'advisor-two' }),
+    answerRuleMessage('codex-arbiter', 'arbiter-coverage-missing', { field: 'prior_advice_review', id: 'advisor-one' }),
+  ].sort());
 });
 
 test('requires an array of command events and a boolean capture state even with no probes', () => {
