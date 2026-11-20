@@ -38,10 +38,10 @@ function recordedFiles(runDir) {
 }
 
 for (const { name, agent, exit, status, options } of cases) {
-  test(`renderReply preserves ${name} reply and recorded files before and after recovery`, () => {
+  test(`renderReply preserves ${name} reply and recorded files before and after recovery`, async () => {
     const runDir = makeRun({ args: ['exec', '--json'],
       events: [{ type: 'thread.started', thread_id: 'reply-render' }, COMPLETED_COMMAND], ...options });
-    const { meta, reply } = collect(runDir, agent, exit);
+    const { meta, reply } = await collect(runDir, agent, exit);
     assert.equal(meta.status, status);
     if (name === 'FAIL without result') {
       assert.match(reply, /^Situation: /m);
@@ -64,10 +64,10 @@ for (const { name, agent, exit, status, options } of cases) {
     assert.deepEqual(recordedFiles(runDir), withRecovery);
   });
 
-  test(`direct CLI preserves ${name} reply including console.log newline`, () => {
+  test(`direct CLI preserves ${name} reply including console.log newline`, async () => {
     const runDir = makeRun({ args: ['exec', '--json'],
       events: [{ type: 'thread.started', thread_id: 'reply-render' }, COMPLETED_COMMAND], ...options });
-    const { meta, reply } = collect(runDir, agent, exit);
+    const { meta, reply } = await collect(runDir, agent, exit);
     assert.equal(meta.status, status);
     const child = spawnSync(process.execPath, [cliPath, runDir, agent, String(exit)], { encoding: 'utf8' });
     assert.ifError(child.error);
@@ -77,10 +77,10 @@ for (const { name, agent, exit, status, options } of cases) {
   });
 }
 
-test('renderReply rejects an unknown agent with the same error as collect', () => {
+test('renderReply rejects an unknown agent with the same error as collect', async () => {
   const runDir = makeRun();
   let expected;
-  assert.throws(() => collect(runDir, 'unknown-agent', 0), (error) => {
+  await assert.rejects(async () => await collect(runDir, 'unknown-agent', 0), (error) => {
     expected = error.message;
     return /^unknown agent: unknown-agent \(expected one of .+\)$/.test(expected);
   });

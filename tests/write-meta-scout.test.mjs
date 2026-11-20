@@ -84,7 +84,7 @@ test('the Questions section builds questions.json entries in the given order', (
 
 // --- scout coverage against questions.json ------------------------------------------
 
-test('a fully covered order is OK and reports 6/6 in the reply', () => {
+test('a fully covered order is OK and reports 6/6 in the reply', async () => {
   const questions = Array.from({ length: 6 }, (_, i) => ({ id: `Q${i + 1}`, text: `Question ${i + 1}?` }));
   const answers = questions.map((q) => ({
     question_id: q.id,
@@ -96,12 +96,12 @@ test('a fully covered order is OK and reports 6/6 in the reply', () => {
     result: { answer: 'Final summary of all sub-questions.', answers, findings: [], unknowns: [], report_markdown: '# report' },
     questions,
   });
-  const { meta, reply } = collect(dir, 'codex-scout', 0);
+  const { meta, reply } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'OK');
   assert.match(reply, /Coverage: 6\/6 sub-questions/);
 });
 
-test('a single explicit question is graded and reports 1/1 in the reply', () => {
+test('a single explicit question is graded and reports 1/1 in the reply', async () => {
   const questions = [{ id: 'Q1', text: 'Describe the mechanism.' }];
   const dir = makeRun({
     events: [COMPLETED_COMMAND],
@@ -114,12 +114,12 @@ test('a single explicit question is graded and reports 1/1 in the reply', () => 
     },
     questions,
   });
-  const { meta, reply } = collect(dir, 'codex-scout', 0);
+  const { meta, reply } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'OK');
   assert.match(reply, /Coverage: 1\/1 sub-questions/);
 });
 
-test('coverage counts only the explicit questions', () => {
+test('coverage counts only the explicit questions', async () => {
   const questions = [
     { id: 'Q1', text: 'First flag, even without a question mark' },
     { id: 'Q2', text: 'Second flag, also imperative' },
@@ -134,12 +134,12 @@ test('coverage counts only the explicit questions', () => {
     result: { answer: 'Summary', answers, findings: [], unknowns: [], report_markdown: '# report' },
     questions,
   });
-  const { meta, reply } = collect(dir, 'codex-scout', 0);
+  const { meta, reply } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'OK');
   assert.match(reply, /Coverage: 2\/2 sub-questions/);
 });
 
-test('skipping two sub-questions fails and names them', () => {
+test('skipping two sub-questions fails and names them', async () => {
   const questions = Array.from({ length: 6 }, (_, i) => ({ id: `Q${i + 1}`, text: `Question ${i + 1}?` }));
   const answers = questions.slice(0, 4).map((q) => ({ question_id: q.id, answer: PROSE_ANSWER, evidence: ['x.ts:1'] }));
   const dir = makeRun({
@@ -147,14 +147,14 @@ test('skipping two sub-questions fails and names them', () => {
     result: { answer: 'Summary', answers, findings: [], unknowns: [], report_markdown: '# report' },
     questions,
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /scout did not answer 2 sub-questions/);
   assert.match(meta.reason, /Q5/);
   assert.match(meta.reason, /Q6/);
 });
 
-test('a table of coordinates instead of a breakdown fails per question', () => {
+test('a table of coordinates instead of a breakdown fails per question', async () => {
   const questions = [
     { id: 'Q1', text: 'Where is the source?' },
     { id: 'Q2', text: 'Where is the registry?' },
@@ -168,12 +168,12 @@ test('a table of coordinates instead of a breakdown fails per question', () => {
     result: { answer: 'Summary', answers, findings: [], unknowns: [], report_markdown: '# report' },
     questions,
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /coordinates without analysis/);
 });
 
-test('a single coordinate-only answer still fails the analysis check', () => {
+test('a single coordinate-only answer still fails the analysis check', async () => {
   const dir = makeRun({
     events: [COMPLETED_COMMAND],
     result: {
@@ -185,12 +185,12 @@ test('a single coordinate-only answer still fails the analysis check', () => {
     },
     questions: [{ id: 'Q1', text: 'Where is the source?' }],
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /coordinates without analysis/);
 });
 
-test('an answer with no evidence at all fails, even with real prose', () => {
+test('an answer with no evidence at all fails, even with real prose', async () => {
   const questions = [
     { id: 'Q1', text: 'How does X work?' },
     { id: 'Q2', text: 'How does Y work?' },
@@ -204,12 +204,12 @@ test('an answer with no evidence at all fails, even with real prose', () => {
     result: { answer: 'Summary', answers, findings: [], unknowns: [], report_markdown: '# report' },
     questions,
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /responses without a single evidence reference/);
 });
 
-test('an unanswered explicit question fails the run', () => {
+test('an unanswered explicit question fails the run', async () => {
   const dir = makeRun({
     events: [COMPLETED_COMMAND],
     result: {
@@ -221,38 +221,38 @@ test('an unanswered explicit question fails the run', () => {
     },
     questions: [{ id: 'Q1', text: 'This question was not answered.' }],
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /scout did not answer 1 sub-questions/);
   assert.match(meta.reason, /Q1/);
 });
 
-test('single-question mode fails a short answer', () => {
+test('single-question mode fails a short answer', async () => {
   const dir = makeRun({
     events: [COMPLETED_COMMAND],
     result: { answer: THIN_ANSWER, findings: [], unknowns: [], report_markdown: '# report' },
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /response without analysis/);
 });
 
-test('single-question mode passes a substantial answer, with no coverage line', () => {
+test('single-question mode passes a substantial answer, with no coverage line', async () => {
   const dir = makeRun({
     events: [COMPLETED_COMMAND],
     result: { answer: LONG_PROSE_ANSWER, findings: [], unknowns: [], report_markdown: '# report' },
   });
-  const { meta, reply } = collect(dir, 'codex-scout', 0);
+  const { meta, reply } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'OK');
   assert.doesNotMatch(reply, /Coverage/);
 });
 
-test('an ordinary scout with zero commands keeps the exact dead-sandbox failure reason', () => {
+test('an ordinary scout with zero commands keeps the exact dead-sandbox failure reason', async () => {
   const dir = makeRun({
     events: [{ type: 'thread.started', thread_id: 'ordinary-scout' }],
     result: { answer: LONG_PROSE_ANSWER, findings: [], unknowns: [], report_markdown: '# report' },
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, 'scout executed no command, so no answer rests on reading the code; '
     + 'check stderr.log for sandbox refusals before changing the order');

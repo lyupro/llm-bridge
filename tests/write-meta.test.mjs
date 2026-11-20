@@ -55,47 +55,47 @@ const LONG_PROSE_ANSWER =
   'values before passing them through the processing pipeline without side effects or needless ' +
   'runtime exceptions. The error contract and dependency call order are described separately.';
 
-test('report matching the tree stays OK', () => {
+test('report matching the tree stays OK', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '1\t0\tsrc/a.ts\n',
     after: '4\t2\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
-test('service-directory work with an untouched tree fails', () => {
+test('service-directory work with an untouched tree fails', async () => {
   // Run 2026-07-30_172914: snapshots byte-identical, changes[] pointing at .omx/.
   const dir = makeRun({
     result: build([{ file: '.omx/state/session.json', what: 'quarantine', why: 'hook interfered' }]),
     before: '1\t0\tsrc/a.ts\n',
     after: '1\t0\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /service directories/);
 });
 
-test('service-directory work while the tree moved elsewhere fails', () => {
+test('service-directory work while the tree moved elsewhere fails', async () => {
   // Run 2026-07-30_171926: task files changed, report talks about .omx/ only.
   const dir = makeRun({
     result: build([{ file: '.omx/state/session.json', what: 'quarantine', why: 'hook interfered' }]),
     before: 'U\t5437\tpackages/agent-sdk/src/cost/spend-gateway.ts\n',
     after: 'U\t5566\tpackages/agent-sdk/src/cost/spend-gateway.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /service directories/);
 });
 
-test('declared edits with an untouched tree fail', () => {
+test('declared edits with an untouched tree fail', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '1\t0\tsrc/a.ts\n',
     after: '1\t0\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   // The run folder sits on its own with no status.json, so there is no task to look up and
   // no earlier pass to fall back on — both halves of the reason have to be said out loud.
@@ -106,7 +106,7 @@ test('declared edits with an untouched tree fail', () => {
   assert.equal(meta.carried_from_earlier_run, false);
 });
 
-test('declared edits with an untouched tree are OK when an earlier pass made them', () => {
+test('declared edits with an untouched tree are OK when an earlier pass made them', async () => {
   // Run 2026-07-31_121703: the second pass found its own earlier edits already in place,
   // listed them honestly, changed nothing — and was told it had done no work. Same empty
   // delta as the case above; the only difference is that the chain has the files.
@@ -120,30 +120,30 @@ test('declared edits with an untouched tree are OK when an earlier pass made the
       result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     },
   ]);
-  const { meta, reply } = collect(path.join(root, 'b-second'), 'codex-build', 0);
+  const { meta, reply } = await collect(path.join(root, 'b-second'), 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.equal(meta.carried_from_earlier_run, true);
   assert.match(reply, /changes were made by an earlier run of this task/);
 });
 
-test('a changed tree with an empty change list fails', () => {
+test('a changed tree with an empty change list fails', async () => {
   const dir = makeRun({
     result: build([]),
     before: '',
     after: 'U\t120\tsrc/new.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /names no changes/);
 });
 
-test('nothing declared and nothing changed is a legitimate OK', () => {
+test('nothing declared and nothing changed is a legitimate OK', async () => {
   const dir = makeRun({ result: build([]), before: '2\t1\tsrc/a.ts\n', after: '2\t1\tsrc/a.ts\n' });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
-test('paths match across separators, ./ prefixes and absolute form', () => {
+test('paths match across separators, ./ prefixes and absolute form', async () => {
   const dir = makeRun({
     result: build([
       { file: 'C:\\repo\\src\\a.ts', what: 'change', why: 'task' },
@@ -152,21 +152,21 @@ test('paths match across separators, ./ prefixes and absolute form', () => {
     before: '',
     after: 'U\t10\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
-test('a file restored to its committed state counts as touched', () => {
+test('a file restored to its committed state counts as touched', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'revert', why: 'task' }]),
     before: '3\t1\tsrc/a.ts\n',
     after: '',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
-test('a red verification still outranks the mismatch check', () => {
+test('a red verification still outranks the mismatch check', async () => {
   const dir = makeRun({
     result: build([{ file: '.omx/state/session.json', what: 'quarantine', why: 'hook interfered' }], {
       verify_passed: false,
@@ -174,35 +174,35 @@ test('a red verification still outranks the mismatch check', () => {
     before: '',
     after: '',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /failed/);
 });
 
-test('a quota signal stays LIMIT rather than becoming a mismatch', () => {
+test('a quota signal stays LIMIT rather than becoming a mismatch', async () => {
   const dir = makeRun({
     log: 'ERROR: rate limit exceeded for this account\n',
     result: { summary: '', changes: [], report_markdown: '' },
     before: '',
     after: 'U\t10\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'LIMIT');
 });
 
-test('a non-zero exit stays FAIL for its own reason', () => {
+test('a non-zero exit stays FAIL for its own reason', async () => {
   const dir = makeRun({
     log: 'ERROR: unexpected shutdown\n',
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
     after: 'U\t10\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 1);
+  const { meta } = await collect(dir, 'codex-build', 1);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /exit=1/);
 });
 
-test('scout is not subject to the build mismatch check', () => {
+test('scout is not subject to the build mismatch check', async () => {
   // Tree moved (src/a.ts) while the scout report declares no "changes" at all — the shape
   // that fails a build via reportVersusWork(). The answer has to clear the single-question
   // substance bar on its own merits, so a scout run is judged as a scout run, not as a build
@@ -213,7 +213,7 @@ test('scout is not subject to the build mismatch check', () => {
     before: '',
     after: 'U\t10\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'OK');
 });
 
@@ -224,41 +224,41 @@ test('a dotted repo folder does not become a hidden run folder', () => {
   assert.equal(projectFolder('C:/repos/...'), 'repo');
 });
 
-test('review is not subject to the build mismatch check', () => {
+test('review is not subject to the build mismatch check', async () => {
   const dir = makeRun({
     result: { verdict: 'approve', summary: 'ok', findings: [], next_steps: [] },
     file: 'review.json',
   });
-  const { meta } = collect(dir, 'codex-review', 0);
+  const { meta } = await collect(dir, 'codex-review', 0);
   assert.equal(meta.status, 'OK');
 });
 
 // --- build scope (scope.txt) ---------------------------------------------------------
 
-test('an edit inside the declared scope is OK', () => {
+test('an edit inside the declared scope is OK', async () => {
   const dir = makeRun({
     result: build([{ file: 'packages/agent-sdk/src/x.ts', what: 'change', why: 'task' }]),
     before: '',
     after: 'U\t10\tpackages/agent-sdk/src/x.ts\n',
     scope: 'packages/**\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
-test('the build reply preserves the touched path spelling', () => {
+test('the build reply preserves the touched path spelling', async () => {
   const dir = makeRun({
     result: build([{ file: 'CHANGELOG.md', what: 'change', why: 'task' }]),
     before: '',
     after: 'U\t10\tCHANGELOG.md\n',
     scope: '**\n',
   });
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.match(reply, /Files: 1 changed · CHANGELOG\.md/);
 });
 
-test('a multi-line verification names its first command whole, not a cut-off one', () => {
+test('a multi-line verification names its first command whole, not a cut-off one', async () => {
   // Collapsed into one 60-character line, three commands came out as
   // `rtk npm test rtk npm run check:s — pass`: a command the operator cannot run or trust.
   const dir = makeRun({
@@ -269,24 +269,24 @@ test('a multi-line verification names its first command whole, not a cut-off one
     after: 'U\t10\ta.txt\n',
     scope: '**\n',
   });
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
   assert.match(reply, /Verification: npm test \(\+2 more\) — pass/);
 });
 
-test('an extra file outside the scope pattern fails', () => {
+test('an extra file outside the scope pattern fails', async () => {
   const dir = makeRun({
     result: build([{ file: 'packages/agent-sdk/src/x.ts', what: 'change', why: 'task' }]),
     before: '',
     after: 'U\t10\tpackages/agent-sdk/src/x.ts\nU\t5\t!Plans/Plan_X.md\n',
     scope: 'packages/**\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /out-of-scope changes/);
   assert.match(meta.reason, /!Plans\/Plan_X\.md/);
 });
 
-test('a file the environment wrote during the run is reported, not charged to the run', () => {
+test('a file the environment wrote during the run is reported, not charged to the run', async () => {
   // The 2026-08-02 run: scoped files edited honestly, .omc/project-memory.json rewritten by
   // OMC alongside it. The verdict must not charge the run for it, and the reply must still
   // say it happened — a pattern that silences a path would hide a real edit next time.
@@ -297,39 +297,39 @@ test('a file the environment wrote during the run is reported, not charged to th
     scope: 'packages/**\n',
     envPaths: ['.omc/**'],
   });
-  const { meta, reply } = collect(dir, 'codex-build', 0);
+  const { meta, reply } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.deepEqual(meta.environment_changes, ['.omc/project-memory.json']);
   assert.match(reply, /Files: 1 changed/);
   assert.match(reply, /Environment: 1 changed outside the run — \.omc\/project-memory\.json/);
 });
 
-test('without a recorded environment the same tree still fails, as it did before', () => {
+test('without a recorded environment the same tree still fails, as it did before', async () => {
   const dir = makeRun({
     result: build([{ file: 'packages/agent-sdk/src/x.ts', what: 'change', why: 'task' }]),
     before: '',
     after: 'U\t10\tpackages/agent-sdk/src/x.ts\nU\t7\t.omc/project-memory.json\n',
     scope: 'packages/**\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /out-of-scope changes/);
 });
 
-test('a pattern that explicitly allows .git/** still fails on a .git edit', () => {
+test('a pattern that explicitly allows .git/** still fails on a .git edit', async () => {
   const dir = makeRun({
     result: build([{ file: '.git/config', what: 'change', why: 'task' }]),
     before: '',
     after: 'U\t10\t.git/config\n',
     scope: '.git/**\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /out-of-scope changes/);
   assert.match(meta.reason, /\.git\/config/);
 });
 
-test('a run with no scope.txt (an older run) is not scope-checked', () => {
+test('a run with no scope.txt (an older run) is not scope-checked', async () => {
   // Same shape as a scope violation — a second, unrelated file changed — but with no
   // scope.txt on disk the check has to stay off, exactly as it behaved before scope existed.
   const dir = makeRun({
@@ -337,7 +337,7 @@ test('a run with no scope.txt (an older run) is not scope-checked', () => {
     before: '',
     after: 'U\t10\tpackages/x.ts\nU\t3\trandom/other.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
@@ -369,13 +369,13 @@ test('reportVersusWork finds a renamed run baseline by task hash', () => {
 
 // --- collect(): status.json -----------------------------------------------------------
 
-test('collect() moves status.json to finished with the same status as meta.json', () => {
+test('collect() moves status.json to finished with the same status as meta.json', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
     after: 'U\t10\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   const status = JSON.parse(fs.readFileSync(path.join(dir, 'status.json'), 'utf8'));
   assert.equal(status.state, 'finished');
   assert.equal(status.status, meta.status);

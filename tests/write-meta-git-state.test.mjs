@@ -27,7 +27,7 @@ import { buildResult as build, makeRun } from './meta/test-fixtures.mjs';
 
 // --- commit made during the run -------------------------------------------------------
 
-test('a HEAD that moved during the run fails, however clean the report', () => {
+test('a HEAD that moved during the run fails, however clean the report', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
@@ -35,12 +35,12 @@ test('a HEAD that moved during the run fails, however clean the report', () => {
     headBefore: 'abcdef1234567890\n',
     headAfter: 'fedcba0987654321\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /commit made despite prohibition/);
 });
 
-test('a moved HEAD outranks a LIMIT signal in the same log', () => {
+test('a moved HEAD outranks a LIMIT signal in the same log', async () => {
   const dir = makeRun({
     log: 'ERROR: rate limit exceeded for this account\n',
     result: { summary: '', changes: [], report_markdown: '' },
@@ -49,12 +49,12 @@ test('a moved HEAD outranks a LIMIT signal in the same log', () => {
     headBefore: 'abcdef1234567890\n',
     headAfter: 'fedcba0987654321\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /commit made despite prohibition/);
 });
 
-test('identical HEAD before and after is not a commit violation', () => {
+test('identical HEAD before and after is not a commit violation', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
@@ -62,23 +62,23 @@ test('identical HEAD before and after is not a commit violation', () => {
     headBefore: 'abcdef1234567890\n',
     headAfter: 'abcdef1234567890\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
-test('missing head-before/after files (an older run) is not a commit violation', () => {
+test('missing head-before/after files (an older run) is not a commit violation', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
     after: 'U\t10\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
 // --- branch moved during the run ------------------------------------------------------
 
-test('detaching HEAD during the run fails even when the commit is unchanged', () => {
+test('detaching HEAD during the run fails even when the commit is unchanged', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
@@ -88,12 +88,12 @@ test('detaching HEAD during the run fails even when the commit is unchanged', ()
     branchBefore: 'master\n',
     branchAfter: '\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /detached HEAD/);
 });
 
-test('a different branch name fails', () => {
+test('a different branch name fails', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
@@ -101,11 +101,11 @@ test('a different branch name fails', () => {
     branchBefore: 'master\n',
     branchAfter: 'feature\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
 });
 
-test('identical branch names are not a branch violation', () => {
+test('identical branch names are not a branch violation', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
@@ -113,21 +113,21 @@ test('identical branch names are not a branch violation', () => {
     branchBefore: 'master\n',
     branchAfter: 'master\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
-test('missing branch-before/after files (an older run) is not a branch violation', () => {
+test('missing branch-before/after files (an older run) is not a branch violation', async () => {
   const dir = makeRun({
     result: build([{ file: 'src/a.ts', what: 'change', why: 'task' }]),
     before: '',
     after: 'U\t10\tsrc/a.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
-test('one branch snapshot without the other is not a branch violation', () => {
+test('one branch snapshot without the other is not a branch violation', async () => {
   // Half a pair proves nothing: a launcher from before this check, or a worker killed before
   // its snapshot, leaves one file missing — and a missing file must not read as detached HEAD.
   for (const half of [{ branchBefore: 'master\n' }, { branchAfter: 'master\n' }]) {
@@ -137,7 +137,7 @@ test('one branch snapshot without the other is not a branch violation', () => {
       after: 'U\t10\tsrc/a.ts\n',
       ...half,
     });
-    const { meta } = collect(dir, 'codex-build', 0);
+    const { meta } = await collect(dir, 'codex-build', 0);
     assert.equal(meta.status, 'OK');
   }
 });

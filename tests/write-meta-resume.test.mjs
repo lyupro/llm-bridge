@@ -9,13 +9,13 @@ import { buildResult as build, COMPLETED_COMMAND, makeRun } from './meta/test-fi
 import { advisorRunFacts, validScope } from './meta/advisor-fixtures.mjs';
 import { QUESTION_KIND } from '../src/home/lib/runner/question-kind.mjs';
 
-function collectResume({ resumed_from = 'failed-pass', resume, args }) {
+async function collectResume({ resumed_from = 'failed-pass', resume, args }) {
   const dir = makeRun({
     status: { resumed_from }, result: build([]), before: '', after: '',
     events: [{ type: 'thread.started', thread_id: 'resume-thread' }],
   });
   fs.writeFileSync(path.join(dir, 'worker.json'), `${JSON.stringify({ args, resume })}\n`);
-  const collected = collect(dir, 'codex-build', 0);
+  const collected = await collect(dir, 'codex-build', 0);
   const persisted = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
   assert.equal(collected.meta.status, 'OK', collected.meta.reason);
   assert.equal(persisted.resumed_from, collected.meta.resumed_from);
@@ -23,8 +23,8 @@ function collectResume({ resumed_from = 'failed-pass', resume, args }) {
   return collected;
 }
 
-test('a resume records its source run and read-only worker sandbox without --sandbox', () => {
-  const { meta, reply } = collectResume({
+test('a resume records its source run and read-only worker sandbox without --sandbox', async () => {
+  const { meta, reply } = await collectResume({
     resume: { thread_id: 'resume-thread', resumed_from: 'failed-pass', sandbox_mode: 'read-only' },
     args: ['exec', 'resume', '--json', '-c', 'sandbox_mode=read-only', 'resume-thread'],
   });
@@ -33,12 +33,12 @@ test('a resume records its source run and read-only worker sandbox without --san
   assert.ok(reply.split('\n').includes("Attempt: resume of failed-pass — continues that pass's Codex thread"));
 });
 
-test('a fresh run always records resumed_from: null and preserves its --sandbox value', () => {
+test('a fresh run always records resumed_from: null and preserves its --sandbox value', async () => {
   for (const resumed_from of [undefined, null, '', '   ', 42]) {
     const dir = makeRun({
       status: { resumed_from }, result: build([]), args: ['exec', '--sandbox', 'workspace-write'],
     });
-    const { meta, reply } = collect(dir, 'codex-build', 0);
+    const { meta, reply } = await collect(dir, 'codex-build', 0);
     assert.equal(meta.resumed_from, null);
     assert.equal(meta.sandbox, 'workspace-write');
     const persisted = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
@@ -48,39 +48,39 @@ test('a fresh run always records resumed_from: null and preserves its --sandbox 
   }
 });
 
-test('a resume without worker.resume keeps the existing absent sandbox value', () => {
-  const { meta } = collectResume({ args: ['exec', 'resume', '--json', 'resume-thread'] });
+test('a resume without worker.resume keeps the existing absent sandbox value', async () => {
+  const { meta } = await collectResume({ args: ['exec', 'resume', '--json', 'resume-thread'] });
   assert.equal(meta.resumed_from, 'failed-pass');
   assert.equal(meta.sandbox, null);
 });
 
-test('an explicit --sandbox takes precedence over the resume sandbox record', () => {
+test('an explicit --sandbox takes precedence over the resume sandbox record', async () => {
   for (const sandbox of ['workspace-write', '']) {
-    const { meta } = collectResume({
+    const { meta } = await collectResume({
       resume: { sandbox_mode: 'read-only' }, args: ['exec', '--sandbox', sandbox],
     });
     assert.equal(meta.sandbox, sandbox);
   }
 });
 
-test('missing, empty and non-string resume sandbox modes preserve the existing null', () => {
+test('missing, empty and non-string resume sandbox modes preserve the existing null', async () => {
   for (const sandbox_mode of [undefined, null, '', '   ', 42]) {
-    const { meta } = collectResume({
+    const { meta } = await collectResume({
       resume: { sandbox_mode }, args: ['exec', 'resume', '--json', 'resume-thread'],
     });
     assert.equal(meta.sandbox, null);
   }
 });
 
-test('resume accounting copies status provenance instead of worker provenance', () => {
-  const { meta } = collectResume({
+test('resume accounting copies status provenance instead of worker provenance', async () => {
+  const { meta } = await collectResume({
     resume: { resumed_from: 'different-worker-source', sandbox_mode: 'read-only' },
     args: ['exec', 'resume', '--json', 'resume-thread'],
   });
   assert.equal(meta.resumed_from, 'failed-pass');
 });
 
-test('collect persists the resume execution chain while status and reason stay unchanged', () => {
+test('collect persists the resume execution chain while status and reason stay unchanged', async () => {
   const predecessor = makeRun({
     events: [
       { type: 'thread.started', thread_id: 'resume-thread' },
@@ -91,7 +91,7 @@ test('collect persists the resume execution chain while status and reason stay u
     status: { resumed_from: path.basename(predecessor) }, result: build([]),
     events: [{ type: 'thread.started', thread_id: 'resume-thread' }],
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
   assert.equal(meta.reason, null);
   const persisted = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
@@ -102,17 +102,17 @@ test('collect persists the resume execution chain while status and reason stay u
   assert.equal(persisted.reason, null);
 });
 
-test('collect persists per-run and chain web evidence beside unchanged command facts', () => {
+test('collect persists per-run and chain web evidence beside unchanged command facts', async () => {
   const web = (url) => ({ type: 'item.completed', item: { type: 'web_search', action: { type: 'open_page', url } } });
   const predecessor = makeRun({ events: [
     { type: 'thread.started', thread_id: 'resume-thread' }, COMPLETED_COMMAND, web('https://WWW.Previous.Example'),
   ] });
-  collect(predecessor, 'codex-build', 0);
+  await collect(predecessor, 'codex-build', 0);
   const dir = makeRun({
     status: { resumed_from: path.basename(predecessor) }, result: build([]),
     events: [{ type: 'thread.started', thread_id: 'resume-thread' }, web('https://current.example')],
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   const persisted = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
   assert.deepEqual(persisted.web_searches, {
     run: { completed: 1, with_urls: 1, hosts: ['current.example'] },
@@ -126,10 +126,10 @@ test('collect persists per-run and chain web evidence beside unchanged command f
   assert.equal(meta.status, 'OK');
   assert.equal(meta.reason, null);
   fs.unlinkSync(path.join(predecessor, 'events.jsonl'));
-  assert.deepEqual(collect(dir, 'codex-build', 0).meta.web_searches, persisted.web_searches);
+  assert.deepEqual((await collect(dir, 'codex-build', 0)).meta.web_searches, persisted.web_searches);
 });
 
-test('collect reads old pruned metadata with a web gap and unchanged command verdict', () => {
+test('collect reads old pruned metadata with a web gap and unchanged command verdict', async () => {
   const predecessor = makeRun({ events: [{ type: 'thread.started', thread_id: 'resume-thread' }] });
   fs.writeFileSync(path.join(predecessor, 'meta.json'), JSON.stringify({
     session_id: 'resume-thread', commands_executed: { version: 1, run: 4, chain: 99 },
@@ -139,7 +139,7 @@ test('collect reads old pruned metadata with a web gap and unchanged command ver
     status: { resumed_from: path.basename(predecessor) }, result: build([]),
     events: [{ type: 'thread.started', thread_id: 'resume-thread' }],
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.web_searches.chain, null);
   assert.match(meta.web_searches.gap, /no web evidence/);
   assert.equal(meta.commands_executed.chain, 4);
@@ -176,12 +176,12 @@ function resumeWithCommands(count, extra) {
   return { dir, predecessor };
 }
 
-test('scout resume uses eight proven predecessor commands for execution and coordinate checks', () => {
+test('scout resume uses eight proven predecessor commands for execution and coordinate checks', async () => {
   for (const kind of [QUESTION_KIND.CODE_REQUIRED, QUESTION_KIND.STARTUP_CONTEXT]) {
     const { dir, predecessor } = resumeWithCommands(8, {
       result: scoutResult, questions: [{ id: 'Q1', text: 'Describe the mechanism.', kind }],
     });
-    const { meta } = collect(dir, 'codex-scout', 0);
+    const { meta } = await collect(dir, 'codex-scout', 0);
     assert.equal(meta.status, 'OK', meta.reason);
     assert.equal(meta.reason, null);
     assert.deepEqual(meta.commands_executed, {
@@ -190,55 +190,55 @@ test('scout resume uses eight proven predecessor commands for execution and coor
   }
 });
 
-test('scout resume with a zero-command predecessor keeps the exact old failure reason', () => {
+test('scout resume with a zero-command predecessor keeps the exact old failure reason', async () => {
   const { dir } = resumeWithCommands(0, {
     result: scoutResult, questions: [{ id: 'Q1', text: 'Describe the mechanism.' }],
   });
-  const { meta } = collect(dir, 'codex-scout', 0);
+  const { meta } = await collect(dir, 'codex-scout', 0);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason, noCommandReason);
   assert.equal(meta.commands_executed.chain, 0);
 });
 
-test('scout resume with a missing predecessor fails with its provenance reason before coverage', () => {
+test('scout resume with a missing predecessor fails with its provenance reason before coverage', async () => {
   for (const answers of [scoutResult.answers, []]) {
     const dir = makeRun({
       status: { resumed_from: 'missing-predecessor' }, result: { ...scoutResult, answers },
       questions: [{ id: 'Q1', text: 'Describe the mechanism.' }],
       events: [{ type: 'thread.started', thread_id: 'resume-thread' }],
     });
-    const { meta } = collect(dir, 'codex-scout', 0);
+    const { meta } = await collect(dir, 'codex-scout', 0);
     assert.equal(meta.status, 'FAIL');
     assert.equal(meta.reason, 'resume chain: missing-predecessor — run folder not found');
     assert.equal(meta.reason, meta.commands_executed.gap);
   }
 });
 
-test('advisor resume uses proven predecessor commands instead of failing D4 commandsRun 0', () => {
+test('advisor resume uses proven predecessor commands instead of failing D4 commandsRun 0', async () => {
   const { dir } = resumeWithCommands(8, { result: validScope() });
   advisorRunFacts(dir);
-  const { meta } = collect(dir, 'codex-advisor', 0);
+  const { meta } = await collect(dir, 'codex-advisor', 0);
   assert.equal(meta.status, 'OK', meta.reason);
   assert.equal(meta.reason, null);
   assert.equal(meta.commands_executed.run, 0);
   assert.equal(meta.commands_executed.chain, 8);
 });
 
-test('advisor resume with a zero-command chain still fails D4', () => {
+test('advisor resume with a zero-command chain still fails D4', async () => {
   const { dir } = resumeWithCommands(0, { result: validScope() });
   advisorRunFacts(dir);
-  const { meta } = collect(dir, 'codex-advisor', 0);
+  const { meta } = await collect(dir, 'codex-advisor', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /advice contract broken \(1\): D4 commandsRun 0/);
 });
 
-test('advisor resume reports an unprovable chain as one provenance contract reason', () => {
+test('advisor resume reports an unprovable chain as one provenance contract reason', async () => {
   const dir = makeRun({
     status: { resumed_from: 'missing-predecessor' }, result: validScope(),
     events: [{ type: 'thread.started', thread_id: 'resume-thread' }],
   });
   advisorRunFacts(dir);
-  const { meta } = collect(dir, 'codex-advisor', 0);
+  const { meta } = await collect(dir, 'codex-advisor', 0);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.reason,
     'advice contract broken (1): resume chain: missing-predecessor — run folder not found');

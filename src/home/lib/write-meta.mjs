@@ -282,7 +282,7 @@ if (invokedDirectly) {
     console.error('usage: node write-meta.mjs <runDir> <agent> <exitCode>');
     process.exit(EXIT.FAIL);
   }
-  const { meta, reply } = collect(runDir, agent, exitCode);
+  const { meta, reply } = await collect(runDir, agent, exitCode);
   console.log(reply);
   process.exit(exitCodeFor(meta.status));
 }

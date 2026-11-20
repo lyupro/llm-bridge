@@ -16,7 +16,7 @@ import { collect, writeStatus } from '../src/home/lib/write-meta.mjs';
 import { stopRows } from '../src/home/lib/meta/stop-rows.mjs';
 import { buildResult as build, makeRun } from './meta/test-fixtures.mjs';
 
-test('OW-078 B2: the measured output-limit failure blocks resume without changing FAIL or exit', () => {
+test('OW-078 B2: the measured output-limit failure blocks resume without changing FAIL or exit', async () => {
   const events = fs.readFileSync(new URL('./meta/fixtures/codex-0.164-output-limit.events.jsonl', import.meta.url), 'utf8');
   const stop = {
     version: 2, trigger: 'exit', stopped_at: '2026-10-28T12:00:00.000Z', exit_code: 1,
@@ -31,7 +31,7 @@ test('OW-078 B2: the measured output-limit failure blocks resume without changin
     phase: 'advise', silence_policy: { threshold_ms: 996000 },
     recovery_policy: { enabled: true, brake: { value: 'on' }, budget_ms: 1102000 },
   }));
-  const { meta, reply } = collect(dir, 'codex-advisor', 1);
+  const { meta, reply } = await collect(dir, 'codex-advisor', 1);
   assert.equal(meta.status, 'FAIL');
   assert.equal(meta.exit, 1);
   assert.equal(meta.result_ok, false);
@@ -46,21 +46,21 @@ test('OW-078 B2: the measured output-limit failure blocks resume without changin
   });
   assert.equal(stopRows(meta, dir).some((row) => row.startsWith('Ready resume line:')), false);
   assert.equal(reply.includes('Ready resume line:'), false);
-  const second = collect(dir, 'codex-advisor', 1);
+  const second = await collect(dir, 'codex-advisor', 1);
   assert.deepEqual(second.meta.continuation_eligibility, meta.continuation_eligibility);
   assert.equal(second.reply, reply);
 });
 
-test('Plan_80 A4: collect preserves stop verbatim across collections without changing the reply', () => {
+test('Plan_80 A4: collect preserves stop verbatim across collections without changing the reply', async () => {
   const dir = makeRun({ result: build([]), before: '', after: '' });
-  const baseline = collect(dir, 'codex-build', 0);
+  const baseline = await collect(dir, 'codex-build', 0);
   assert.equal(baseline.meta.status, 'OK');
   assert.equal(baseline.meta.stop, null);
   const stop = { version: 1, trigger: 'deadline', stopped_at: '2026-10-15T08:00:00.000Z', exit_code: 1,
     signal: null, process_error: null, stdio_drained: false, elapsed_ms: 1000,
     receipts: { lines: 0, last_received_at: null, incomplete: false, truncated: false, write_error: null }, result_file: { state: 'missing' } };
   writeStatus(dir, { stop });
-  const first = collect(dir, 'codex-build', 0), second = collect(dir, 'codex-build', 0);
+  const first = await collect(dir, 'codex-build', 0), second = await collect(dir, 'codex-build', 0);
   assert.deepEqual(first.meta.stop, stop);
   assert.deepEqual(second.meta.stop, stop);
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8')).stop, stop);
@@ -76,7 +76,7 @@ test('Plan_80 A4: collect preserves stop verbatim across collections without cha
 });
 
 for (const agent of ['codex-advisor', 'codex-build']) {
-  test(`Plan_80 A5: collect records repeatable frozen assessments for ${agent}`, () => {
+  test(`Plan_80 A5: collect records repeatable frozen assessments for ${agent}`, async () => {
     const stop = {
       version: 1, trigger: 'deadline', stopped_at: '2026-10-15T08:20:00.000Z',
       result_file: { state: 'missing' },
@@ -97,9 +97,9 @@ for (const agent of ['codex-advisor', 'codex-build']) {
       phase: agent === 'codex-advisor' ? 'advise' : 'default',
       silence_policy: { version: 1, threshold_ms: 1200000 },
     }));
-    const first = collect(dir, agent, 1);
+    const first = await collect(dir, agent, 1);
     const persistedFirst = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
-    const second = collect(dir, agent, 1);
+    const second = await collect(dir, agent, 1);
     const persistedSecond = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
     assert.equal(first.meta.status, 'FAIL');
     assert.equal(second.meta.status, first.meta.status);
@@ -130,7 +130,7 @@ for (const agent of ['codex-advisor', 'codex-build']) {
   });
 }
 
-test('collect assesses the frozen policy and denies a second automatic recovery attempt', () => {
+test('collect assesses the frozen policy and denies a second automatic recovery attempt', async () => {
   const stop = {
     version: 2, trigger: 'deadline', stopped_at: '2026-10-15T08:20:00.000Z',
     tree_stop: { state: 'stopped' }, result_file: { state: 'missing' },
@@ -146,8 +146,8 @@ test('collect assesses the frozen policy and denies a second automatic recovery 
     fs.writeFileSync(path.join(dir, 'worker.json'), JSON.stringify({
       phase: 'advise', silence_policy: { threshold_ms: 996000 }, recovery_policy: recoveryPolicy,
     }));
-    const first = collect(dir, 'codex-advisor', 1);
-    const second = collect(dir, 'codex-advisor', 1);
+    const first = await collect(dir, 'codex-advisor', 1);
+    const second = await collect(dir, 'codex-advisor', 1);
     assert.equal(first.meta.status, 'FAIL');
     assert.equal(first.meta.situation.kind, 'silent-stall-candidate');
     assert.equal(first.meta.situation.cause, 'deadline');

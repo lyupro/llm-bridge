@@ -23,7 +23,7 @@ import { buildResult as build, makeRun } from './meta/test-fixtures.mjs';
 
 const BUILD_SCHEMA = SCHEMAS['codex-build'];
 
-test('a declared failure fails the run even with a clean tree and green verification', () => {
+test('a declared failure fails the run even with a clean tree and green verification', async () => {
   // The 2026-08-04 shape exactly: nothing changed, nothing claimed, verification green.
   const dir = makeRun({
     schema: BUILD_SCHEMA,
@@ -31,29 +31,29 @@ test('a declared failure fails the run even with a clean tree and green verifica
     before: '',
     after: '',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /the task was not done: the target module is absent/);
 });
 
-test('the same run without the declaration is the OK this plan was written to remove', () => {
+test('the same run without the declaration is the OK this plan was written to remove', async () => {
   // Identical fixture minus schema.json and the field: an archived run keeps the verdict it
   // was given on the day it ran. This is the behaviour the marker preserves, not a regression.
   const { outcome, ...archived } = build([]);
   const dir = makeRun({ result: archived, before: '', after: '' });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'OK');
 });
 
-test('a contracted run that leaves the field empty is an unfilled result', () => {
+test('a contracted run that leaves the field empty is an unfilled result', async () => {
   const { outcome, ...withoutField } = build([]);
   const dir = makeRun({ schema: BUILD_SCHEMA, result: withoutField, before: '', after: '' });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /result is not filled in/);
 });
 
-test('a red verification still outranks the declared outcome', () => {
+test('a red verification still outranks the declared outcome', async () => {
   // Both would fail the run; the reason has to be the command that broke, because that is
   // what the orchestrator acts on first.
   const dir = makeRun({
@@ -62,12 +62,12 @@ test('a red verification still outranks the declared outcome', () => {
     before: '',
     after: '',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /verification/);
 });
 
-test('the declared outcome outranks scope and the report-versus-tree check', () => {
+test('the declared outcome outranks scope and the report-versus-tree check', async () => {
   // A run that both failed its task and wandered outside scope: the orchestrator is told the
   // work was not done, not where it was not done.
   const dir = makeRun({
@@ -77,12 +77,12 @@ test('the declared outcome outranks scope and the report-versus-tree check', () 
     before: '',
     after: 'U\t10\tdocs/notes.md\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /the task was not done/);
 });
 
-test('a declared success is still judged by the tree', () => {
+test('a declared success is still judged by the tree', async () => {
   // The field adds a reason to go red; it removes none. A run claiming done while the report
   // names a file nothing touched fails exactly as it did before.
   const dir = makeRun({
@@ -91,12 +91,12 @@ test('a declared success is still judged by the tree', () => {
     before: '',
     after: 'U\t10\tsrc/b.ts\n',
   });
-  const { meta } = collect(dir, 'codex-build', 0);
+  const { meta } = await collect(dir, 'codex-build', 0);
   assert.equal(meta.status, 'FAIL');
   assert.match(meta.reason, /wrong work was done/);
 });
 
-test('a failed build says what it left in the tree, like a LIMIT does', () => {
+test('a failed build says what it left in the tree, like a LIMIT does', async () => {
   // "The work was not done" is not "the tree is clean": a run can write half a change and
   // then declare fail. Without this line the orchestrator has to go and look.
   const dir = makeRun({
@@ -105,22 +105,22 @@ test('a failed build says what it left in the tree, like a LIMIT does', () => {
     before: '',
     after: 'U\t10\tsrc/a.ts\n',
   });
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
   assert.match(reply, /Worktree: has unfinished changes \(1\): src\/a\.ts/);
 });
 
-test('a failed build with a clean tree says so rather than staying silent', () => {
+test('a failed build with a clean tree says so rather than staying silent', async () => {
   const dir = makeRun({
     schema: BUILD_SCHEMA,
     result: build([], { outcome: 'fail', summary: 'the target module is absent' }),
     before: '',
     after: '',
   });
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
   assert.match(reply, /Worktree: no new changes/);
 });
 
-test('a build with no snapshot admits the tree state is unknown', () => {
+test('a build with no snapshot admits the tree state is unknown', async () => {
   // A killed run never wrote state-after.txt. Printing "no new changes" from missing data is
   // the mistake status.json's tree_after: false exists to prevent.
   const dir = makeRun({
@@ -128,14 +128,14 @@ test('a build with no snapshot admits the tree state is unknown', () => {
     after: null,
     result: build([], { outcome: 'fail', summary: 'killed by the deadline' }),
   });
-  const { reply } = collect(dir, 'codex-build', 0);
+  const { reply } = await collect(dir, 'codex-build', 0);
   assert.match(reply, /Worktree: unknown — the run left no worktree snapshot/);
 });
 
-test('scout and review keep a fail reply without a worktree line', () => {
+test('scout and review keep a fail reply without a worktree line', async () => {
   // The line is about a writing run's leftovers; a read-only agent has none to report.
   const dir = makeRun({ result: { answer: '' }, log: 'ERROR: something broke\n' });
-  const { reply } = collect(dir, 'codex-scout', 1);
+  const { reply } = await collect(dir, 'codex-scout', 1);
   assert.match(reply, /^FAIL/);
   assert.doesNotMatch(reply, /Worktree:/);
 });
